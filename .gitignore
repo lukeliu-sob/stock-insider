@@ -1,0 +1,24 @@
+# Stock Insider — local runtime state, secrets, and caches
+# Governance: permission model N-paths (docs/architecture/permission-model.md)
+
+# Secrets
+.env
+.env.*
+
+# Runtime state (never committed; single-file SQLite + sessions)
+data/
+sessions/
+
+# Python
+__pycache__/
+*.pyc
+.pytest_cache/
+.venv/
+*.egg-info/
+
+# Node (pi extensions tooling)
+node_modules/
+
+# OS
+.DS_Store
+Thumbs.db

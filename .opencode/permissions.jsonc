@@ -1,0 +1,58 @@
+{
+  // =====================================================================
+  // .opencode/permissions.jsonc — machine-readable permission model (D3)
+  // Encodes docs/architecture/permission-model.md. Default: DENY.
+  // Every path and tool capability is explicitly whitelisted below.
+  // Guards describe enforcement mechanisms; branch protection and review
+  // memos back up whatever the harness cannot enforce mechanically.
+  // =====================================================================
+  "version": 1,
+  "model": "stock-insider-dev",
+  "roles": ["plan", "build", "verify"],
+  "tools": {
+    "plan":   { "read": true,  "grep": true,  "find": true,  "ls": true, "write": false, "edit": false, "bash": false, "web_search": true },
+    "build":  { "read": true,  "grep": true,  "find": true,  "ls": true, "write": true,  "edit": true,  "bash": true,  "web_search": true },
+    "verify": { "read": true,  "grep": true,  "find": true,  "ls": true, "write": false, "edit": false, "bash": true,  "web_search": false }
+  },
+  "paths": [
+    // RW zone (Build role) — baseline extension only, never replacement
+    { "pattern": "src/**",                     "access": { "plan": "r", "build": "rw", "verify": "r" } },
+    { "pattern": "test/**",                    "access": { "plan": "r", "build": "rw", "verify": "r" } },
+    { "pattern": "tools/**",                   "access": { "plan": "r", "build": "rw", "verify": "r" } },
+
+    // Safety-critical subpaths — RW but every change requires a linked ADR
+    // and human approval (branch protection enforces the review).
+    { "pattern": "src/stockinsider/agent/guardrail*", "access": { "plan": "r", "build": "rw-gated", "verify": "r" }, "gate": "ADR + human approval" },
+    { "pattern": "src/stockinsider/agent/registry*",  "access": { "plan": "r", "build": "rw-gated", "verify": "r" }, "gate": "ADR + human approval" },
+    { "pattern": "src/stockinsider/shared/**",        "access": { "plan": "r", "build": "rw-gated", "verify": "r" }, "gate": "ADR + human approval" },
+
+    // Owner-authored zones — coding agent reads as constraints, never writes.
+    // (Owner may paste agent-drafted content; AI authorship goes to the AI-use log.)
+    { "pattern": "docs/**",                    "access": { "plan": "r", "build": "r",  "verify": "r" } },
+    { "pattern": "prompts/**",                 "access": { "plan": "r", "build": "r",  "verify": "r" }, "gate": "prompt-change flow: ADR + eval gate + human approval" },
+    { "pattern": ".github/**",                 "access": { "plan": "r", "build": "r",  "verify": "r" }, "gate": "human approval" },
+    { "pattern": "AGENTS.md",                  "access": { "plan": "r", "build": "r",  "verify": "r" }, "gate": "human approval" },
+    { "pattern": "Prompt.md",                  "access": { "plan": "r", "build": "r",  "verify": "r" }, "gate": "human approval" },
+    { "pattern": "architecture-blueprint.md",  "access": { "plan": "r", "build": "r",  "verify": "r" } },
+    { "pattern": "Report.md",                  "access": { "plan": "r", "build": "r",  "verify": "r" } },
+    { "pattern": "transcripts/**",             "access": { "plan": "r", "build": "r",  "verify": "r" } },
+    { "pattern": ".opencode/**",               "access": { "plan": "r", "build": "r",  "verify": "r" }, "gate": "human approval" },
+    { "pattern": ".agent/**",                  "access": { "plan": "r", "build": "r",  "verify": "r" }, "gate": "human approval" },
+    { "pattern": ".pi/**",                     "access": { "plan": "r", "build": "r",  "verify": "r" }, "gate": "human approval" },
+
+    // Governance records — Build may append the AI-use log only in the same
+    // change set as code/prompt changes (GOV-002); everything else read-only.
+    { "pattern": "docs/ai-use-log.yaml",       "access": { "plan": "r", "build": "append", "verify": "r" } },
+
+    // Runtime state and secrets — no access, any role
+    { "pattern": "sessions/**",                "access": { "plan": "n", "build": "n", "verify": "n" } },
+    { "pattern": "data/**",                    "access": { "plan": "n", "build": "n", "verify": "n" } },
+    { "pattern": ".env",                       "access": { "plan": "n", "build": "n", "verify": "n" } }
+  ],
+  "guards": [
+    { "id": "G1", "rule": "Block write/edit where effective access is not rw/append",  "enforcement": "harness permission layer (.opencode / .pi governance gate)" },
+    { "id": "G2", "rule": "Safety-critical and gated paths require a linked ADR in the change set", "enforcement": "branch protection + review memo" },
+    { "id": "G3", "rule": "src/ or prompts/ changes without an ai-use-log diff block merge", "enforcement": "CI gate (D7-6)" },
+    { "id": "G4", "rule": "bash must not touch sessions/, data/, or .env",             "enforcement": "heuristic (pi gate) + review" }
+  ]
+}
