@@ -1,0 +1,1079 @@
+# =====================================================================
+# Stock Insider — Requirements Registry (Single Source of Truth)
+# Deliverable D1. Validated by CI against docs/req/req-schema.json.
+#
+# Registry discipline (enforced by process, checked by CI gates):
+#   1. New requirements only APPEND rows; existing rows are never
+#      silently rewritten. Changing a row = requirement change = ADR +
+#      regression rerun of the row's regression_scope.
+#   2. A failing old row is a regression: fix the code, never the test.
+#   3. Every entry carries a machine-checkable fit criterion.
+#   4. Invariants are zero-tolerance: their tests must show 0 escapes,
+#      and include adversarial + boundary (±1) cases.
+#   5. Statements use glossary terms only (docs/req/glossary.md).
+# =====================================================================
+
+meta:
+  project: Stock Insider
+  registry_version: 0.3.2
+  id_prefix: REQ-SI
+  classification: type-c-system          # AI-agent-built AND LLM-native (methodology judgment 1)
+  markets: [HK, US]
+  decision_cadence: weekly               # owner decides weekly; data syncs daily
+  data_horizon: 5y                       # EOD daily bars
+  news_retention: 2y
+  language_policy: >-
+    English only for all artifacts, data, and agent output. Sole exception:
+    Chinese stock names as aliases in the symbol map (see REQ-SI-GOV-001).
+  scope_must_do:
+    - EOD market data ingestion (watchlist + benchmark indices, 5y, gap-checked)
+    - Fundamentals ingestion with full HK coverage via commercial source
+    - English news ingestion (relevance-filtered, deduplicated, 2y retention)
+    - Deterministic indicator computation (LLM never computes)
+    - RAG-grounded analysis reports with full numeric provenance
+    - Event scoring and event study (T+5 primary)
+    - "Session persistence: multi-turn conversation, resume, read-only review"
+    - Hybrid CLI (subcommands + REPL), streaming output, analysis profiles
+    - User-configurable OpenAI-compatible providers (chat + embedding)
+  scope_must_not_do:
+    - Never execute trades or manage positions
+    - Never emit deterministic causal claims or price predictions (REQ-SI-INV-002)
+    - Never display an unverified numeric (REQ-SI-INV-001)
+    - Never substitute fabricated/stale/estimated values for missing data (REQ-SI-INV-003)
+    - Never add a symbol without verified resolution + user confirmation (REQ-SI-INV-004)
+    - Never fetch outside the domain whitelist (REQ-SI-FR-015, when enabled)
+  scope_out_of_scope:
+    - Intraday / realtime data
+    - Social media ingestion
+    - Multi-user serving / network services
+    - Automated trading signals
+    - Chinese-language news with translation pipeline (tracked as REQ-SI-FR-024, Could)
+
+requirements:
+
+  # -----------------------------------------------------------------
+  # Functional requirements (FR)
+  # -----------------------------------------------------------------
+  - id: REQ-SI-FR-001
+    type: functional
+    statement: >-
+      The system ingests daily EOD OHLCV data (native currency,
+      split/dividend-adjusted) for every active watchlist symbol and the
+      built-in benchmark indices (HSI, HSTECH, S&P 500, Nasdaq-100), with
+      5-year history depth, automatic gap detection against the exchange
+      calendar, and automatic backfill on the next sync.
+    fit_criterion: >-
+      Offline test on a seeded database: (a) after deleting one bar, the
+      next sync re-fetches it; (b) after sync, for every active symbol,
+      bar_count equals calendar trading-day count over the trailing 5
+      years with tolerance 0 days.
+    priority: Must
+    tradeoff: >-
+      EOD-only keeps data sources cheap and stable and matches the weekly
+      decision cadence; intraday timeliness and cost are consciously
+      sacrificed (Won't list).
+    source: "Owner requirements discussion R2 item 5 / R3 items 1-2"
+    status: conceptual
+    depends_on: []
+    regression_trigger: true
+    regression_scope: [test/offline/test_ingest_market.py]
+
+  - id: REQ-SI-FR-002
+    type: functional
+    statement: >-
+      The system ingests quarterly fundamentals (income statement,
+      balance sheet, cash-flow statement) for all watchlist symbols with
+      full HK mainboard coverage through a commercial data source.
+      Vendor selection is deferred to architecture (candidate evaluation
+      table; broker OpenAPI and paid REST both remain candidates). All
+      ingested fundamentals pass schema validation before storage.
+    fit_criterion: >-
+      For every watchlist symbol, required fields (revenue, net income,
+      total assets, shareholders equity, operating cash flow) are present
+      for at least the latest 8 quarters with at least 99 percent field
+      completeness; symbols with missing fields appear in an explicit
+      coverage report and silent omissions must number 0.
+    priority: Must
+    tradeoff: >-
+      Paid/commercial source accepted specifically to avoid an HK
+      fundamentals coverage downgrade; monetary cost consciously accepted
+      (owner decision R4 item 2).
+    source: "Owner requirements discussion R4 item 2"
+    status: conceptual
+    depends_on: []
+    regression_trigger: true
+    regression_scope: [test/offline/test_ingest_fundamentals.py]
+    notes: >-
+      Capability requirement only; vendor choice is an architecture
+      decision (see docs/architecture/evaluation-table.md when authored).
+
+  - id: REQ-SI-FR-003
+    type: functional
+    statement: >-
+      The system ingests English-language financial news relevant to
+      active watchlist symbols and macro keywords, filtered at ingestion
+      (no full firehose), deduplicated by similarity key, and stored with
+      source, URL, publication timestamp, and fetch timestamp. Retention
+      window is 2 years with automatic expiry.
+    fit_criterion: >-
+      (a) Relevance: on a fixture corpus of relevant/irrelevant articles
+      the relevance filter achieves precision at least 0.8. (b)
+      Retention: articles older than 2 years are excluded from retrieval
+      and reported by the retention job under synthetic timestamps. (c)
+      Dedup: duplicate fixture articles produce exactly one stored record.
+    priority: Must
+    tradeoff: >-
+      English-only corpus keeps the embedding stack single-language
+      (REQ-SI-GOV-001); loss of Chinese-language HK coverage is accepted
+      for v1, mitigated later by REQ-SI-FR-024.
+    source: "Owner requirements discussion R2 item 5 / R4 item 4"
+    status: conceptual
+    depends_on: []
+    regression_trigger: true
+    regression_scope: [test/offline/test_ingest_news.py]
+
+  - id: REQ-SI-FR-004
+    type: functional
+    statement: >-
+      The system maintains a watchlist manageable by CLI. When the user
+      mentions a security in conversation that is not on the watchlist,
+      the agent resolves the mention against the provider symbol search
+      API, presents the resolved candidate (canonical symbol, exchange,
+      official name) for explicit user confirmation, and on confirmation
+      adds the symbol and triggers its full 5-year backfill.
+    fit_criterion: >-
+      Offline test with a mocked resolver: (a) a resolvable mention
+      produces a confirmation prompt and is added only after simulated
+      confirmation; (b) an unresolvable mention produces an explicit
+      not-found report and leaves the watchlist unchanged; (c) a
+      fabricated ticker is never added (0 additions).
+    priority: Must
+    tradeoff: >-
+      The confirmation step adds one interaction per new symbol; it is
+      required to keep REQ-SI-INV-004 human-in-the-loop. Auto-add was
+      considered and rejected.
+    source: "Owner requirements discussion R4 item 1"
+    status: conceptual
+    depends_on: [REQ-SI-INV-004]
+    regression_trigger: true
+    regression_scope: [test/offline/test_watchlist.py]
+
+  - id: REQ-SI-FR-005
+    type: functional
+    statement: >-
+      A CLI command displays the current basic information snapshot for
+      a canonical symbol: latest EOD quote with data date and exchange,
+      company profile, key fundamentals summary, and recent significant
+      moves. The display path makes no LLM call.
+    fit_criterion: >-
+      Scripted CLI test: output content derives 100 percent from
+      database records; with the LLM provider endpoint unavailable the
+      snapshot still renders fully (exit code 0); every displayed numeric
+      carries a data date.
+    priority: Must
+    tradeoff: >-
+      Deterministic display guarantees freshness labels and zero
+      hallucination; conversational flexibility on this path is
+      sacrificed (conversational path exists via analysis runs).
+    source: "Owner requirements discussion R2 item 5"
+    status: conceptual
+    depends_on: [REQ-SI-FR-001, REQ-SI-FR-002]
+    regression_trigger: true
+    regression_scope: [test/offline/test_cli_info.py]
+
+  - id: REQ-SI-FR-006
+    type: functional
+    statement: >-
+      All financial indicators — valuation (PE, PB, PS), profitability
+      (ROE, margins), growth (year-over-year revenue and earnings), risk
+      (volatility, maximum drawdown) and any derived analytics — are
+      computed exclusively by deterministic code tools; the LLM never
+      performs arithmetic on market data.
+    fit_criterion: >-
+      (a) Structural gate: a static check fails if arithmetic on
+      market-data values occurs outside the computation module. (b)
+      Correctness: indicator outputs match golden-value fixtures within
+      1e-6.
+    priority: Must
+    tradeoff: >-
+      Separating computation from narration constrains the LLM to
+      interpretation (advisory role); less flexible answers accepted in
+      exchange for verifiability.
+    source: "Owner requirements discussion R2 item 3 (F2 clarification)"
+    status: conceptual
+    depends_on: []
+    regression_trigger: true
+    regression_scope: [test/offline/test_indicators.py]
+
+  - id: REQ-SI-FR-007
+    type: functional
+    statement: >-
+      The system provides semantic retrieval (vector search over the
+      embedded news corpus) returning news items with source URL and
+      publication date. Retrieval results reach the agent as structured
+      tool output and are the only news source the agent may cite.
+    fit_criterion: >-
+      On a fixture corpus, a query set of 20 known-target questions
+      returns the target article within top-5 for at least 80 percent of
+      questions; per-response retrieval precision is recorded.
+    priority: Must
+    tradeoff: >-
+      Vector-only retrieval chosen over hybrid keyword+vector for v1
+      simplicity; recall risk accepted, revisit trigger recorded in the
+      option ledger.
+    source: "Owner requirements discussion R2 item 5"
+    status: conceptual
+    depends_on: [REQ-SI-FR-003]
+    regression_trigger: true
+    regression_scope: [test/offline/test_retrieval.py]
+
+  - id: REQ-SI-FR-008
+    type: functional
+    statement: >-
+      The agent produces an analysis report for a symbol or topic that
+      combines deterministic computed facts, fundamentals, and retrieved
+      news. Every numeric value in the report cites its provenance, and
+      the report passes the REQ-SI-INV-001 post-check before being
+      stored or displayed.
+    fit_criterion: >-
+      On the fixed evaluation set, post-check numeric citation coverage
+      is 100 percent; a report failing post-check degrades to an explicit
+      data-unavailable statement and is never displayed as-is.
+    priority: Must
+    tradeoff: >-
+      Post-check adds latency to every report; guaranteed traceability
+      accepted as a core owner requirement.
+    source: "Owner requirements discussion R1 item 3 / R2 item 3"
+    status: conceptual
+    depends_on: [REQ-SI-FR-006, REQ-SI-FR-007, REQ-SI-INV-001]
+    regression_trigger: true
+    regression_scope: [test/offline/test_report_gate.py, test/live/test_eval_set.py]
+
+  - id: REQ-SI-FR-009
+    type: functional
+    statement: >-
+      For news items relevant to a watchlist symbol, the LLM produces a
+      structured event score (direction positive/neutral/negative,
+      strength 1-5, confidence 0.0-1.0, one-sentence rationale),
+      validated against a strict JSON schema before storage and stamped
+      with model and prompt version. The scale is locked for v1; changing
+      it is a requirement change under REQ-SI-GOV-003.
+    fit_criterion: >-
+      (a) Schema: 100 percent of stored scores validate; malformed LLM
+      output is rejected and logged, never silently repaired. (b)
+      Adversarial: injection-laden fixture news cannot produce scores
+      outside schema bounds or dictate fields.
+    priority: Should
+    tradeoff: >-
+      Locked minimal scale keeps event studies statistically comparable
+      over time; richer taxonomies deferred.
+    source: "Owner requirements discussion R2 item 3 (F2 clarification) / R3 item 6"
+    status: conceptual
+    depends_on: [REQ-SI-FR-003]
+    regression_trigger: true
+    regression_scope: [test/offline/test_event_scoring.py]
+
+  - id: REQ-SI-FR-010
+    type: functional
+    statement: >-
+      The system computes, deterministically, forward returns and
+      abnormal returns (versus the symbol benchmark index) over T+1,
+      T+5 (primary), and T+20 trading-day windows around scored events,
+      aligned to the respective exchange calendar; results are stored
+      with their computation parameters.
+    fit_criterion: >-
+      Golden-fixture test: forward and abnormal returns match
+      hand-computed values within 1e-6, including a fixture with a market
+      holiday inside the window; window alignment never counts
+      non-trading days.
+    priority: Should
+    tradeoff: >-
+      T+5 primary matches the weekly decision cadence (owner decision R4
+      item 6); T+1 and T+20 retained as secondary views at minor storage
+      cost.
+    source: "Owner requirements discussion R2 item 3 / R4 item 6"
+    status: conceptual
+    depends_on: [REQ-SI-FR-009, REQ-SI-FR-001]
+    regression_trigger: true
+    regression_scope: [test/offline/test_event_study.py]
+
+  - id: REQ-SI-FR-011
+    type: functional
+    statement: >-
+      Every session persists to sessions/<session_id>/ containing
+      session.jsonl (append-only message and tool-call stream),
+      artifacts/ (per-turn reports, never overwritten), and context/
+      (a per-response context snapshot). Each snapshot entry stores the
+      values as they entered the model context, plus a reference to the
+      source database row — later data changes (restatements,
+      backfills) never alter the audit record. The sessions index
+      records session_id, created_at, last_active_at, status
+      (active/closed), model, prompt version, profile, subject symbols,
+      and summary. Existing turns are never rewritten.
+    fit_criterion: >-
+      (a) Completeness: after a scripted session, all artifacts exist
+      and the index row exists with non-empty model/prompt/profile
+      fields. (b) Append-only: appending a turn leaves all prior content
+      byte-identical. (c) Reconstruction: replaying session.jsonl
+      reproduces the identical tool-call sequence. (d) Values-as-seen:
+      after mutating a source database row following a session, the
+      session's context snapshot content is unchanged.
+    priority: Must
+    tradeoff: >-
+      Full session persistence costs disk and I/O; accepted as the
+      foundation of traceability (core owner requirement). The single
+      Session model supersedes the earlier Run/Turn/Resume split (owner
+      decision: simplify to one concept).
+    source: "Owner requirements discussion R2 item 3; session-model revision R5; values-as-seen revision R6"
+    status: conceptual
+    depends_on: []
+    regression_trigger: true
+    regression_scope: [test/offline/test_session_persistence.py]
+
+  - id: REQ-SI-FR-012
+    type: functional
+    statement: >-
+      A CLI command lists sessions from the sessions index with
+      session_id, created and last-active dates, status, subject
+      symbols, and profile, filterable by symbol and date.
+    fit_criterion: >-
+      Scripted CLI test: with N seeded sessions, output lists exactly
+      the sessions matching the filter; phantom entries number 0.
+    priority: Must
+    tradeoff: "Index-only listing (no transcript loading); detail deferred to show."
+    source: "Owner requirements discussion R2 item 3; session-model revision R5"
+    status: conceptual
+    depends_on: [REQ-SI-FR-011]
+    regression_trigger: true
+    regression_scope: [test/offline/test_cli_sessions.py]
+
+  - id: REQ-SI-FR-013
+    type: functional
+    statement: >-
+      The CLI exposes subcommands (sync, watch, info, analyze, resume,
+      sessions, show, config, digest) and an interactive REPL mode. Bare
+      invocation starts a new REPL session. analyze stays in interactive
+      follow-up after the initial report unless --no-interactive is
+      given. REPL sessions are first-class sessions under REQ-SI-FR-011.
+    fit_criterion: >-
+      Scripted CLI test: every subcommand renders help without error;
+      the REPL accepts a scripted input file and produces a recorded
+      session with a sessions index row; analyze --no-interactive exits
+      after the report leaving a closed session.
+    priority: Must
+    tradeoff: "Hybrid surface serves both scripted and conversational use; pure-REPL rejected."
+    source: "Owner requirements discussion R3 item 4"
+    status: conceptual
+    depends_on: [REQ-SI-FR-011]
+    regression_trigger: true
+    regression_scope: [test/offline/test_cli_surface.py]
+
+  - id: REQ-SI-FR-014
+    type: functional
+    statement: >-
+      All agent output, reports, and CLI-facing text are in English. The
+      only permitted non-English content is Chinese stock names as
+      aliases inside the symbol map, which never appear in reports except
+      in the alias table context.
+    fit_criterion: >-
+      A language-detection check over sampled generated reports and CLI
+      strings flags a non-English ratio above 1 percent, excluding the
+      symbol alias table.
+    priority: Must
+    tradeoff: >-
+      Single language fixes the NLP stack and avoids encoding issues;
+      Chinese-language output consciously dropped by owner decision.
+    source: "Owner requirements discussion R4 item 4"
+    status: conceptual
+    depends_on: [REQ-SI-GOV-001]
+    regression_trigger: true
+    regression_scope: [test/offline/test_language_policy.py]
+
+  - id: REQ-SI-FR-015
+    type: functional
+    statement: >-
+      An optional crawling tool fetches web pages only from a configured
+      domain whitelist (financial media domains), extracts content via
+      per-domain extraction templates, validates against an extraction
+      schema, and stores the source URL and fetch timestamp. The agent
+      cannot fetch URLs outside the whitelist.
+    fit_criterion: >-
+      (a) Whitelist: fetch attempts to non-whitelisted domains fail
+      closed (0 successes, logged). (b) Template: fixture pages produce
+      schema-valid records; failed extraction stores nothing.
+    priority: Should
+    tradeoff: >-
+      Whitelist restricts coverage but bounds parsing fragility and the
+      injection surface; open crawling rejected.
+    source: "Owner requirements discussion R2 item 3 (F1 clarification)"
+    status: conceptual
+    depends_on: [REQ-SI-SEC-002]
+    regression_trigger: true
+    regression_scope: [test/offline/test_crawler.py]
+    notes: >-
+      Positioning (ADR-002): GDELT alone satisfies REQ-SI-FR-003 (Must);
+      the crawler is the extension path with a documented future role of
+      Chinese-media support (REQ-SI-FR-024).
+
+  - id: REQ-SI-FR-016
+    type: functional
+    statement: >-
+      A command generates a weekly digest per watchlist symbol
+      summarizing the week's price action, notable scored events, and
+      upcoming catalysts (earnings dates), rendered from deterministic
+      data with LLM narration under the same REQ-SI-INV-001 gate.
+    fit_criterion: >-
+      Scripted digest generation on seeded week data produces a digest whose
+      numerics
+      all pass post-check; missing-data sections render explicit
+      unavailable placeholders rather than being silently omitted.
+    priority: Should
+    tradeoff: "Serves the weekly cadence; not core to a single-run analysis loop."
+    source: "Owner requirements discussion R4 item 6"
+    status: conceptual
+    depends_on: [REQ-SI-FR-009]
+    regression_trigger: true
+    regression_scope: [test/offline/test_weekly_digest.py]
+
+  - id: REQ-SI-FR-017
+    type: functional
+    statement: >-
+      A display-level toggle converts presented prices and valuations
+      between native currency and HKD/USD using stored FX rates. No
+      analysis-side implicit conversion occurs.
+    fit_criterion: >-
+      Fixture FX test: converted values match golden values within 1e-6;
+      toggling changes display only (stored data identical).
+    priority: Could
+    tradeoff: "Presentation convenience; deferred behind analysis features."
+    source: "Owner requirements discussion R3 item 2.5 (currency note)"
+    status: conceptual
+    depends_on: [REQ-SI-FR-001]
+    regression_trigger: true
+    regression_scope: [test/offline/test_currency_display.py]
+
+  - id: REQ-SI-FR-018
+    type: functional
+    statement: >-
+      Optional bulk ingestion of all HK mainboard and US-listed symbols
+      beyond the watchlist, behind the same gap/backfill machinery and
+      the same completeness criteria.
+    fit_criterion: >-
+      A bulk sync of a fixture symbol universe achieves the same 0-day
+      calendar completeness as REQ-SI-FR-001 within the configured
+      concurrency budget.
+    priority: Could
+    tradeoff: >-
+      High engineering and rate-limit cost; deferred until watchlist
+      mode proves stable.
+    source: "Owner requirements discussion R3 item 3 (option A chosen)"
+    status: conceptual
+    depends_on: [REQ-SI-FR-001]
+    regression_trigger: true
+    regression_scope: [test/offline/test_bulk_sync.py]
+
+  - id: REQ-SI-FR-019
+    type: functional
+    statement: >-
+      During analysis sessions, model reasoning and generation stream to the
+      terminal as produced; reasoning content renders visually distinct
+      from report content; progress indication is present during long
+      tool operations.
+    fit_criterion: >-
+      Scripted terminal test: the first streamed chunk arrives strictly
+      before the final completion marker; reasoning and report streams
+      are separable by markers; a session without streaming fails the check.
+    priority: Must
+    tradeoff: >-
+      Streaming replaces latency budgets as the responsiveness mechanism
+      (performance entries deferred to future status); owner accepts long
+      analysis when progress is visible.
+    source: "Owner requirements discussion R4 item 4"
+    status: conceptual
+    depends_on: []
+    regression_trigger: true
+    regression_scope: [test/offline/test_streaming.py]
+
+  - id: REQ-SI-FR-020
+    type: functional
+    statement: >-
+      Each session executes under a user-selected analysis profile
+      (quick, standard, deep), chosen at session start and fixed for the
+      session lifetime; switching profiles requires a new session. The
+      profile governs context budget, news retrieval window and depth,
+      tool-pass limit, and model routing, and is recorded in the session
+      record. Default is standard.
+    fit_criterion: >-
+      (a) The same query under two profiles yields session records with
+      correct differing profile fields and differing budget envelopes.
+      (b) A profile mismatch or a mid-session switch attempt aborts with
+      an explicit error before any provider call.
+    priority: Must
+    tradeoff: >-
+      Three tiers cover quick checks versus comprehensive research
+      without per-session manual tuning; more tiers deferred.
+    source: "Owner requirements discussion R4 item 5"
+    status: conceptual
+    depends_on: [REQ-SI-FR-011, REQ-SI-COST-001]
+    regression_trigger: true
+    regression_scope: [test/offline/test_profiles.py]
+
+  - id: REQ-SI-FR-021
+    type: functional
+    statement: >-
+      Chat model and embedding model endpoints are user-configurable
+      OpenAI-compatible endpoints via CLI configuration. Provider and
+      model identifiers are stamped into every session record; switching
+      providers requires no code change.
+    fit_criterion: >-
+      Mocked-endpoint test: changing provider configuration changes
+      which endpoint receives calls, with zero code changes; session records
+      carry the configured identifiers.
+    priority: Must
+    tradeoff: >-
+      Promoted to Must per owner requirement (R4 item 2): provider
+      choice is a product feature. Note: DeepSeek currently exposes no
+      embedding endpoint; embedding provider must be configured
+      separately (verified at implementation).
+    source: "Owner requirements discussion R4 item 2"
+    status: conceptual
+    depends_on: [REQ-SI-FR-011]
+    regression_trigger: true
+    regression_scope: [test/offline/test_provider_config.py]
+
+  - id: REQ-SI-FR-022
+    type: functional
+    statement: >-
+      A CLI command renders a session for read-only review: the
+      turn-by-turn transcript, tool calls, the per-response context
+      records (values as seen, per REQ-SI-FR-011), per-turn report
+      artifacts, and post-check verdicts. The command performs no
+      provider calls and no state changes.
+    fit_criterion: >-
+      For a seeded session, show output enumerates exactly the tool
+      calls in session.jsonl (order and arguments match; 0 unexplained
+      calls), context records display snapshot values even after the
+      source database row is mutated, and the command completes with
+      providers unreachable (exit 0).
+    priority: Should
+    tradeoff: "Review convenience; read-only by design, no re-execution."
+    source: "Owner requirements discussion R1 item 3; session-model revision R5"
+    status: conceptual
+    depends_on: [REQ-SI-FR-011]
+    regression_trigger: true
+    regression_scope: [test/offline/test_show.py]
+
+  - id: REQ-SI-FR-023
+    type: functional
+    statement: >-
+      A CLI command resumes a closed session (default: the most recent):
+      conversation context is restored and new turns are appended to
+      the same session.jsonl (prior turns never rewritten); the session
+      record's status and last_active_at update. Every invariant gate
+      applies to each resumed response.
+    fit_criterion: >-
+      Scripted resume on a seeded closed session: (a) prior content is
+      byte-identical after appended turns; (b) a resume asking about a
+      number absent from session context yields an explicit
+      not-in-context answer, never a fabricated number; (c) omitting
+      the session id resumes the most recent session.
+    priority: Should
+    tradeoff: >-
+      Resume reuses the session rather than spawning child records
+      (owner decision: single Session model); audit integrity is
+      preserved by the append-only discipline of REQ-SI-FR-011.
+    source: "Owner requirements discussion R1 item 3; session-model revision R5"
+    status: conceptual
+    depends_on: [REQ-SI-FR-011, REQ-SI-INV-001]
+    regression_trigger: true
+    regression_scope: [test/offline/test_resume.py]
+
+  - id: REQ-SI-FR-024
+    type: functional
+    statement: >-
+      Optional ingestion of Chinese financial media with an API-based
+      translation stage storing English renditions alongside the
+      preserved original. Translated content is provenance-stamped as
+      model output, never as external fact.
+    fit_criterion: >-
+      Fixture pipeline: a Chinese article in, an English rendition
+      stored with the original preserved; the rendition passes the
+      language check; translation cost is recorded per article.
+    priority: Could
+    tradeoff: >-
+      Recovers Chinese-language HK coverage lost under the English-only
+      policy; adds cost and translation-fidelity risk, hence Could.
+    source: "Owner requirements discussion R4 item 4 (policy consequence)"
+    status: conceptual
+    depends_on: [REQ-SI-FR-003, REQ-SI-GOV-001]
+    regression_trigger: true
+    regression_scope: [test/offline/test_zh_news.py]
+
+  - id: REQ-SI-FR-025
+    type: functional
+    statement: >-
+      Optional local training of classical quantitative models (for
+      example gradient-boosting or regression-class models) on retained
+      event-score and market data for statistical research. Any model
+      output surfaced through the agent is presented as a statistical
+      estimate with explicit uncertainty and remains subject to
+      REQ-SI-INV-002 (never a deterministic prediction). Training-grade
+      dependencies are excluded from the MVP dependency set.
+    fit_criterion: >-
+      Reopen condition (option ledger): event-study statistics
+      accumulated for at least 6 months with scoring hit-rate
+      significantly above a random baseline; implementing this
+      requirement requires an ADR and an evaluation design before any
+      training code.
+    priority: Could
+    tradeoff: >-
+      Owner interest in local quant model training is parked behind a
+      measurable readiness condition; the event study (REQ-SI-FR-009 /
+      REQ-SI-FR-010) delivers retained-data quantitative value in the
+      MVP without training dependencies.
+    source: "Owner requirements discussion R6 item 3 (D2 round 1)"
+    status: future
+    depends_on: [REQ-SI-FR-009, REQ-SI-FR-010, REQ-SI-INV-002]
+    regression_trigger: false
+    regression_scope: []
+    notes: >-
+      Distinct from LLM/embedding providers, which remain API-only
+      (REQ-SI-FR-021); see glossary term Quant Model.
+
+  # -----------------------------------------------------------------
+  # Invariants (INV) — non-negotiable, zero-tolerance
+  # -----------------------------------------------------------------
+  - id: REQ-SI-INV-001
+    type: invariant
+    statement: >-
+      Every numeric value in agent output must trace to a database
+      record or a computed result registered in the response's context
+      snapshot. A deterministic post-check extracts numerics from every
+      assistant response and verifies each against that response's
+      context; on any mismatch the response degrades to an explicit
+      data-unavailable statement instead of displaying unverifiable
+      content.
+    fit_criterion: >-
+      Zero tolerance. Adversarial suite injecting fabricated numbers
+      into outputs must be rejected in 100 percent of attempts (no
+      fabricated number reaches display or storage); correctly cited
+      numbers must pass in 100 percent of cases. Boundary and boundary
+      plus/minus-one cases included.
+    priority: Must
+    zero_tolerance: true
+    tradeoff: >-
+      Non-negotiable. The post-check design includes an explicit
+      safe-list mechanism for non-data numerics (for example years);
+      this is part of the check design and can never bypass data
+      verification.
+    source: "Owner requirements discussion R1 item 1 / R2 item 3"
+    status: conceptual
+    depends_on: [REQ-SI-FR-011]
+    regression_trigger: true
+    regression_scope: [test/offline/test_inv1_postcheck.py]
+
+  - id: REQ-SI-INV-002
+    type: invariant
+    statement: >-
+      Agent output must not contain deterministic causal claims between
+      events and price movements, nor deterministic price predictions.
+      Speculative judgments must carry an explicit hypothesis label.
+    fit_criterion: >-
+      Zero tolerance. An adversarial prompt suite attempting to elicit
+      predictions or causal assertions yields 0 violating outputs that
+      pass the deterministic filter; filter precision and recall are
+      recorded in the evaluation logbook.
+    priority: Must
+    zero_tolerance: true
+    tradeoff: >-
+      Non-negotiable (epistemic safety). Analysis value is preserved by
+      allowing labeled hypotheses and statistical associations, which
+      the event study provides.
+    source: "Owner requirements discussion R3 item 7 (INV-2 revision accepted)"
+    status: conceptual
+    depends_on: []
+    regression_trigger: true
+    regression_scope: [test/offline/test_inv2_filter.py, test/live/test_eval_set.py]
+
+  - id: REQ-SI-INV-003
+    type: invariant
+    statement: >-
+      On data gaps, provider or API failures, or validation failures,
+      the system reports the failure explicitly (what failed, which
+      source, what is missing) and produces no substitute values — never
+      fabricated, never stale-presented-as-fresh, never silently
+      estimated.
+    fit_criterion: >-
+      Zero tolerance. A fault-injection suite (API error, missing field,
+      stale record, schema-invalid payload) yields 0 fabricated or
+      substituted values across outputs; every injected fault produces a
+      visible failure report.
+    priority: Must
+    zero_tolerance: true
+    tradeoff: "Non-negotiable. Failure visibility prioritized over complete-looking reports."
+    source: "Owner requirements discussion R2 item 4 (accepted design)"
+    status: conceptual
+    depends_on: []
+    regression_trigger: true
+    regression_scope: [test/offline/test_inv3_failsafe.py]
+
+  - id: REQ-SI-INV-004
+    type: invariant
+    statement: >-
+      A security enters the watchlist only through a symbol resolution
+      verified against the provider symbol search API with explicit user
+      confirmation. The agent must never add, backfill, or analyze a
+      guessed or unverified identifier.
+    fit_criterion: >-
+      Zero tolerance. An adversarial suite (fabricated tickers,
+      wrong-exchange collisions, partial names) yields 0 watchlist
+      additions without verified resolution and confirmation.
+    priority: Must
+    zero_tolerance: true
+    tradeoff: "Non-negotiable. Prevents wrong-symbol analysis and data pollution at the cost of one confirmation step."
+    source: "Owner requirements discussion R4 item 1 / R4 item 3 (confirmed)"
+    status: conceptual
+    depends_on: [REQ-SI-FR-004]
+    regression_trigger: true
+    regression_scope: [test/offline/test_inv4_symbol_gate.py]
+
+  # -----------------------------------------------------------------
+  # Quality attributes (QA)
+  # -----------------------------------------------------------------
+  - id: REQ-SI-QA-001
+    type: quality
+    statement: >-
+      Retrieval-augmented answers meet a faithfulness threshold on a
+      fixed, version-controlled evaluation set.
+    fit_criterion: >-
+      Semantic evaluation gate replays the evaluation set on any prompt
+      or model change; below-threshold results block the change.
+    metric: faithfulness (fraction of answer claims supported by retrieved context)
+    threshold: ">= 0.6 (initial; raising requires a requirement change)"
+    verification: test/live/test_eval_set.py
+    priority: Must
+    tradeoff: >-
+      0.6 is deliberately modest for v1 cold start; raising it is an
+      explicit governance change, never silent tuning.
+    source: "Methodology AI-requirement category 2 (output quality), mapped in R2"
+    status: conceptual
+    depends_on: [REQ-SI-GOV-003]
+    regression_trigger: true
+    regression_scope: [test/live/test_eval_set.py]
+
+  - id: REQ-SI-QA-002
+    type: quality
+    statement: "News retrieval results are relevant to the query intent."
+    fit_criterion: "Fixture query set evaluated every regression run."
+    metric: relevance@5
+    threshold: ">= 0.8"
+    verification: test/offline/test_retrieval.py
+    priority: Should
+    tradeoff: "Vector-only recall accepted for v1 (see REQ-SI-FR-007 tradeoff)."
+    source: "Owner requirements discussion R2 item 5"
+    status: conceptual
+    depends_on: [REQ-SI-FR-007]
+    regression_trigger: true
+    regression_scope: [test/offline/test_retrieval.py]
+
+  - id: REQ-SI-QA-003
+    type: quality
+    statement: "Market data completeness per active watchlist symbol."
+    fit_criterion: "Sync job self-check compares stored bars to calendar expectations."
+    metric: stored_bars / expected_trading_days (trailing 5y)
+    threshold: ">= 0.99"
+    verification: test/offline/test_ingest_market.py
+    priority: Must
+    tradeoff: "Residual 1% tolerated for source-side history anomalies; gaps are reported, never hidden."
+    source: "Owner requirements discussion R3 item 3"
+    status: conceptual
+    depends_on: [REQ-SI-FR-001]
+    regression_trigger: true
+    regression_scope: [test/offline/test_ingest_market.py]
+
+  - id: REQ-SI-QA-004
+    type: quality
+    statement: "Numeric citation coverage in final reports (measurement companion of REQ-SI-INV-001)."
+    fit_criterion: "Post-check log aggregated per run; coverage below 1.0 degrades the report."
+    metric: verified_numerics / total_numerics per report
+    threshold: "= 1.0"
+    verification: test/offline/test_report_gate.py
+    priority: Must
+    tradeoff: "None — measurement side of an invariant."
+    source: "Owner requirements discussion R1 item 1"
+    status: conceptual
+    depends_on: [REQ-SI-INV-001]
+    regression_trigger: true
+    regression_scope: [test/offline/test_report_gate.py]
+
+  # -----------------------------------------------------------------
+  # Performance (PERF) — deferred, status: future
+  # -----------------------------------------------------------------
+  - id: REQ-SI-PERF-001
+    type: performance
+    statement: "Latency of the non-LLM basic information query."
+    fit_criterion: "Scripted CLI timing once thresholds are set."
+    metric: wall-clock seconds, p95
+    threshold: "TBD (provisional: < 5 s)"
+    verification: test/offline/test_cli_info.py (timing mode)
+    priority: Should
+    tradeoff: >-
+      Deferred per owner decision R4 item 4: responsiveness is handled
+      by streaming (REQ-SI-FR-019); thresholds to be set once real
+      workloads exist.
+    source: "Owner requirements discussion R4 item 4"
+    status: future
+    depends_on: [REQ-SI-FR-005]
+    regression_trigger: false
+    regression_scope: []
+
+  - id: REQ-SI-PERF-002
+    type: performance
+    statement: "End-to-end analysis session duration under the standard profile."
+    fit_criterion: "Scripted timing on the evaluation set once thresholds are set."
+    metric: wall-clock seconds, p50
+    threshold: "TBD (provisional: < 120 s)"
+    verification: test/live/test_eval_set.py (timing mode)
+    priority: Should
+    tradeoff: "Deferred; owner accepts long analysis with visible progress."
+    source: "Owner requirements discussion R4 item 4"
+    status: future
+    depends_on: [REQ-SI-FR-019]
+    regression_trigger: false
+    regression_scope: []
+
+  - id: REQ-SI-PERF-003
+    type: performance
+    statement: "Daily sync duration for a 100-symbol watchlist."
+    fit_criterion: "Scripted sync timing once thresholds are set."
+    metric: wall-clock minutes
+    threshold: "TBD (provisional: < 10 min)"
+    verification: test/offline/test_ingest_market.py (timing mode)
+    priority: Should
+    tradeoff: "Deferred; batch window acceptable for nightly sync."
+    source: "Owner requirements discussion R4 item 4"
+    status: future
+    depends_on: [REQ-SI-FR-001]
+    regression_trigger: false
+    regression_scope: []
+
+  # -----------------------------------------------------------------
+  # Cost (COST)
+  # -----------------------------------------------------------------
+  - id: REQ-SI-COST-001
+    type: cost
+    statement: >-
+      Per-session token budgets are tiered by analysis profile and
+      user-configurable. Budget overflow triggers compact-and-retry
+      once per response, then an explicit budget-exceeded abort with a
+      clear report.
+    fit_criterion: >-
+      Budget accounting is recorded per session; the overflow path is
+      exercised with a mocked provider.
+    metric: tokens per session
+    threshold: "quick <= 30000, standard <= 100000, deep <= 400000 (configurable defaults)"
+    verification: test/offline/test_budget_overflow.py
+    priority: Must
+    tradeoff: >-
+      Owner states cost is not a primary concern (R4 item 5); budgets
+      retained as generous safety rails. No global monthly ceiling in
+      v1.
+    source: "Owner requirements discussion R4 item 5"
+    status: conceptual
+    depends_on: [REQ-SI-FR-020]
+    regression_trigger: true
+    regression_scope: [test/offline/test_budget_overflow.py]
+
+  - id: REQ-SI-COST-002
+    type: cost
+    statement: >-
+      Every provider call's token usage (prompt and completion) is
+      logged to the session record; cumulative usage is queryable per
+      session, symbol, and profile.
+    fit_criterion: "Usage assertions over a scripted multi-session suite."
+    metric: provider calls with logged usage
+    threshold: "= 100%"
+    verification: test/offline/test_run_persistence.py
+    priority: Should
+    tradeoff: "Observability before enforcement; no caps beyond COST-001 in v1."
+    source: "Methodology AI-requirement category 1 (cost governance), mapped in R2"
+    status: conceptual
+    depends_on: [REQ-SI-FR-011]
+    regression_trigger: true
+    regression_scope: [test/offline/test_session_persistence.py]
+
+  # -----------------------------------------------------------------
+  # Governance (GOV)
+  # -----------------------------------------------------------------
+  - id: REQ-SI-GOV-001
+    type: governance
+    statement: >-
+      All project artifacts, documentation, stored data, and agent
+      output are written in English. Sole exception: Chinese stock names
+      as aliases in the symbol map.
+    fit_criterion: >-
+      Language check over documentation, code strings, and sampled
+      outputs; non-English ratio at most 1 percent, excluding the alias
+      table.
+    priority: Must
+    tradeoff: "Fixes the language stack and encoding safety; Chinese content deferred to REQ-SI-FR-024."
+    source: "Owner requirements discussion R4 item 4"
+    status: conceptual
+    depends_on: []
+    regression_trigger: true
+    regression_scope: [test/offline/test_language_policy.py]
+
+  - id: REQ-SI-GOV-002
+    type: governance
+    statement: >-
+      Every change set touching source code or prompts must include an
+      AI-use log update in the same change set; CI blocks merges that
+      modify code or prompt paths without an AI-use log diff.
+    fit_criterion: >-
+      Gate test: a synthetic change modifying src/ or prompts/ without
+      an AI-use log diff fails the check; with the diff it passes.
+    priority: Must
+    tradeoff: "Process overhead per change accepted as auditability requirement (course D1 gate)."
+    source: "Course spec D7 blocking gate 6"
+    status: conceptual
+    depends_on: []
+    regression_trigger: true
+    regression_scope: [.github/workflows/ci.yml]
+
+  - id: REQ-SI-GOV-003
+    type: governance
+    statement: >-
+      Runtime prompts are versioned artifacts. Any prompt change is
+      treated as a requirement change: reviewed, replayed against the
+      evaluation set (semantic evaluation gate), and re-approved before
+      reaching production.
+    fit_criterion: >-
+      Gate test: a prompt file change without an evaluation-set replay
+      result blocks merge; the version bump is recorded in prompts/ and
+      referenced in session records thereafter.
+    priority: Must
+    tradeoff: "Prompt agility sacrificed for eval-gated stability (methodology: changing a prompt is changing a requirement)."
+    source: "Methodology section 5 (prompts as requirement artifacts); R2 item 6"
+    status: conceptual
+    depends_on: [REQ-SI-QA-001]
+    regression_trigger: true
+    regression_scope: [.github/workflows/ci.yml]
+
+  - id: REQ-SI-GOV-004
+    type: governance
+    statement: >-
+      The watchlist is capped at 100 active symbols. Exceeding the cap
+      requires removing symbols first; the system raises an explicit
+      error otherwise.
+    fit_criterion: "Adding the 101st symbol fails with an explicit error; exactly 100 additions succeed."
+    priority: Must
+    tradeoff: "Cap bounds sync cost and keeps the watchlist meaningful for one person's weekly cadence."
+    source: "Owner requirements discussion R3 item 3 (option A)"
+    status: conceptual
+    depends_on: [REQ-SI-FR-004]
+    regression_trigger: true
+    regression_scope: [test/offline/test_watchlist.py]
+
+  - id: REQ-SI-GOV-005
+    type: governance
+    statement: >-
+      Every session record carries model identifier, prompt version,
+      analysis profile, and provider configuration stamps; turns
+      inherit their session's provenance.
+    fit_criterion: >-
+      Zero session records with missing provenance fields across a
+      scripted multi-session suite, including resumed sessions.
+    priority: Must
+    tradeoff: "None — consolidated from FR-011/FR-021; listed separately so CI can check completeness directly."
+    source: "Course D2 ADR context requirements; R4 item 2"
+    status: conceptual
+    depends_on: [REQ-SI-FR-011, REQ-SI-FR-021]
+    regression_trigger: true
+    regression_scope: [test/offline/test_session_persistence.py]
+
+  - id: REQ-SI-GOV-006
+    type: governance
+    statement: >-
+      No code change merges unless the tests for the change were
+      approved before implementation began. Every implementation PR
+      references an approved test-plan artifact (docs/test-plans/
+      TP-NNN.md with status approved); CI blocks PRs touching src/ or
+      test/ that lack a valid reference. Approval preceding
+      implementation is reviewer-verified from file history.
+    fit_criterion: >-
+      Gate test: a synthetic PR modifying src/ without a test-plan
+      reference fails the approval gate; with a valid approved
+      reference it passes; the gate script rejects TP files whose
+      status is not approved.
+    priority: Must
+    tradeoff: >-
+      Adds one artifact and one PR discipline per change (course
+      blocking gate D7-1); mechanical ordering check is approximated
+      by reviewer verification of git history - full automation
+      rejected as over-engineering for a course team.
+    source: "Course D7 blocking gate 1; D4 discussion round 10 (option a chosen)"
+    status: conceptual
+    depends_on: []
+    regression_trigger: true
+    regression_scope: [.github/workflows/ci.yml, tools/checks/testplan_gate.py]
+
+  # -----------------------------------------------------------------
+  # Security (SEC)
+  # -----------------------------------------------------------------
+  - id: REQ-SI-SEC-001
+    type: security
+    statement: >-
+      API keys and credentials are supplied via environment variables
+      or a local untracked configuration file. No secret material is
+      committed to the repository.
+    fit_criterion: >-
+      Secret scan of working tree and history yields 0 matches for
+      configured key patterns; a synthetic commit containing a fake key
+      is rejected by the CI scan.
+    priority: Must
+    tradeoff: "None — non-negotiable hygiene."
+    source: "Standard security baseline; R2 item 5 storage discussion"
+    status: conceptual
+    depends_on: []
+    regression_trigger: true
+    regression_scope: [.github/workflows/ci.yml]
+
+  - id: REQ-SI-SEC-002
+    type: security
+    statement: >-
+      News content is untrusted input. Layer one: sanitization
+      neutralizes instruction-like content before it enters model
+      context. Layer two: all model outputs touching analysis pass
+      schema validation. Layer three: deterministic policy execution
+      makes final decisions. No single layer is bypassable.
+    fit_criterion: >-
+      Adversarial corpus with embedded injection payloads: 0 payloads
+      alter tool selection, watchlist state, or output policy; malformed
+      outputs fail closed.
+    priority: Must
+    tradeoff: >-
+      Three-layer defense adds pipeline stages; required by the Type-C
+      classification (methodology risk list group B).
+    source: "Methodology section 7.2 item 16; R2 item 4"
+    status: conceptual
+    depends_on: []
+    regression_trigger: true
+    regression_scope: [test/offline/test_injection_suite.py]
+
+  - id: REQ-SI-SEC-003
+    type: security
+    statement: >-
+      All data is stored locally. Outbound network traffic is limited
+      to whitelisted provider and data endpoints; the agent performs no
+      other network access.
+    fit_criterion: >-
+      Sandboxed network test: requests to non-whitelisted hosts fail
+      (0 successful egress); offline mode completes all local
+      operations.
+    priority: Must
+    tradeoff: "Local-first limits collaboration features; consistent with single-owner analysis tool."
+    source: "Owner requirements discussion R2 item 5"
+    status: conceptual
+    depends_on: []
+    regression_trigger: true
+    regression_scope: [test/offline/test_egress.py]
