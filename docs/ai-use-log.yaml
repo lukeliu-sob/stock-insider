@@ -1,0 +1,408 @@
+# =====================================================================
+# AI-Use Log — Stock Insider (D1)
+# Mandatory audit record. Gate (REQ-SI-GOV-002): any change set touching
+# src/ or prompts/ must include a diff to this file or CI blocks merge.
+# Entries are append-only; corrections add a new entry, never rewrite.
+# =====================================================================
+
+schema: 1
+project: Stock Insider
+convention: >-
+  role=ai means an AI agent performed the work; role=human means the
+  owner/team performed the work. Every AI-authored artifact requires a
+  human decision entry before it is considered approved.
+
+sessions:
+
+  - id: AILOG-0001
+    date: "2026-09-15"
+    tool: "pi coding agent (LLM session)"
+    role: ai
+    task: >-
+      Requirements elicitation discussion, rounds 1-4: restated and
+      structured the owner's initial feature description; proposed
+      requirement categories, candidate invariants, data-source and
+      storage options, MoSCoW draft; surfaced cross-cutting implications
+      (multi-market symbology, exchange calendars, multilingual
+      embeddings, English-only policy); produced requirements baseline
+      draft v0.1 and v0.2 in chat for review. No files written during
+      discussion.
+    artifacts: []
+    human_decision: >-
+      Owner made all decisions across four rounds: HK+US markets;
+      watchlist mode with conversational addition; daily EOD, 5y bars,
+      2y news retention; hybrid CLI; English-only policy (HK Chinese
+      names as aliases only); analysis-only scope (no trading);
+      weekly decision cadence; commercial API accepted for HK
+      fundamentals (vendor deferred to architecture); API-only models
+      with user-configurable providers; performance requirements
+      deferred (streaming instead); tiered analysis profiles instead of
+      flat cost caps; INV-1/INV-2'/INV-3/INV-4 accepted.
+    status: approved
+
+  - id: AILOG-0002
+    date: "2026-09-15"
+    tool: "pi coding agent (LLM session)"
+    role: ai
+    task: >-
+      Authored D1 deliverables from the confirmed baseline draft v0.2:
+      docs/req/requirements.yaml (45 entries: 24 FR, 4 INV, 4 QA,
+      3 PERF-future, 2 COST, 5 GOV, 3 SEC), docs/req/req-schema.json
+      (CI validation schema with invariant and NFR conditionals),
+      docs/req/glossary.md (25 terms with code mappings + 3 pending),
+      and this log.
+    artifacts:
+      - docs/req/requirements.yaml
+      - docs/req/req-schema.json
+      - docs/req/glossary.md
+      - docs/ai-use-log.yaml
+    human_decision: >-
+      Owner approved baseline draft v0.2 content and authorized writing
+      D1 artifacts (owner instruction: "confirmed; begin writing D1").
+      Final read-through review of the written files: pending.
+    status: pending-review
+
+  - id: AILOG-0003
+    date: "2026-09-15"
+    tool: "pi coding agent (LLM session)"
+    role: ai
+    task: >-
+      Applied registry revision v0.2.0 -> v0.3.0: unified the
+      Run/Turn/Resume split into a single Session model per owner
+      decision. Rewrote FR-011 (session persistence, append-only,
+      per-turn artifacts), FR-012 (sessions listing), FR-013 (CLI
+      surface: analyze stays interactive, resume/sessions/show),
+      FR-020 (profile locked per session), FR-022 (read-only show),
+      FR-023 (session resume), INV-001 wording (per-response
+      post-check), COST-001/002 (session-bound budgets and usage),
+      GOV-003/GOV-005 (session-record wording), meta scope wording;
+      updated glossary (Session term replaces Agent Run, Follow-up
+      entry removed and merged into Session, Replay renamed to Session
+      Review, code mappings moved to sessions/ paths); paraphrased one
+      non-English quote in AILOG-0002 for language-policy compliance;
+      appended this entry.
+    artifacts:
+      - docs/req/requirements.yaml
+      - docs/req/glossary.md
+      - docs/ai-use-log.yaml
+    human_decision: >-
+      Owner identified an inconsistency among the glossary Run
+      definition, FR-013 REPL semantics, and FR-023 ask semantics
+      (analysis should support continued conversation, not one-shot
+      execution). Owner ruled to merge all concepts into a single
+      Session model where follow-ups and resume are naturally included,
+      and confirmed: per-turn report artifacts (never overwritten);
+      profile locked per session (switching requires a new session);
+      bare invocation starts a new session with explicit resume for
+      continuation.
+    status: pending-review
+
+  - id: AILOG-0004
+    date: "2026-09-15"
+    tool: "pi coding agent (LLM session)"
+    role: ai
+    task: >-
+      D2 architecture discussion (round 1): structured the owner's
+      two-part agent-side/data-side proposal around a tool-boundary
+      topology; produced and got approval for the blueprint structure
+      preview. Applied registry revision v0.3.0 -> v0.3.1 (FR-011 and
+      FR-022 rewritten for the values-as-seen snapshot discipline);
+      appended REQ-SI-FR-025 (local quant model training, Could/future
+      with option-ledger reopen condition); added glossary terms
+      (Authority Boundary, Context Assembly, Egress Whitelist, Quant
+      Model, Slash Command, Tool Registry, Values-as-Seen); authored
+      architecture-blueprint.md v0.1.0 (course D2.1).
+    artifacts:
+      - docs/req/requirements.yaml
+      - docs/req/glossary.md
+      - docs/ai-use-log.yaml
+      - architecture-blueprint.md
+    human_decision: >-
+      Owner confirmed six architecture decisions: data side as an
+      in-process Python package (no daemon); quant model training
+      deferred to Could/future with a measurable reopen condition;
+      web reading tiers A/B/C (static fetch Should, headless browser
+      Could, real-browser bridge Won't on security grounds);
+      values-as-seen context snapshots (registry micro-revision);
+      vector-store candidates sqlite-vec vs chromadb both enter the
+      evaluation table; initial tool catalog of ~10-12 tools confirmed.
+      Owner approved the blueprint structure preview and instructed
+      that all documents be written in English.
+    status: pending-review
+
+  - id: AILOG-0005
+    date: "2026-09-15"
+    tool: "pi coding agent (LLM session)"
+    role: ai
+    task: >-
+      D2 round 2 discussion and ADR authoring: presented candidate
+      analyses (data vendors, vector stores, context-engineering
+      parameters, ADR split) and full English ADR drafts; on owner
+      approval, wrote docs/architecture/adr/001-runtime-architecture-
+      and-context-engineering.md, 002-data-source-vendor.md, and
+      003-storage-and-vector-store.md; removed the placeholder
+      001-architecture-choice.md; added glossary terms (Embedding —
+      added after the owner asked what embedding means, Model Routing,
+      Provenance Ledger); added the FR-015 positioning note (registry
+      v0.3.1 unchanged in structure); appended this entry.
+    artifacts:
+      - docs/architecture/adr/001-runtime-architecture-and-context-engineering.md
+      - docs/architecture/adr/002-data-source-vendor.md
+      - docs/architecture/adr/003-storage-and-vector-store.md
+      - docs/req/glossary.md
+      - docs/req/requirements.yaml
+      - docs/ai-use-log.yaml
+    human_decision: >-
+      Owner ruled: EODHD as commercial source with paid-tier upgrade on
+      sustained rate limiting; sqlite-vec for unified single-file
+      database maintenance; compaction at /compact or a configurable
+      threshold defaulting to 80% of context budget; default model for
+      all roles including embedding is deepseek-v4.1-flash with
+      per-profile overrides; ADR split 001/002/003 accepted; news plan
+      is GDELT plus the whitelist crawler (crawler's future role:
+      Chinese sources), Finnhub dropped; typer+rich, runtime
+      directories, and minimal-dependency policy accepted. Owner
+      approved the three ADR drafts for writing.
+    status: pending-review
+
+  - id: AILOG-0006
+    date: "2026-09-15"
+    tool: "pi coding agent (LLM session)"
+    role: ai
+    task: >-
+      Authored docs/architecture/invariants.md (D2.3: per-invariant
+      statement, source requirement, enforcing components, verification
+      design, and concrete runtime fallback actions including escalation
+      thresholds) and docs/architecture/trace-matrix.md (D2.4: all 46
+      registry entries mapped to components, tests, and runtime
+      monitors, with the five-stream monitor legend). Fixed an ADR-001
+      cross-reference typo (AILOG range); resolved the glossary
+      "Budget compaction" pending term into the defined term
+      "Compaction" (ADR-001 6.3-6.4); appended this entry.
+    artifacts:
+      - docs/architecture/invariants.md
+      - docs/architecture/trace-matrix.md
+      - docs/architecture/adr/001-runtime-architecture-and-context-engineering.md
+      - docs/req/glossary.md
+      - docs/ai-use-log.yaml
+    human_decision: >-
+      Owner instructed continuation (owner instruction: "continue")
+      after being informed that these two artifacts are mechanical
+      derivations from existing decisions and require no new decisions.
+    status: pending-review
+
+  - id: AILOG-0007
+    date: "2026-09-15"
+    tool: "pi coding agent (LLM session)"
+    role: ai
+    task: >-
+      Authored the remaining seven D2 artifacts per owner approval of
+      the discussion proposals (R8): memory-design.md (six-class state
+      inventory, retention decisions, interruption and cross-version
+      policies, privacy), permission-model.md (default-deny role-path
+      matrix for the coding agent, safety-critical path rules,
+      enforcement chain), runtime-policy-catalog.md (17 runtime policy
+      rows P-01..P-17 plus CI-gate reference), evaluation-table.md (six
+      weighted candidate comparisons summarizing ADR-001/002/003),
+      risk-list.md (R-01..R-12 with review triggers), option-ledger.md
+      (rejected/deferred options with reconsideration conditions), and
+      evaluation-logbook.md (qualitative Q-01..Q-04 entries; empirical
+      E-entry template for future eval runs). Added the glossary term
+      Incomplete Turn; appended this entry.
+    artifacts:
+      - docs/architecture/memory-design.md
+      - docs/architecture/permission-model.md
+      - docs/architecture/runtime-policy-catalog.md
+      - docs/architecture/evaluation-table.md
+      - docs/architecture/risk-list.md
+      - docs/architecture/option-ledger.md
+      - docs/architecture/evaluation-logbook.md
+      - docs/req/glossary.md
+      - docs/ai-use-log.yaml
+    human_decision: >-
+      Owner accepted all four proposed policies (R8): market bars
+      retained indefinitely (5y is the backfill minimum, not a pruning
+      horizon); news full text and embeddings expire at 2 years while
+      event scores with headline snapshots and URLs are retained
+      indefinitely; embedding-model change requires a full vector index
+      rebuild; docs/req/ and docs/architecture/ are read-only for the
+      coding agent's Build role (option a - owner-authored changes,
+      AI-drafted content recorded in the AI-use log).
+    status: pending-review
+
+  - id: AILOG-0008
+    date: "2026-09-15"
+    tool: "pi coding agent (LLM session)"
+    role: ai
+    task: >-
+      Authored D3 coding-governance artifacts: AGENTS.md (router-style
+      entry point, task-based reading protocol, access map,
+      dependency-direction rules, stop-and-ask protocol);
+      docs/code-governance/structural-constraints.md (module-element
+      bijection, baseline discipline, docstring traceability
+      convention, authority boundaries in code);
+      docs/code-governance/mcp-tool-manifest.md (development-time
+      tool-by-role matrix, explicitly distinct from the runtime tool
+      registry); .opencode/permissions.jsonc (machine encoding of the
+      permission matrix with guards G1-G4); .opencode/rules.md and
+      .agent/rules.md (human-only behavioral rules and project
+      covenant). Harness adaptation per owner instruction: verified
+      pi's native capabilities by reading pi's documentation
+      (AGENTS.md auto-load, .pi/extensions/ tool_call interception,
+      project trust model), then implemented .pi/extensions/
+      governance-gate.ts (executable permission gate: blocks read on
+      no-access paths, write/edit outside RW paths, heuristic bash
+      guard) and docs/code-governance/pi-adaptation.md (opencode-to-pi
+      mapping table, first-run setup, honest enforcement limits,
+      parity rule). Added .gitignore for runtime state and secrets;
+      appended this entry.
+    artifacts:
+      - AGENTS.md
+      - docs/code-governance/structural-constraints.md
+      - docs/code-governance/mcp-tool-manifest.md
+      - docs/code-governance/pi-adaptation.md
+      - .opencode/permissions.jsonc
+      - .opencode/rules.md
+      - .agent/rules.md
+      - .pi/extensions/governance-gate.ts
+      - .gitignore
+      - docs/ai-use-log.yaml
+    human_decision: >-
+      Owner approved the AGENTS.md router design (context budget of
+      at most 200 lines, task-based reading matrix, grep-based
+      registry lookup, zero-duplication discipline) and confirmed the
+      full English policy including docstring requirement-ID
+      references. Owner additionally required a pi adaptation of the
+      opencode-side constraints because some team members do not use
+      opencode.
+    status: pending-review
+
+  - id: AILOG-0009
+    date: "2026-09-15"
+    tool: "pi coding agent (LLM session)"
+    role: ai
+    task: >-
+      Role-confusion audit and fix in AGENTS.md, triggered by an owner
+      review finding: the non-negotiables section mixed product-runtime
+      invariants (INV-001..004, which bind the financial agent being
+      built) with development-time rules (which bind the coding agent
+      reading the file). Restructured section 2 into 2a (development
+      rules binding the coding agent, including a clarified dual-scope
+      English-only rule) and 2b (product invariants framed as
+      constraints on the generated code, with derived coding rules);
+      added the framing note under the section 3 reading table and an
+      explicit qualifier in section 7. Audited all other governance
+      files (.opencode/rules.md, .agent/rules.md, structural-
+      constraints.md, mcp-tool-manifest.md, permissions.jsonc,
+      governance-gate.ts, pi-adaptation.md, D2 artifacts) for the same
+      confusion: none found - each has a single correct audience.
+      Appended this entry.
+    artifacts:
+      - AGENTS.md
+      - docs/ai-use-log.yaml
+    human_decision: >-
+      Owner identified the role confusion in AGENTS.md section 2
+      during review (product-agent constraints presented as coding-
+      agent rules) and instructed a full audit for similar confusion
+      plus a fix. Owner approved the proposed modification plan
+      (2a/2b split, three companion edits, AI-log record).
+    status: applied
+
+  - id: AILOG-0010
+    date: "2026-09-15"
+    tool: "pi coding agent (LLM session)"
+    role: ai
+    task: >-
+      Authored D4 verification-governance artifacts per owner approval
+      of the round-10 plan: docs/code-governance/verification-
+      constraints.md (ten rules, test-plan approval process, CI job
+      map, guard-removal discipline); .github/workflows/ci.yml (six
+      jobs: structural, quality, regression, gates, approval, eval -
+      implementing all six course blocking gates); docs/review-memo.md
+      (per-PR template with verdict rules); docs/debt-register.md
+      (eight-category register seeded with DE-01..DE-06);
+      docs/bug-diary.md (template plus five real process-phase seed
+      entries BD-001..BD-005, including the owner-caught AGENTS.md role
+      confusion); docs/test-plans/TEMPLATE.md and CODEOWNERS; nine
+      standalone structural/gate scripts under tools/checks/ with
+      README. Co-evolution edits: registry v0.3.2 with new GOV-006
+      (test approval gate), trace-matrix GOV-006 row and baseline bump,
+      blueprint baseline bump, AGENTS.md access-map/test-plan/structural
+      bullet updates, permission-model and permissions.jsonc tools/
+      rows, glossary Test Plan term; appended this entry. The new
+      top-level tools/ directory was owner-approved in the same round
+      (decision 1: independent scripts).
+    artifacts:
+      - docs/code-governance/verification-constraints.md
+      - .github/workflows/ci.yml
+      - docs/review-memo.md
+      - docs/debt-register.md
+      - docs/bug-diary.md
+      - docs/test-plans/TEMPLATE.md
+      - CODEOWNERS
+      - tools/checks/*.py
+      - tools/checks/README.md
+      - docs/req/requirements.yaml
+      - docs/architecture/trace-matrix.md
+      - architecture-blueprint.md
+      - AGENTS.md
+      - docs/architecture/permission-model.md
+      - .opencode/permissions.jsonc
+      - docs/req/glossary.md
+      - docs/ai-use-log.yaml
+    human_decision: >-
+      Owner approved the D4 initial plan with six rulings: structural
+      scripts as independent tools/checks (new top-level directory);
+      test approval gate via file-based test plans (option a); eval
+      gate with repo-secret provider key; ruff + mypy + pytest +
+      import-boundary toolchain; coverage report-only without
+      thresholds; bug diary seeded with the five real process
+      incidents.
+    status: pending-review
+
+  - id: AILOG-0011
+    date: "2026-09-15"
+    tool: "pi coding agent (LLM session)"
+    role: ai
+    task: >-
+      First live catch by the language gate: running
+      tools/checks/language_policy.py after D4 authoring flagged a
+      leftover Chinese owner-instruction quote in AILOG-0006 (same
+      class as the AILOG-0002 paraphrase fixed earlier, previously
+      missed). Paraphrased to English; all nine gate scripts re-run
+      green. No other changes.
+    artifacts:
+      - docs/ai-use-log.yaml
+    human_decision: "None required (self-check catch; gate operating as designed)"
+    status: applied
+
+  - id: AILOG-0012
+    date: "2026-09-15"
+    tool: "pi coding agent (LLM session)"
+    role: ai
+    task: >-
+      Authored D9 and remaining documentation artifacts: Prompt.md
+      (static launch instruction with six gated phases - orientation,
+      execution plan, test plan first, implementation, self-
+      verification, human gate; never unattended); README.md (purpose
+      and architecture, repository layout, test-running instructions,
+      blocking-gate design, harness guidance); transcripts/TEMPLATE.md
+      (annotated-transcript format with intervention blocks and
+      rationale requirements per course D5); Report.md skeleton (D6
+      structure with evidence pointers to registry history, bug
+      diary, AI-use log). Initialized the git repository with five
+      phase-ordered commits (D1, D2, D3, D4, D9 + reference
+      materials) and created the GitHub repository (public, for free-
+      tier branch protection) with branch protection on main: six
+      required status contexts, one approving review with code-owner
+      review, enforced for admins. Appended this entry.
+    artifacts:
+      - Prompt.md
+      - README.md
+      - transcripts/TEMPLATE.md
+      - Report.md
+      - docs/ai-use-log.yaml
+    human_decision: >-
+      Owner instructed completion of the remaining D9 documents and
+      creation of the GitHub repository for the project.
+    status: applied
