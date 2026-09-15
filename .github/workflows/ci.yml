@@ -1,0 +1,152 @@
+# CI — Stock Insider blocking gates (course D7)
+# Jobs map to verification-constraints.md §3. Guard-removal discipline: §4.
+# Guards marked [DE-05] must be removed (own PR + test plan) as scaffolding lands.
+
+name: ci
+
+on:
+  push:
+  pull_request:
+
+permissions:
+  contents: read
+
+jobs:
+  # ------------------------------------------------------------------
+  # Structural tier — every commit (D7-2 static, D7-3 schema)
+  # ------------------------------------------------------------------
+  structural:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.13"
+      - run: pip install pyyaml jsonschema
+      - name: Registry schema gate (D7-3)
+        run: python tools/checks/registry_schema.py
+      - name: Trace-matrix coverage (R1)
+        run: python tools/checks/trace_coverage.py
+      - name: Language gate (GOV-001)
+        run: python tools/checks/language_policy.py
+      - name: Docstring traceability (R3, code side)
+        run: python tools/checks/docstring_ids.py
+      - name: Import boundaries (fitness function)
+        run: python tools/checks/import_boundaries.py
+      - name: Secret scan (D7-2, pattern-level)
+        run: python tools/checks/secret_scan.py
+
+  # ------------------------------------------------------------------
+  # Quality — every commit [DE-05 guards]
+  # ------------------------------------------------------------------
+  quality:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.13"
+      - run: pip install ruff mypy
+      - name: Lint and type-check (guarded)
+        run: |
+          if [ -f pyproject.toml ]; then
+            ruff check .
+            mypy src
+          else
+            echo "[DE-05] pyproject.toml absent — quality gate guarded (must be removed when scaffolding lands)"
+          fi
+
+  # ------------------------------------------------------------------
+  # Regression tier — every PR (D7-5) [DE-05 guard]
+  # ------------------------------------------------------------------
+  regression:
+    if: github.event_name == 'pull_request'
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.13"
+      - run: pip install pytest pytest-cov
+      - name: Full offline suite (guarded)
+        run: |
+          if find test/offline -name 'test_*.py' | grep -q .; then
+            python -m pytest test/offline --cov=src --cov-report=term-missing
+          else
+            echo "[DE-05] no offline tests yet — regression gate guarded (must be removed when tests land)"
+          fi
+
+  # ------------------------------------------------------------------
+  # Change-set gates — every PR (D7-6 + parity)
+  # ------------------------------------------------------------------
+  gates:
+    if: github.event_name == 'pull_request'
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.13"
+      - run: pip install pyyaml
+      - name: Compute base SHA
+        run: echo "CI_BASE_SHA=${{ github.event.pull_request.base.sha }}" >> "$GITHUB_ENV"
+      - name: AI-use log gate (D7-6)
+        run: python tools/checks/aiuse_gate.py
+      - name: Governance parity gate
+        run: python tools/checks/parity_gate.py
+
+  # ------------------------------------------------------------------
+  # Test-approval gate — PRs touching src/ or test/ (D7-1, GOV-006)
+  # ------------------------------------------------------------------
+  approval:
+    if: github.event_name == 'pull_request'
+    runs-on: ubuntu-latest
+    env:
+      PR_BODY: ${{ github.event.pull_request.body }}
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.13"
+      - name: Compute base SHA
+        run: echo "CI_BASE_SHA=${{ github.event.pull_request.base.sha }}" >> "$GITHUB_ENV"
+      - name: Test-plan reference gate
+        run: python tools/checks/testplan_gate.py
+
+  # ------------------------------------------------------------------
+  # Semantic evaluation gate — prompt/model changes only (D7-4, GOV-003)
+  # The single triggered exception to "live tests never block" (R6).
+  # ------------------------------------------------------------------
+  eval:
+    if: github.event_name == 'pull_request'
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.13"
+      - run: pip install pytest
+      - name: Trigger check
+        run: |
+          CHANGED=$(git diff --name-only ${{ github.event.pull_request.base.sha }}...HEAD)
+          if echo "$CHANGED" | grep -qE '^(prompts/|src/.*provider|src/.*rout)'; then
+            echo "EVAL_TRIGGERED=true" >> "$GITHUB_ENV"
+          else
+            echo "No prompt/model-routing change — evaluation gate not triggered"
+          fi
+      - name: Replay evaluation set (QA-001 thresholds block)
+        if: env.EVAL_TRIGGERED == 'true'
+        env:
+          PROVIDER_API_KEY: ${{ secrets.PROVIDER_API_KEY }}
+        run: |
+          if [ ! -f test/live/test_eval_set.py ]; then
+            echo "[DE-05] evaluation harness absent — eval gate guarded (must exist before first prompt change merges)"
+            exit 1
+          fi
+          python -m pytest test/live/test_eval_set.py
