@@ -78,7 +78,9 @@ def test_analyze_enters_repl(sessions_root) -> None:
 def test_repl_slash_sessions(sessions_root) -> None:
     result = runner.invoke(app, [], input="/sessions\n/exit\n")
     assert result.exit_code == 0
-    assert "no sessions match the filter" in result.output
+    # The REPL's own session is open, so the listing shows exactly it.
+    assert "active" in result.output
+    assert "standard" in result.output
 
 
 def test_repl_unknown_slash_is_explicit_error(sessions_root) -> None:
