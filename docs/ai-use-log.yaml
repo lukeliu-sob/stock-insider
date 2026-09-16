@@ -610,3 +610,58 @@ sessions:
       SessionStore root injectable with sessions/ default), then
       authorized application of the two gate-protected proposal files.
     status: applied
+
+  - id: AILOG-0017
+    date: "2026-09-16"
+    tool: "pi coding agent (LLM session)"
+    role: ai
+    task: >-
+      TP-003 implementation per owner-confirmed plan and three in-round
+      rulings (wire surface: Chat Completions only, stateless, no
+      api_surface config field; layered config.json design with env
+      overrides for CI; secrets via .env with dotenv semantics and
+      config set --api-key writing .env - correcting the agent's
+      initially over-strict never-in-file stance, which the owner
+      noted conflicted with SEC-001's own wording): agent/providers.py
+      (ProviderConfig, layered resolution with explicit validation,
+      OpenAICompatibleProvider over chat completions + embeddings with
+      injectable client factory and usage return, API-key resolution
+      env-over-.env, masking, atomic .env writer);
+      agent/profiles.py apply_budget_overrides; agent/session.py
+      provenance stamp merge (GOV-005 completion);
+      agent/repl.py config resolution and session stamping;
+      cli config show/set/path subcommands; secret_scan.py bug fix
+      (fail only on tracked .env; local untracked .env is the supported
+      dev flow); ci.yml eval-guard removal (DE-05 final repayment);
+      test/live/test_eval_set.py (QA-001 seed: five cases plus a
+      stability second pass, threshold 0.6, explicit failure when
+      unconfigured or keyless, local opt-out via env flag); 20 offline
+      tests incl. ten negative/adversarial. Verification against
+      checkout-index exports (BD-006 protocol); evaluation-logbook
+      E-001 and DE-02 closure follow after the first CI replay with
+      real scores.
+    artifacts:
+      - docs/test-plans/TP-003.md
+      - src/stockinsider/agent/providers.py
+      - src/stockinsider/agent/profiles.py
+      - src/stockinsider/agent/session.py
+      - src/stockinsider/agent/repl.py
+      - src/stockinsider/cli/app.py
+      - tools/checks/secret_scan.py
+      - .github/workflows/ci.yml
+      - test/offline/test_provider_config.py
+      - test/offline/test_session_persistence.py
+      - test/offline/test_cli_surface.py
+      - test/live/test_eval_set.py
+      - docs/debt-register.md
+      - docs/ai-use-log.yaml
+    human_decision: >-
+      Owner confirmed the TP-003 plan and its four rulings (eval seed
+      honest layering; secret timing; config storage; streaming and
+      usage recording deferred), selected Chat Completions over the
+      Responses API, endorsed the dedicated config.json design, and
+      overruled the agent's secrets-never-in-file position in favor of
+      the registry's own SEC-001 wording (.env flow, config
+      set --api-key); then authorized application of the
+      gate-protected proposal files.
+    status: applied

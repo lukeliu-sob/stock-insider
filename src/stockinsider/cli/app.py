@@ -1,9 +1,10 @@
 """Typer application: FR-013 subcommand surface.
 
-Seven subcommands remain explicit-failure stubs (English error naming
+Six subcommands remain explicit-failure stubs (English error naming
 the target requirement, non-zero exit — INV-003 semantics); `sessions`
-lists from the sessions index (FR-012) and `analyze` enters the
-interactive REPL. Bare invocation starts a new REPL session (FR-013).
+lists from the sessions index (FR-012), `analyze` and bare invocation
+enter the REPL (FR-013), and `config` shows/updates the layered
+provider configuration (FR-021, SEC-001).
 
 Implements: REQ-SI-FR-013, REQ-SI-INV-003 (ADR-001)
 """
@@ -13,6 +14,14 @@ from typing import NoReturn
 import typer
 
 from stockinsider import __version__
+from stockinsider.agent.providers import (
+    config_path,
+    mask_key,
+    resolve_api_key,
+    resolve_config,
+    save_config,
+    write_env_api_key,
+)
 from stockinsider.agent.repl import repl
 from stockinsider.agent.session import SessionStore
 
@@ -104,13 +113,80 @@ def show() -> None:
     _stub("show", "REQ-SI-FR-022")
 
 
-@app.command()
-def config() -> None:
-    """Configure chat/embedding model endpoints (OpenAI-compatible).
+config_app = typer.Typer(help="Show or update provider/model/budget configuration.")
+app.add_typer(config_app, name="config")
 
-    Implements: REQ-SI-FR-021
+
+@config_app.command("show")
+def config_show() -> None:
+    """Display the resolved configuration (secrets masked).
+
+    Implements: REQ-SI-FR-021, REQ-SI-SEC-001 (ADR-001)
     """
-    _stub("config", "REQ-SI-FR-021")
+    resolved = resolve_config()
+    key, source = resolve_api_key()
+    path = config_path()
+    suffix = "" if path.exists() else " (absent; defaults apply)"
+    typer.echo(f"config file: {path}{suffix}")
+    typer.echo(f"chat:       {resolved.chat_model} @ {resolved.chat_base_url or 'UNCONFIGURED'}")
+    typer.echo(f"embedding:  {resolved.embedding_model} @ {resolved.embedding_base_url or 'UNCONFIGURED'}")
+    typer.echo("budgets:    " + " ".join(f"{k}={v}" for k, v in sorted(resolved.budgets.items())))
+    typer.echo(f"api key:    {mask_key(key)} ({source})")
+
+
+@config_app.command("set")
+def config_set(
+    chat_base_url: str = typer.Option(None, help="Chat endpoint base URL (OpenAI-compatible)."),
+    chat_model: str = typer.Option(None, help="Chat model identifier."),
+    embedding_base_url: str = typer.Option(None, help="Embedding endpoint base URL."),
+    embedding_model: str = typer.Option(None, help="Embedding model identifier."),
+    budget_quick: int = typer.Option(None, help="Token budget override for the quick profile."),
+    budget_standard: int = typer.Option(None, help="Token budget override for the standard profile."),
+    budget_deep: int = typer.Option(None, help="Token budget override for the deep profile."),
+    api_key: str = typer.Option(
+        None,
+        "--api-key",
+        help="Write PROVIDER_API_KEY to .env (never stored in config.json).",
+    ),
+) -> None:
+    """Update configuration values; secrets go to .env, never config.json.
+
+    Implements: REQ-SI-FR-021, REQ-SI-SEC-001 (ADR-001)
+    """
+    if api_key is not None:
+        path = write_env_api_key(api_key)
+        typer.echo(f"api key written to {path} (masked: {mask_key(api_key)})")
+    updates: dict[str, object] = {}
+    if chat_base_url is not None:
+        updates["chat_base_url"] = chat_base_url
+    if chat_model is not None:
+        updates["chat_model"] = chat_model
+    if embedding_base_url is not None:
+        updates["embedding_base_url"] = embedding_base_url
+    if embedding_model is not None:
+        updates["embedding_model"] = embedding_model
+    if budget_quick is not None:
+        updates["budget_quick"] = budget_quick
+    if budget_standard is not None:
+        updates["budget_standard"] = budget_standard
+    if budget_deep is not None:
+        updates["budget_deep"] = budget_deep
+    if not updates:
+        if api_key is None:
+            typer.secho("nothing to set; see --help for options", fg=typer.colors.RED, err=True)
+            raise typer.Exit(code=2)
+        return
+    save_config(updates)
+    typer.echo(f"config updated: {sorted(updates)}")
+
+
+@config_app.command("path")
+def config_path_cmd() -> None:
+    """Print the configuration file path.
+
+    Implements: REQ-SI-FR-021 (ADR-001)
+    """
+    typer.echo(str(config_path()))
 
 
 @app.command()

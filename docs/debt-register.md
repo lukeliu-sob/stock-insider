@@ -14,8 +14,8 @@
 | Untouchable code | 0 |
 | Hidden dependencies | 0 |
 | Agent-induced bloat | 0 |
-| Evaluation debt | 2 |
-| Guardrail debt | 3 |
+| Evaluation debt | 0 |
+| Guardrail debt | 2 |
 | Human/cognitive debt | 1 |
 
 Categories at zero have no current entries; the category opens the moment its first entry appears — do not pre-register speculative debt.
@@ -32,7 +32,7 @@ Categories at zero have no current entries; the category opens the moment its fi
 - **Category**: evaluation debt
 - **Description**: the evaluation logbook holds qualitative Q-entries only; no E-entry has ever run, so QA-001's 0.6 faithfulness threshold is unverified in practice.
 - **Repayment trigger**: evaluation harness built (CI `eval` job guard removal); first E-entry recorded.
-- **Status**: open (2026-09-15)
+- **Status**: repaid by TP-003 (2026-09-16): evaluation harness built and exercised; first E-entry (E-001, 6/6 = 1.00 ≥ 0.6) recorded from CI run 35054084367.
 
 ### DE-03 — Bash governance is heuristic
 - **Category**: guardrail debt
@@ -50,7 +50,7 @@ Categories at zero have no current entries; the category opens the moment its fi
 - **Category**: guardrail debt
 - **Description**: `quality`, `regression`, and the eval harness check are existence-guarded (pass with a note) until `pyproject.toml`, offline tests, and `test/live/test_eval_set.py` land. Each guard removal is its own PR with its own test plan (verification-constraints §4).
 - **Repayment trigger**: corresponding artifact lands.
-- **Status**: partially repaid by TP-001 (2026-09-15): `quality` and `regression` guards removed — both jobs now install the package (`pip install -e .`) and run unconditionally; `docstring_ids.py` and `import_boundaries.py` activated. Eval-harness guard remains open until `test/live/test_eval_set.py` lands.
+- **Status**: repaid. Quality and regression guards removed by TP-001 (2026-09-15); eval-harness guard removed by TP-003 (2026-09-16) with `test/live/test_eval_set.py` landing in the same change set. No existence guards remain.
 
 ### DE-06 — Cross-file reference validity unautomated
 - **Category**: guardrail debt
