@@ -1,6 +1,8 @@
 # CODEOWNERS — Stock Insider
-# Branch protection requires owner review on safety-critical paths
-# (course D7: human review + linked ADR for safety-critical changes).
+# Advisory: marks the owner as requested reviewer on safety-critical paths
+# (branch protection no longer mechanically requires approving reviews —
+# owner decision 2026-09-16, see AILOG-0015; the owner still reviews every
+# PR before merging as process discipline).
 
 * @lukeliu-sob
 
