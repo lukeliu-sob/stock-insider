@@ -1,0 +1,92 @@
+"""Offline tests for session persistence (TP-002, FR-011).
+
+Covers: tree layout on creation, append-only semantics of
+session.jsonl, never-overwrite refusal for artifacts and snapshots,
+index integrity (phantom rows skipped), and profile validation.
+"""
+
+import json
+
+import pytest
+
+from stockinsider.agent.session import SessionError, SessionStore
+
+
+@pytest.fixture()
+def store(tmp_path):
+    return SessionStore(root=tmp_path / "sessions")
+
+
+def test_create_session_layout(store) -> None:
+    record = store.create(profile="quick", subject_symbols=["0700.HK"])
+    session_dir = store.root / record["session_id"]
+    assert (session_dir / "session.jsonl").is_file()
+    assert (session_dir / "artifacts").is_dir()
+    assert (session_dir / "context").is_dir()
+    first = json.loads((session_dir / "session.jsonl").read_text(encoding="utf-8"))
+    assert first["event"] == "session-open"
+    assert first["record"]["session_id"] == record["session_id"]
+    rows = store.list_sessions()
+    assert [row["session_id"] for row in rows] == [record["session_id"]]
+
+
+def test_append_only_never_rewrites(store) -> None:
+    record = store.create()
+    stream = store.root / record["session_id"] / "session.jsonl"
+    before = stream.read_bytes()
+    store.append_event(record["session_id"], {"event": "user-message", "text": "hello"})
+    after = stream.read_bytes()
+    assert after.startswith(before)
+    assert after[len(before) :].strip() != b""
+    assert len(after) > len(before)
+
+
+def test_artifacts_never_overwritten(store) -> None:
+    record = store.create()
+    store.artifact(record["session_id"], "turn-001-report.md", "# report v1")
+    with pytest.raises(SessionError, match="never overwritten"):
+        store.artifact(record["session_id"], "turn-001-report.md", "# report v2")
+
+
+def test_snapshot_values_as_seen_no_rewrite(store) -> None:
+    record = store.create()
+    store.snapshot(record["session_id"], "turn-001", {"quote": {"close": 311.4}})
+    with pytest.raises(SessionError, match="never rewritten"):
+        store.snapshot(record["session_id"], "turn-001", {"quote": {"close": 311.5}})
+
+
+def test_index_phantom_rows_skipped(store, tmp_path) -> None:
+    real = store.create()
+    rows = store._index_read()
+    rows.append(
+        {
+            "session_id": "99999999T999999Z-deadbeef",
+            "profile": "quick",
+            "status": "active",
+            "created": "2026-09-16T00:00:00+00:00",
+            "last_active": "2026-09-16T00:00:00+00:00",
+            "subject_symbols": [],
+            "provenance": {},
+        }
+    )
+    store._index_write(rows)
+    listed = [row["session_id"] for row in store.list_sessions()]
+    assert listed == [real["session_id"]]
+
+
+def test_unknown_session_rejected(store) -> None:
+    with pytest.raises(SessionError, match="unknown session"):
+        store.append_event("20260101T000000Z-nope", {"event": "x"})
+
+
+def test_invalid_profile_rejected(store) -> None:
+    with pytest.raises(SessionError, match="unknown analysis profile"):
+        store.create(profile="turbo")
+
+
+def test_close_and_reopen(store) -> None:
+    record = store.create()
+    store.close(record["session_id"])
+    assert store.list_sessions()[0]["status"] == "closed"
+    store.resume(record["session_id"])
+    assert store.list_sessions()[0]["status"] == "active"

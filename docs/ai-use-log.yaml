@@ -563,3 +563,50 @@ sessions:
       that human review continues as owner discipline rather than a
       GitHub-enforced block.
     status: applied
+
+  - id: AILOG-0016
+    date: "2026-09-16"
+    tool: "pi coding agent (LLM session)"
+    role: ai
+    task: >-
+      TP-002 implementation (agent runtime skeleton, non-safety-critical
+      modules) per the owner-confirmed round-11 plan: agent/profiles.py
+      (Profile enum, budget envelopes), agent/session.py (SessionStore:
+      append-only session.jsonl, never-overwritten artifacts,
+      values-as-seen snapshots, single-writer index with phantom-row
+      skipping, profile lock), agent/context.py (six-layer skeleton,
+      budget envelope with explicit overflow abort), agent/repl.py
+      (slash dispatch per blueprint 7.3, explicit free-text failure),
+      CLI wiring (sessions real, analyze and bare invocation enter the
+      REPL), and 35 offline tests including eleven negative tests and
+      the R8 boundary matrix for all three budget envelopes.
+      Providers deferred to TP-003 paired with the evaluation harness
+      (creating a provider module trips the CI eval trigger while the
+      harness remains a DE-05 guard). Environment incident during this
+      change set: the BD-006 worktree reverter escalated to git
+      reset -- hard-equivalent behavior (reverting tracked-file edits,
+      removing staged new files); all content was secured in untracked
+      proposals/ and staged via hash-object/update-index with commits
+      executed in single atomic shell invocations; verification ran
+      against git checkout-index exports of the staged tree, immune to
+      worktree interference. Owner advised to eliminate the external
+      watcher (JetBrains stale-buffer autosave is the prime suspect).
+    artifacts:
+      - docs/test-plans/TP-002.md
+      - src/stockinsider/agent/profiles.py
+      - src/stockinsider/agent/session.py
+      - src/stockinsider/agent/context.py
+      - src/stockinsider/agent/repl.py
+      - src/stockinsider/cli/app.py
+      - test/offline/test_session_persistence.py
+      - test/offline/test_cli_sessions.py
+      - test/offline/test_profiles.py
+      - test/offline/test_cli_surface.py
+      - docs/ai-use-log.yaml
+    human_decision: >-
+      Owner confirmed the TP-002 execution plan and its four rulings
+      (providers deferred to TP-003 with the eval harness; free-text
+      REPL input fails explicitly; test files trace-matrix aligned;
+      SessionStore root injectable with sessions/ default), then
+      authorized application of the two gate-protected proposal files.
+    status: applied
