@@ -1,6 +1,5 @@
 # CI — Stock Insider blocking gates (course D7)
 # Jobs map to verification-constraints.md §3. Guard-removal discipline: §4.
-# [DE-05] remaining: eval-harness guard (until test/live/test_eval_set.py lands).
 
 name: ci
 
@@ -122,7 +121,7 @@ jobs:
       - uses: actions/setup-python@v5
         with:
           python-version: "3.13"
-      - run: pip install pytest
+      - run: pip install -e . pytest
       - name: Trigger check
         run: |
           CHANGED=$(git diff --name-only ${{ github.event.pull_request.base.sha }}...HEAD)
@@ -135,9 +134,7 @@ jobs:
         if: env.EVAL_TRIGGERED == 'true'
         env:
           PROVIDER_API_KEY: ${{ secrets.PROVIDER_API_KEY }}
+          PROVIDER_BASE_URL: ${{ secrets.PROVIDER_BASE_URL }}
+          PROVIDER_CHAT_MODEL: ${{ secrets.PROVIDER_CHAT_MODEL }}
         run: |
-          if [ ! -f test/live/test_eval_set.py ]; then
-            echo "[DE-05] evaluation harness absent — eval gate guarded (must exist before first prompt change merges)"
-            exit 1
-          fi
-          python -m pytest test/live/test_eval_set.py
+          python -m pytest -s test/live/test_eval_set.py

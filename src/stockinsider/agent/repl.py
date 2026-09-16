@@ -11,7 +11,8 @@ from __future__ import annotations
 
 from collections.abc import Callable
 
-from stockinsider.agent.profiles import Profile
+from stockinsider.agent.profiles import Profile, apply_budget_overrides
+from stockinsider.agent.providers import resolve_config
 from stockinsider.agent.session import SessionStore
 
 PROMPT = "stockinsider> "
@@ -55,14 +56,25 @@ def repl(
     store: SessionStore,
     *,
     profile: Profile | str = Profile.standard,
+    data_root: "str | None" = None,
     input_fn: Callable[[str], str] = input,
     echo: Callable[[str], None] = print,
 ) -> None:
     """Run the interactive REPL session loop.
 
-    Implements: REQ-SI-FR-013 (ADR-001)
+    The provider configuration is resolved once at session start and
+    stamped into the session record (GOV-005); mid-session config
+    changes do not affect an open session.
+
+    Implements: REQ-SI-FR-013, REQ-SI-GOV-005 (ADR-001)
     """
-    record = store.create(profile=profile)
+    config = resolve_config(data_root)
+    apply_budget_overrides(config.budgets)
+    stamp = {
+        "model_id": config.chat_model,
+        "provider_config": config.chat_base_url or "unconfigured-endpoint",
+    }
+    record = store.create(profile=profile, provenance=stamp)
     echo(
         f"session {record['session_id']} opened (profile: {record['profile']}); type /help for commands, /exit to leave"
     )

@@ -2,9 +2,11 @@
 
 Profiles are chosen at session start and fixed for the session lifetime
 (FR-020); the budget envelope governs context assembly and aborts
-explicitly on overflow.
+explicitly on overflow. Budget ceilings are user-configurable via
+data/config.json (COST-001); the single writer for overrides is the
+config resolution path (agent.providers), applied at session start.
 
-Implements: REQ-SI-FR-020 (ADR-001)
+Implements: REQ-SI-FR-020, REQ-SI-COST-001 (ADR-001)
 """
 
 from __future__ import annotations
@@ -35,12 +37,21 @@ class BudgetEnvelope:
     max_session_tokens: int
 
 
-#: Default budget ceilings (blueprint §8.3, COST-001; configurable later).
+#: Default budget ceilings (blueprint §8.3, COST-001); config.json overrides.
 PROFILE_BUDGETS: dict[Profile, int] = {
     Profile.quick: 30_000,
     Profile.standard: 100_000,
     Profile.deep: 400_000,
 }
+
+
+def apply_budget_overrides(budgets: dict[str, int]) -> None:
+    """Apply user-configured budget ceilings (single writer: config resolution).
+
+    Implements: REQ-SI-COST-001 (ADR-001)
+    """
+    for name, value in budgets.items():
+        PROFILE_BUDGETS[Profile(name)] = int(value)
 
 
 def envelope_for(profile: Profile | str) -> BudgetEnvelope:

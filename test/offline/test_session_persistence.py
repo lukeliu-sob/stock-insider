@@ -90,3 +90,41 @@ def test_close_and_reopen(store) -> None:
     assert store.list_sessions()[0]["status"] == "closed"
     store.resume(record["session_id"])
     assert store.list_sessions()[0]["status"] == "active"
+
+
+# -- GOV-005 provenance stamps (TP-003) --------------------------------------
+
+
+def test_provenance_stamps_from_resolved_values(store) -> None:
+    record = store.create(
+        profile="quick",
+        provenance={"model_id": "my-model", "provider_config": "https://api.example.com/v1"},
+    )
+    assert record["provenance"]["model_id"] == "my-model"
+    assert record["provenance"]["provider_config"] == "https://api.example.com/v1"
+    # Unspecified fields keep their explicit placeholders (never blank).
+    assert record["provenance"]["prompt_version"].startswith("unset-until")
+
+
+def test_zero_missing_provenance_fields_across_sessions(store) -> None:
+    stamp = {"model_id": "m", "provider_config": "u"}
+    for index in range(3):
+        store.create(profile=("quick", "standard", "deep")[index], provenance=stamp)
+    for row in store.list_sessions():
+        assert set(row["provenance"]) == {"model_id", "prompt_version", "provider_config"}
+        assert all(str(value).strip() for value in row["provenance"].values())
+
+
+def test_repl_stamps_resolved_config(tmp_path, monkeypatch) -> None:
+    from stockinsider.agent.providers import save_config
+    from stockinsider.agent.repl import repl
+
+    data = tmp_path / "data"
+    data.mkdir()
+    monkeypatch.setenv("STOCKINSIDER_DATA_ROOT", str(data))
+    save_config({"chat_base_url": "https://r.example/v1", "chat_model": "rm"}, data)
+    store = SessionStore(root=tmp_path / "sessions")
+    repl(store, input_fn=lambda _prompt: "/exit", echo=lambda _line: None)
+    row = store.list_sessions()[0]
+    assert row["provenance"]["model_id"] == "rm"
+    assert row["provenance"]["provider_config"] == "https://r.example/v1"

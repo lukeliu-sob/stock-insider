@@ -70,10 +70,15 @@ class SessionStore:
         self,
         profile: Profile | str = Profile.standard,
         subject_symbols: list[str] | None = None,
+        provenance: dict[str, str] | None = None,
     ) -> dict[str, Any]:
         """Create a session tree and index row; return the record.
 
-        Implements: REQ-SI-FR-011, REQ-SI-FR-020 (ADR-001)
+        The provenance stamp overwrites the explicit placeholders with
+        resolved provider values (GOV-005); unspecified fields keep their
+        honest placeholders.
+
+        Implements: REQ-SI-FR-011, REQ-SI-FR-020, REQ-SI-GOV-005 (ADR-001)
         """
         try:
             prof = Profile(profile)
@@ -91,7 +96,7 @@ class SessionStore:
             "created": _now(),
             "last_active": _now(),
             "subject_symbols": sorted(set(subject_symbols or [])),
-            "provenance": _provenance_defaults(),
+            "provenance": {**_provenance_defaults(), **(provenance or {})},
         }
         first_line = json.dumps({"event": "session-open", "record": record}) + "\n"
         (session_dir / "session.jsonl").write_text(first_line, encoding="utf-8")
