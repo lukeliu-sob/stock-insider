@@ -57,7 +57,7 @@ All six course gates are implemented in `.github/workflows/ci.yml` and `tools/ch
 | Regression (D7-5) | `regression` job runs the full offline suite; any old-test failure blocks |
 | AI-use log (D7-6) | `aiuse_gate.py` blocks src/prompts changes without an AI-use-log diff |
 
-Branch protection on `main` requires all six check contexts, one approving review (code-owner review on safety-critical paths via `CODEOWNERS`), and enforces for admins. Safety-critical changes additionally require a linked ADR.
+Branch protection on `main` requires all six check contexts and enforces for admins, with linear history (owner decision 2026-09-16: approving reviews are a process discipline, not a mechanical block — the owner reviews every PR before merging; `CODEOWNERS` marks the requested reviewer). Safety-critical changes additionally require a linked ADR.
 
 ## Development with an AI coding agent
 
