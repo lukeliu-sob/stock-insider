@@ -536,3 +536,30 @@ sessions:
       the re-application completed that authorized action. BD-006 and
       this entry staged as proposals for owner application.
     status: applied
+
+  - id: AILOG-0015
+    date: "2026-09-16"
+    tool: "pi coding agent (LLM session)"
+    role: ai
+    task: >-
+      Governance change applied on owner decision (option C of three
+      offered): branch protection on main no longer requires approving
+      reviews (required_pull_request_reviews removed). Rationale: the
+      repository is single-owner and GitHub prohibits PR authors from
+      approving their own PRs, deadlocking the merge flow since agent
+      PRs are created under the owner token. The owner commits to
+      reviewing every PR on GitHub before merging as process
+      discipline (recorded here; CODEOWNERS comment updated to
+      advisory wording). Unchanged: six required status contexts
+      (strict), linear history, enforce_admins, no force push or
+      deletion. README branch-protection paragraph updated to match.
+    artifacts:
+      - CODEOWNERS
+      - README.md
+      - docs/ai-use-log.yaml
+    human_decision: >-
+      Owner selected option C (remove the mechanical review
+      requirement, keep the six blocking gates), explicitly accepting
+      that human review continues as owner discipline rather than a
+      GitHub-enforced block.
+    status: applied
