@@ -14,7 +14,7 @@
 | Untouchable code | 0 |
 | Hidden dependencies | 0 |
 | Agent-induced bloat | 0 |
-| Evaluation debt | 1 |
+| Evaluation debt | 0 |
 | Guardrail debt | 2 |
 | Human/cognitive debt | 1 |
 
@@ -32,7 +32,7 @@ Categories at zero have no current entries; the category opens the moment its fi
 - **Category**: evaluation debt
 - **Description**: the evaluation logbook holds qualitative Q-entries only; no E-entry has ever run, so QA-001's 0.6 faithfulness threshold is unverified in practice.
 - **Repayment trigger**: evaluation harness built (CI `eval` job guard removal); first E-entry recorded.
-- **Status**: harness landed with TP-003 (2026-09-16); E-001 pending the first CI replay with real scores — closes when the E-entry is recorded.
+- **Status**: repaid by TP-003 (2026-09-16): evaluation harness built and exercised; first E-entry (E-001, 6/6 = 1.00 ≥ 0.6) recorded from CI run 35054084367.
 
 ### DE-03 — Bash governance is heuristic
 - **Category**: guardrail debt

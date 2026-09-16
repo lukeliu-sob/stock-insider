@@ -50,3 +50,8 @@ Verdict: pass / blocked (gate) · Notes / anomalies ...
 ```
 
 Rules: every prompt or model change gets an E-entry before production (GOV-003); failed thresholds record a diagnosis and the follow-up decision; E-entries are append-only.
+
+### E-001 — First evaluation-set replay (seed harness landing)
+Date: 2026-09-16 · Prompt version: n/a (no prompts/ yet — seed-level harness) · Model(s): deepseek-v4.1-flash (chat role; endpoint via PROVIDER_BASE_URL secret) · Profile: n/a
+Scores: faithfulness(seed) = 6/6 = 1.00 (threshold 0.6, QA-001) · usage interface verified on live call (prompt/completion tokens returned)
+Verdict: pass · Notes: per-case report emitted by the gate (CI run 35054084367): exact-echo / json-only / english-only / short-confirmation clean; yes-no format-stable across both runs but semantically inconsistent between runs ('No' vs 'yes') — the case checks format stability only; semantic determinism is deliberately out of scope for the seed set. Report-level RAG replay (QA-001 full semantics) extends the set when the agent analysis loop lands.
