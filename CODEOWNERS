@@ -1,15 +1,14 @@
 # CODEOWNERS — Stock Insider
 # Branch protection requires owner review on safety-critical paths
 # (course D7: human review + linked ADR for safety-critical changes).
-# Replace @team-owner with the real GitHub handle(s).
 
-* @team-owner
+* @lukeliu-sob
 
 # Safety-critical: invariant enforcement points
-/src/stockinsider/agent/guardrail* @team-owner
-/src/stockinsider/agent/registry* @team-owner
-/src/stockinsider/shared/ @team-owner
+/src/stockinsider/agent/guardrail* @lukeliu-sob
+/src/stockinsider/agent/registry* @lukeliu-sob
+/src/stockinsider/shared/ @lukeliu-sob
 
 # Safety-critical: prompts and CI gate integrity
-/prompts/ @team-owner
-/.github/ @team-owner
+/prompts/ @lukeliu-sob
+/.github/ @lukeliu-sob

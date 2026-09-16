@@ -3,7 +3,7 @@
 
 A PR touching src/ or test/ must reference an approved test plan in its
 body: "Test-Plan: TP-NNN", with docs/test-plans/TP-NNN.md present and
-containing "status: approved". Approval preceding implementation is
+carrying an approved status. Approval preceding implementation is
 reviewer-verified from file history (see GOV-006 tradeoff).
 
 Environment: CI_BASE_SHA, PR_BODY. Without them the gate skips (local
@@ -19,6 +19,9 @@ import sys
 ROOT = pathlib.Path(__file__).resolve().parents[2]
 TRIGGER_PREFIXES = ("src/", "test/")
 TP_REF = re.compile(r"Test-Plan:\s*(TP-\d{3})", re.IGNORECASE)
+# Approved status: literal "status: approved" or the template's table
+# row "| Status | approved |" (case-insensitive).
+TP_APPROVED = re.compile(r"status:\s*approved|\|\s*status\s*\|\s*approved\s*\|", re.IGNORECASE)
 
 
 def changed_files():
@@ -49,16 +52,13 @@ def main() -> None:
 
     match = TP_REF.search(body)
     if not match:
-        sys.exit(
-            "FAIL test-plan gate: PR body lacks 'Test-Plan: TP-NNN' "
-            f"while touching {triggers} (GOV-006 / D7-1)"
-        )
+        sys.exit(f"FAIL test-plan gate: PR body lacks 'Test-Plan: TP-NNN' while touching {triggers} (GOV-006 / D7-1)")
 
     tp_id = match.group(1).upper()
     tp_file = ROOT / "docs" / "test-plans" / f"{tp_id}.md"
     if not tp_file.exists():
         sys.exit(f"FAIL test-plan gate: {tp_file} does not exist")
-    if "status: approved" not in tp_file.read_text(encoding="utf-8").lower():
+    if not TP_APPROVED.search(tp_file.read_text(encoding="utf-8")):
         sys.exit(f"FAIL test-plan gate: {tp_id} is not approved")
     print(f"PASS test-plan gate: {tp_id} referenced and approved")
 

@@ -50,7 +50,7 @@ Categories at zero have no current entries; the category opens the moment its fi
 - **Category**: guardrail debt
 - **Description**: `quality`, `regression`, and the eval harness check are existence-guarded (pass with a note) until `pyproject.toml`, offline tests, and `test/live/test_eval_set.py` land. Each guard removal is its own PR with its own test plan (verification-constraints §4).
 - **Repayment trigger**: corresponding artifact lands.
-- **Status**: open (2026-09-15)
+- **Status**: partially repaid by TP-001 (2026-09-15): `quality` and `regression` guards removed — both jobs now install the package (`pip install -e .`) and run unconditionally; `docstring_ids.py` and `import_boundaries.py` activated. Eval-harness guard remains open until `test/live/test_eval_set.py` lands.
 
 ### DE-06 — Cross-file reference validity unautomated
 - **Category**: guardrail debt
