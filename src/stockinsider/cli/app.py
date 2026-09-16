@@ -1,11 +1,9 @@
-"""Typer application: FR-013 subcommand surface (scaffold stubs).
+"""Typer application: FR-013 subcommand surface.
 
-All nine subcommands are registered but intentionally not implemented:
-each exits non-zero with an explicit English "not implemented" message
-naming its target requirement — refuse to pretend success (INV-003
-semantics). Real behavior lands per command in later test-planned
-changes; the interactive REPL is likewise deferred to the agent-runtime
-test plan.
+Seven subcommands remain explicit-failure stubs (English error naming
+the target requirement, non-zero exit — INV-003 semantics); `sessions`
+lists from the sessions index (FR-012) and `analyze` enters the
+interactive REPL. Bare invocation starts a new REPL session (FR-013).
 
 Implements: REQ-SI-FR-013, REQ-SI-INV-003 (ADR-001)
 """
@@ -15,11 +13,14 @@ from typing import NoReturn
 import typer
 
 from stockinsider import __version__
+from stockinsider.agent.repl import repl
+from stockinsider.agent.session import SessionStore
 
 app = typer.Typer(
     name="stockinsider",
     help="Local CLI financial analyst for HK + US equities (analysis only; never trades).",
-    no_args_is_help=True,
+    no_args_is_help=False,
+    invoke_without_command=True,
 )
 
 _STUB_NOTE = "error: '{command}' is not implemented yet (target: {req}); refusing to pretend success (INV-003)."
@@ -60,11 +61,11 @@ def info(symbol: str = typer.Argument(..., help="Canonical symbol, e.g. 0700.HK"
 
 @app.command()
 def analyze() -> None:
-    """Produce an analysis report for a symbol or topic (interactive only).
+    """Enter an interactive analysis REPL session (interactive only).
 
-    Implements: REQ-SI-FR-008
+    Implements: REQ-SI-FR-013
     """
-    _stub("analyze", "REQ-SI-FR-008")
+    repl(SessionStore())
 
 
 @app.command()
@@ -77,12 +78,21 @@ def resume() -> None:
 
 
 @app.command()
-def sessions() -> None:
+def sessions(
+    symbol: str = typer.Option(None, help="Filter by subject symbol, e.g. 0700.HK."),
+    date: str = typer.Option(None, help="Filter by creation date prefix (YYYY-MM-DD)."),
+) -> None:
     """List sessions from the sessions index.
 
     Implements: REQ-SI-FR-012
     """
-    _stub("sessions", "REQ-SI-FR-012")
+    rows = SessionStore().list_sessions(symbol=symbol, date=date)
+    if not rows:
+        typer.echo("no sessions match the filter")
+        return
+    for row in rows:
+        symbols = ",".join(row["subject_symbols"]) or "-"
+        typer.echo(f"{row['session_id']}  {row['created']}  {row['status']}  {symbols}  {row['profile']}")
 
 
 @app.command()
@@ -120,6 +130,7 @@ def _print_version(value: bool) -> None:
 
 @app.callback()
 def _root(
+    ctx: typer.Context,
     version: bool = typer.Option(
         False,
         "--version",
@@ -129,6 +140,8 @@ def _root(
     ),
 ) -> None:
     """Local CLI financial analyst for HK + US equities."""
+    if ctx.invoked_subcommand is None:
+        repl(SessionStore())
 
 
 def main() -> None:
