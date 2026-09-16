@@ -406,3 +406,52 @@ sessions:
       Owner instructed completion of the remaining D9 documents and
       creation of the GitHub repository for the project.
     status: applied
+
+  - id: AILOG-0013
+    date: "2026-09-15"
+    tool: "pi coding agent (LLM session)"
+    role: ai
+    task: >-
+      Implementation phase start, change set TP-001 (package
+      scaffolding): pyproject.toml (metadata, dependency set, ruff/
+      mypy/pytest configuration, console entry point); package
+      skeleton under src/stockinsider/ (package root, agent shell,
+      data shell, cli shell with app.py registering all nine FR-013
+      subcommands as explicit-failure stubs - English error naming
+      the target requirement, non-zero exit, INV-003 semantics);
+      first offline tests test/offline/test_cli_surface.py (surface,
+      version flag, negative stub-failure test); CODEOWNERS placeholder
+      replaced with the real owner handle. Deviation from the approved
+      plan, forced by the pi governance gate: creation of shared/ and
+      agent/registry/ was deferred out of TP-001 because those are
+      safety-critical paths whose every change requires a linked ADR
+      (guard G2) - they now land with their feature test plans and
+      ADRs instead. The gate also blocked agent writes to docs/ and
+      .github/ as designed (first implementation-phase enforcement
+      catch): TP-001.md, the ci.yml guard-removal edit, the debt-
+      register DE-05 partial-repayment update, and this AI-log entry
+      were staged as proposals under proposals/tp-001/ and, after
+      owner review, applied by the agent under explicit owner
+      instruction (recorded authorization; first full propose-review-
+      authorize cycle of the implementation phase).
+    artifacts:
+      - pyproject.toml
+      - src/stockinsider/__init__.py
+      - src/stockinsider/agent/__init__.py
+      - src/stockinsider/data/__init__.py
+      - src/stockinsider/cli/__init__.py
+      - src/stockinsider/cli/app.py
+      - test/offline/test_cli_surface.py
+      - CODEOWNERS
+      - docs/test-plans/TP-001.md
+      - .github/workflows/ci.yml
+      - docs/debt-register.md
+      - docs/ai-use-log.yaml
+    human_decision: >-
+      Owner approved the TP-001 execution plan and its four rulings
+      (single PR with ordered commits; all nine subcommands as
+      explicit-failure stubs; full dependency set in one step;
+      CODEOWNERS pointed at the real owner handle), then explicitly
+      authorized the agent to apply the four gate-protected proposal
+      files staged under proposals/tp-001/.
+    status: applied

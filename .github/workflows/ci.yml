@@ -1,6 +1,6 @@
 # CI — Stock Insider blocking gates (course D7)
 # Jobs map to verification-constraints.md §3. Guard-removal discipline: §4.
-# Guards marked [DE-05] must be removed (own PR + test plan) as scaffolding lands.
+# [DE-05] remaining: eval-harness guard (until test/live/test_eval_set.py lands).
 
 name: ci
 
@@ -37,7 +37,7 @@ jobs:
         run: python tools/checks/secret_scan.py
 
   # ------------------------------------------------------------------
-  # Quality — every commit [DE-05 guards]
+  # Quality — every commit (existence guard removed by TP-001)
   # ------------------------------------------------------------------
   quality:
     runs-on: ubuntu-latest
@@ -46,18 +46,14 @@ jobs:
       - uses: actions/setup-python@v5
         with:
           python-version: "3.13"
-      - run: pip install ruff mypy
-      - name: Lint and type-check (guarded)
-        run: |
-          if [ -f pyproject.toml ]; then
-            ruff check .
-            mypy src
-          else
-            echo "[DE-05] pyproject.toml absent — quality gate guarded (must be removed when scaffolding lands)"
-          fi
+      - run: pip install -e . ruff mypy
+      - name: Lint
+        run: ruff check .
+      - name: Type-check
+        run: mypy src
 
   # ------------------------------------------------------------------
-  # Regression tier — every PR (D7-5) [DE-05 guard]
+  # Regression tier — every PR (D7-5) (existence guard removed by TP-001)
   # ------------------------------------------------------------------
   regression:
     if: github.event_name == 'pull_request'
@@ -67,14 +63,9 @@ jobs:
       - uses: actions/setup-python@v5
         with:
           python-version: "3.13"
-      - run: pip install pytest pytest-cov
-      - name: Full offline suite (guarded)
-        run: |
-          if find test/offline -name 'test_*.py' | grep -q .; then
-            python -m pytest test/offline --cov=src --cov-report=term-missing
-          else
-            echo "[DE-05] no offline tests yet — regression gate guarded (must be removed when tests land)"
-          fi
+      - run: pip install -e . pytest pytest-cov
+      - name: Full offline suite
+        run: python -m pytest test/offline --cov=src --cov-report=term-missing
 
   # ------------------------------------------------------------------
   # Change-set gates — every PR (D7-6 + parity)
