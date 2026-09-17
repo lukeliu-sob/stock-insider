@@ -840,3 +840,40 @@ sessions:
       ruling), and authorized application of the gate-protected
       proposal files (prompts/, registry, shared, trace-matrix).
     status: applied
+
+  - id: AILOG-0022
+    date: "2026-09-17"
+    tool: "pi coding agent (LLM session)"
+    role: ai
+    task: >-
+      TP-007b implementation (session review and resume + loop-level
+      evaluation) per the owner-confirmed round-16 plan: repl
+      restructured into start_new_session / resume_session /
+      _session_loop; render_session (read-only FR-022 render with
+      stamps, ordered tool-call enumeration, quarantine flags,
+      snapshot values, artifacts); /show and /resume real in the REPL
+      (in-place resume swaps the record, rebuilds the engine, resets
+      guardrail counters - documented v1 limitation); CLI show/resume
+      real with default resolution and explicit errors; live eval set
+      extended with two loop-level cases (numbers-cited-or-degraded;
+      epistemic cleanliness of displayed text) - the E-002 era for
+      identity-v1 behavioral coverage; test_show.py and test_resume.py
+      born (matrix-named) covering the FR-022/023 fit criteria
+      including byte-identical prior content after appended turns.
+      E-002 logbook entry follows the CI replay with real numbers.
+    artifacts:
+      - docs/test-plans/TP-007b.md
+      - src/stockinsider/agent/repl.py
+      - src/stockinsider/cli/app.py
+      - test/offline/test_show.py
+      - test/offline/test_resume.py
+      - test/offline/test_cli_surface.py
+      - test/live/test_eval_set.py
+      - docs/ai-use-log.yaml
+    human_decision: >-
+      Owner confirmed the TP-007b plan and its five rulings (show
+      render contents; resume semantics incl. non-persisted counters;
+      E-002 two-loop-case honest acceptance; history window stays 20;
+      matrix-named test files), then authorized application of the
+      gate-protected proposal files.
+    status: applied

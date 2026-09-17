@@ -22,8 +22,8 @@ from stockinsider.agent.providers import (
     save_config,
     write_env_api_key,
 )
-from stockinsider.agent.repl import repl
-from stockinsider.agent.session import SessionStore
+from stockinsider.agent.repl import render_session, repl, resume_session
+from stockinsider.agent.session import SessionError, SessionStore
 
 app = typer.Typer(
     name="stockinsider",
@@ -78,12 +78,18 @@ def analyze() -> None:
 
 
 @app.command()
-def resume() -> None:
-    """Resume a closed session (default: the most recent).
+def resume(
+    session_id: str = typer.Argument(None, help="Session to resume (default: the most recent closed)."),
+) -> None:
+    """Resume a closed session and continue the conversation.
 
     Implements: REQ-SI-FR-023
     """
-    _stub("resume", "REQ-SI-FR-023")
+    try:
+        resume_session(SessionStore(), session_id)
+    except SessionError as exc:
+        typer.secho(f"error: {exc}", fg=typer.colors.RED, err=True)
+        raise typer.Exit(code=2) from None
 
 
 @app.command()
@@ -105,12 +111,26 @@ def sessions(
 
 
 @app.command()
-def show() -> None:
+def show(
+    session_id: str = typer.Argument(None, help="Session to render (default: the most recent)."),
+) -> None:
     """Render a session for read-only review.
 
     Implements: REQ-SI-FR-022
     """
-    _stub("show", "REQ-SI-FR-022")
+    store = SessionStore()
+    target = session_id
+    if target is None:
+        rows = store.list_sessions()
+        if not rows:
+            typer.echo("no sessions available")
+            return
+        target = rows[-1]["session_id"]
+    try:
+        render_session(store, target, typer.echo)
+    except SessionError as exc:
+        typer.secho(f"error: {exc}", fg=typer.colors.RED, err=True)
+        raise typer.Exit(code=2) from None
 
 
 config_app = typer.Typer(help="Show or update provider/model/budget configuration.")
