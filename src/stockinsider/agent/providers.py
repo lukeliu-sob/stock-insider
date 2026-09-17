@@ -21,8 +21,8 @@ from typing import Any, Callable
 
 from stockinsider.agent.profiles import PROFILE_BUDGETS, Profile
 
-DEFAULT_CHAT_MODEL = "deepseek-v4.1-flash"
-DEFAULT_EMBEDDING_MODEL = "deepseek-v4.1-flash"
+DEFAULT_CHAT_MODEL = "deepseek-flash"
+DEFAULT_EMBEDDING_MODEL = "deepseek-flash"
 API_KEY_ENV = "PROVIDER_API_KEY"
 CONFIG_VERSION = 1
 

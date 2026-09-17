@@ -45,8 +45,8 @@ def env_root(tmp_path, monkeypatch):
 
 def test_defaults_when_unconfigured(env_root) -> None:
     resolved = resolve_config(env_root)
-    assert resolved.chat_model == "deepseek-v4.1-flash"
-    assert resolved.embedding_model == "deepseek-v4.1-flash"
+    assert resolved.chat_model == "deepseek-flash"
+    assert resolved.embedding_model == "deepseek-flash"
     assert resolved.chat_base_url is None
     assert resolved.embedding_base_url is None
     assert resolved.budgets == {p.value: PROFILE_BUDGETS[p] for p in Profile}
@@ -223,7 +223,7 @@ def test_config_show_masks_key(env_root, monkeypatch) -> None:
     assert result.exit_code == 0
     assert "sk-livekeyabcdefgh" not in result.output
     assert "sk-...efgh" in result.output
-    assert "deepseek-v4.1-flash" in result.output
+    assert "deepseek-flash" in result.output
     assert "UNCONFIGURED" in result.output
 
 

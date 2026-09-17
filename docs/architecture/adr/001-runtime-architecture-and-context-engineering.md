@@ -95,7 +95,7 @@ The provenance ledger is architecturally **non-compactable**: without it the INV
 
 ### 6.5 Model routing
 
-Default for **all profiles and all model roles (chat, reasoning, event scoring, embedding): `deepseek-v4.1-flash`** (latest at decision time). Per-profile and per-role overrides are user-configurable (FR-021) — e.g., the owner may point the `deep` profile at a reasoning model with no code change.
+Default for **all profiles and all model roles (chat, reasoning, event scoring, embedding): `deepseek-flash`**. *(Corrected 2026-09-17: the decision-time name `deepseek-v4.1-flash` does not exist in the live catalog — first live conversation returned HTTP 400 listing `deepseek-flash` / `deepseek-v4-pro`; recorded in AILOG-0023.)* Per-profile and per-role overrides are user-configurable (FR-021) — e.g., the owner may point the `deep` profile at a reasoning model with no code change.
 
 *Implementation note*: the embedding endpoint of the configured provider is verified at implementation; if the endpoint family does not expose embeddings, configuration falls back to a separately configured OpenAI-compatible embedding provider (already supported by FR-021). No code change is implied.
 

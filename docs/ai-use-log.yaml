@@ -877,3 +877,41 @@ sessions:
       matrix-named test files), then authorized application of the
       gate-protected proposal files.
     status: applied
+
+  - id: AILOG-0023
+    date: "2026-09-17"
+    tool: "pi coding agent (LLM session)"
+    role: ai
+    task: >-
+      Default model-name correction, triggered by the owner's first
+      live conversation (HTTP 400: the endpoint catalog offers
+      deepseek-flash and deepseek-v4-pro; the decision-time default
+      deepseek-v4.1-flash does not exist). providers.py defaults
+      corrected to deepseek-flash (chat and embedding); test assertions
+      synced; current-state documents synced (AGENTS.md, README.md,
+      glossary); ADR-001 §6.5 carries a marked correction; TP-003 gains
+      a dated amendment (referenced by the fix PR per GOV-006);
+      evaluation-logbook gains an appended note clarifying the E-001/
+      E-002 model metadata. Historical records (prior AI-log sessions,
+      E-entry text, original TP-003 text) intentionally unchanged.
+      Same round: the owner asked for the /resume mechanism
+      explanation; its current semantics (in-REPL resume swaps the
+      binding without closing the current session, leaving it active
+      in the index) were explained and flagged as a usability defect
+      with a fix proposal pending owner choice.
+    artifacts:
+      - src/stockinsider/agent/providers.py
+      - test/offline/test_provider_config.py
+      - AGENTS.md
+      - README.md
+      - docs/req/glossary.md
+      - docs/architecture/adr/001-runtime-architecture-and-context-engineering.md
+      - docs/test-plans/TP-003.md
+      - docs/architecture/evaluation-logbook.md
+      - docs/ai-use-log.yaml
+    human_decision: >-
+      Owner reported the live 400 error and instructed the correction (owner instruction: fix it),
+      accepting the recommended single default
+      (deepseek-flash for all roles; profile-based routing not
+      adopted this round).
+    status: applied

@@ -34,7 +34,7 @@
 | Faithfulness | Fraction of answer claims supported by retrieved context. Quality metric for RAG answers. | `REQ-SI-QA-001`; eval harness |
 | Fit Criterion | The machine-checkable completion rule for a requirement: test rule + threshold + verification method. | registry field `fit_criterion` |
 | Incomplete Turn | A turn interrupted before its post-check completed; marked `incomplete` in session.jsonl and excluded from context reconstruction on resume. | `agent/session` (memory-design §3) |
-| Model Routing | The per-profile, per-role mapping of model roles (chat, reasoning, event scoring, embedding) to configured models. Default for all roles and profiles: `deepseek-v4.1-flash`; user-overridable per profile. | config `profiles.*.models` (ADR-001 §6.5) |
+| Model Routing | The per-profile, per-role mapping of model roles (chat, reasoning, event scoring, embedding) to configured models. Default for all roles and profiles: `deepseek-flash`; user-overridable per profile. | config `profiles.*.models` (ADR-001 §6.5) |
 | News Relevance Filter | Ingestion-time filter admitting only news relevant to active watchlist symbols or macro keywords. No firehose ingestion. | `IngestionService.filter_news` (`REQ-SI-FR-003`) |
 | Post-check | Deterministic verifier that extracts numerics from final agent output and matches each against the run's context snapshot. Executor of `REQ-SI-INV-001`. | `Guardrail.postcheck` |
 | Profile Budget Envelope | The per-session token ceiling bound to the analysis profile. Overflow: compact-and-retry once per response, then explicit abort. | config `profiles.*.budget` (`REQ-SI-COST-001`) |

@@ -8,7 +8,7 @@ This project is the CS5351 agentic software engineering course project, built AI
 
 Two parts separated by a **tool boundary** (the authority membrane):
 
-- **Agent side** (`src/stockinsider/agent/`) — a self-built lightweight agent loop: REPL + slash commands, session persistence (append-only `session.jsonl`, values-as-seen context snapshots), layered context assembly with compaction and provenance-ledger re-injection, a deterministic guardrail (numeric post-check, epistemic filter, fail-safe), and user-configurable OpenAI-compatible providers (default `deepseek-v4.1-flash`).
+- **Agent side** (`src/stockinsider/agent/`) — a self-built lightweight agent loop: REPL + slash commands, session persistence (append-only `session.jsonl`, values-as-seen context snapshots), layered context assembly with compaction and provenance-ledger re-injection, a deterministic guardrail (numeric post-check, epistemic filter, fail-safe), and user-configurable OpenAI-compatible providers (default `deepseek-flash`).
 - **Data side** (`src/stockinsider/data/`) — an in-process package behind a facade: ingestion adapters (EODHD fundamentals, GDELT + whitelist-crawler news), SQLite + sqlite-vec storage, deterministic indicators and event studies. The LLM reaches it only through schema-validated tools.
 
 Four zero-tolerance invariants govern the product (`docs/architecture/invariants.md`): every number in output traces to the session's context snapshot; no deterministic causal claims or price predictions; failures are explicit, never substituted; watchlist additions only via verified symbol resolution.
