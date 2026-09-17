@@ -54,6 +54,23 @@ def apply_budget_overrides(budgets: dict[str, int]) -> None:
         PROFILE_BUDGETS[Profile(name)] = int(value)
 
 
+#: Tool-loop iteration caps per profile (owner ruling 2026-09-16:
+#: standard = 10; caps bound runaway tool use per turn).
+TOOL_LOOP_LIMITS: dict[Profile, int] = {
+    Profile.quick: 4,
+    Profile.standard: 10,
+    Profile.deep: 20,
+}
+
+
+def tool_loop_limit(profile: Profile | str) -> int:
+    """Return the tool-loop iteration cap for a profile.
+
+    Implements: REQ-SI-FR-020 (ADR-001)
+    """
+    return TOOL_LOOP_LIMITS[Profile(profile)]
+
+
 def envelope_for(profile: Profile | str) -> BudgetEnvelope:
     """Return the token budget envelope for a profile.
 

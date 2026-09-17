@@ -788,3 +788,55 @@ sessions:
       TP-007; two matrix-named test files; ADR-006 charter), then
       authorized application of the gate-protected proposal files.
     status: applied
+
+  - id: AILOG-0021
+    date: "2026-09-16"
+    tool: "pi coding agent (LLM session)"
+    role: ai
+    task: >-
+      TP-007a implementation (agent loop core - first real
+      conversations) per the owner-confirmed round-15 plan with the
+      profile-tiered loop-cap ruling (quick 4 / standard 10 owner-set /
+      deep 20): agent/loop.py TurnEngine (blueprint 7.2 pipeline:
+      bounded tool loop through the registry membrane, values-as-seen
+      snapshots as the INV-001 pool, guardrail wiring with quarantine
+      events archiving originals, provider-backed regeneration, usage
+      accounting, streaming render contract); providers.complete (one
+      code path, stream aggregation, tool-call delta assembly);
+      registry.openai_tool_specs + shared JSON_SCHEMA_TYPES;
+      session.read_events; profiles TOOL_LOOP_LIMITS; repl free-text
+      wiring with unconfigured-provider explicitness and Ctrl+C
+      handling; prompts/identity.md v1 (five disciplines - the GOV-003
+      versioned-artifact era begins; prompt_version completes the
+      GOV-005 stamp); trace-matrix FR-008 row gains test_agent_loop.
+      Two matrix-named/new suites (test_streaming 7, test_agent_loop
+      9) plus persistence and CLI-surface extensions, all offline via
+      scripted providers and fake streaming clients. prompts/ and the
+      registry/shared extensions staged via proposals under explicit
+      owner authorization; eval gate fires on this change set by
+      design (providers + prompts touched).
+    artifacts:
+      - docs/test-plans/TP-007a.md
+      - prompts/identity.md
+      - src/stockinsider/agent/loop.py
+      - src/stockinsider/agent/providers.py
+      - src/stockinsider/agent/repl.py
+      - src/stockinsider/agent/session.py
+      - src/stockinsider/agent/profiles.py
+      - src/stockinsider/agent/registry.py
+      - src/stockinsider/shared/tools.py
+      - test/offline/test_streaming.py
+      - test/offline/test_agent_loop.py
+      - test/offline/test_session_persistence.py
+      - test/offline/test_cli_surface.py
+      - docs/architecture/trace-matrix.md
+      - docs/ai-use-log.yaml
+    human_decision: >-
+      Owner confirmed the TP-007a plan and its five rulings (a/b
+      split; single-path complete with sink; INV-001 snapshot =
+      turn tool results; identity v1 skeleton; usability constants),
+      then amended the loop cap to profile tiers with standard=10
+      (quick 4 / deep 20 agent-proposed and approved in the same
+      ruling), and authorized application of the gate-protected
+      proposal files (prompts/, registry, shared, trace-matrix).
+    status: applied

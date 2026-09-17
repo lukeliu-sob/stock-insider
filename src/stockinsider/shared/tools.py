@@ -38,6 +38,16 @@ class EffectClass(str, Enum):
     WRITE = "write"
 
 
+#: JSON-Schema type names for the wire types (OpenAI tool parameters).
+JSON_SCHEMA_TYPES: dict[str, str] = {
+    "str": "string",
+    "int": "integer",
+    "float": "number",
+    "bool": "boolean",
+    "list": "array",
+    "dict": "object",
+}
+
 #: Wire type names allowed in specs (str/int/float/bool/list/dict).
 _WIRE_TYPES: dict[str, type] = {
     "str": str,

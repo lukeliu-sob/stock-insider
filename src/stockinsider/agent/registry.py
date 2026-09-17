@@ -16,6 +16,7 @@ from datetime import datetime, timezone
 from typing import Any
 
 from stockinsider.shared.tools import (
+    JSON_SCHEMA_TYPES,
     EffectClass,
     ToolCall,
     ToolResult,
@@ -60,6 +61,36 @@ class Registry:
         Implements: REQ-SI-FR-013 (ADR-005)
         """
         return sorted(self._specs.values(), key=lambda spec: spec.name)
+
+    def openai_tool_specs(self) -> list[dict[str, Any]]:
+        """Render registered specs as OpenAI function-tool definitions.
+
+        Implements: REQ-SI-FR-013 (ADR-005)
+        """
+        specs: list[dict[str, Any]] = []
+        for spec in self.list_tools():
+            properties = {**spec.arguments_spec, **spec.optional_spec}
+            required = sorted(spec.arguments_spec)
+            parameters: dict[str, Any] = {
+                "type": "object",
+                "properties": {
+                    name: {"type": JSON_SCHEMA_TYPES[type_name]}
+                    for name, type_name in properties.items()
+                },
+            }
+            if required:
+                parameters["required"] = required
+            specs.append(
+                {
+                    "type": "function",
+                    "function": {
+                        "name": spec.name,
+                        "description": spec.description,
+                        "parameters": parameters,
+                    },
+                }
+            )
+        return specs
 
     def execute(self, call: ToolCall, *, allow_write: bool = False) -> ToolResult:
         """Execute one validated tool call; every failure is explicit.

@@ -175,3 +175,16 @@ def test_session_open_without_record_rejected() -> None:
 
     with pytest.raises(EventValidationError, match="record"):
         validate_event({"event": "session-open"})
+
+
+# -- usage accounting roundtrip (TP-007a, COST-002) ---------------------------
+
+
+def test_usage_event_roundtrip(store) -> None:
+    record = store.create()
+    store.append_event(
+        record["session_id"],
+        {"event": "assistant-message", "text": "ok", "usage": {"prompt_tokens": 11, "completion_tokens": 4}},
+    )
+    events = store.read_events(record["session_id"])
+    assert events[-1]["usage"] == {"prompt_tokens": 11, "completion_tokens": 4}

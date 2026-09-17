@@ -23,7 +23,7 @@ Mapping: **every requirement → enforcing component → test/evidence → runti
 | FR-005 Basic info display | `cli` (`info`), `data/store` | `test/offline/test_cli_info.py` | — |
 | FR-006 Deterministic computation | `data/compute` + CI static gate | `test/offline/test_indicators.py` | — |
 | FR-007 RAG retrieval | `data/store` (sqlite-vec, ADR-003) | `test/offline/test_retrieval.py` | retrieval precision log (QA-002) |
-| FR-008 Analysis report | `agent/context`, `agent/guardrail`, pipeline | `test/offline/test_report_gate.py`, `test/live/test_eval_set.py` | S3 |
+| FR-008 Analysis report | `agent/context`, `agent/guardrail`, pipeline | `test/offline/test_agent_loop.py`, `test/offline/test_report_gate.py`, `test/live/test_eval_set.py` | S3 |
 | FR-009 Event scoring | `agent/providers` (chat + JSON schema), `data/store` (`events`) | `test/offline/test_event_scoring.py` | S1 (model/prompt stamps on events) |
 | FR-010 Event study | `data/compute` | `test/offline/test_event_study.py` | — |
 | FR-011 Session persistence | `agent/session` | `test/offline/test_session_persistence.py` | S1 (index integrity) |

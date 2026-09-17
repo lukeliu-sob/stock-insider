@@ -2,9 +2,10 @@
 
 Slash commands and CLI subcommands are two entries to one verb set; a
 third verb set is forbidden. /tools lists the registry and directly
-invokes deterministic read/compute tools through the same membrane the
-agent loop will use. Free-text turns fail explicitly until the agent
-analysis loop lands (INV-003: refuse to pretend success).
+invokes deterministic read/compute tools. Free-text turns run the full
+agent pipeline (streaming, tool loop, guardrail) when the provider is
+configured; otherwise they fail explicitly with remediation guidance
+(INV-003: refuse to pretend success).
 
 Implements: REQ-SI-FR-013, REQ-SI-INV-003 (ADR-001, ADR-005)
 """
@@ -15,8 +16,16 @@ import uuid
 from collections.abc import Callable
 
 from stockinsider.agent.context import estimate_tokens
+from stockinsider.agent.loop import TurnEngine, load_identity_prompt
 from stockinsider.agent.profiles import Profile, apply_budget_overrides, envelope_for
-from stockinsider.agent.providers import resolve_config
+from stockinsider.agent.providers import (
+    API_KEY_ENV,
+    OpenAICompatibleProvider,
+    ProviderConfig,
+    ProviderError,
+    resolve_api_key,
+    resolve_config,
+)
 from stockinsider.agent.registry import Registry
 from stockinsider.agent.session import SessionStore
 from stockinsider.shared.tools import (
@@ -38,9 +47,6 @@ _NOT_IMPLEMENTED: dict[str, str] = {
     "config": "REQ-SI-FR-021",
     "compact": "context compaction (blueprint §7.4)",
 }
-
-_AGENT_LOOP_TARGET = "the agent analysis loop (agent runtime test plan)"
-
 
 def _explicit_not_implemented(command: str, target: str, echo: Callable[[str], None]) -> None:
     echo(f"error: /{command} is not implemented yet (target: {target}); refusing to pretend success (INV-003).")
@@ -155,12 +161,15 @@ def repl(
     """
     config = resolve_config(data_root)
     apply_budget_overrides(config.budgets)
+    prompt_version, _identity = load_identity_prompt()
     stamp = {
         "model_id": config.chat_model,
         "provider_config": config.chat_base_url or "unconfigured-endpoint",
+        "prompt_version": prompt_version,
     }
     record = store.create(profile=profile, provenance=stamp)
     registry = build_registry(store)
+    engine = _build_engine(store, registry, config)
     echo(
         f"session {record['session_id']} opened (profile: {record['profile']}); type /help for commands, /exit to leave"
     )
@@ -186,9 +195,55 @@ def repl(
             else:
                 echo(f"error: unknown command /{name}; /help lists available commands")
         else:
-            echo(
-                f"error: {_AGENT_LOOP_TARGET} is not implemented; this REPL handles "
-                "slash commands only - refusing to pretend success (INV-003)."
-            )
+            if engine is None:
+                echo(
+                    "error: provider unconfigured — run `stockinsider config set "
+                    "--chat-base-url ...` and `--api-key` (or set PROVIDER_BASE_URL / "
+                    f"{API_KEY_ENV}); slash commands remain available"
+                )
+            else:
+                _run_conversational_turn(engine, record, line, echo)
     store.close(record["session_id"])
     echo(f"session {record['session_id']} closed")
+
+
+def _build_engine(
+    store: SessionStore, registry: Registry, config: ProviderConfig
+) -> TurnEngine | None:
+    """Construct the turn engine when the provider is fully configured.
+
+    Implements: REQ-SI-FR-008 (ADR-001)
+    """
+    key, _source = resolve_api_key()
+    if not config.chat_base_url or key is None:
+        return None
+    provider = OpenAICompatibleProvider(config, api_key=key)
+    return TurnEngine(store, registry, provider)
+
+
+def _run_conversational_turn(
+    engine: TurnEngine, record: dict, line: str, echo: Callable[[str], None]
+) -> None:
+    """Run one free-text turn with streaming render and explicit failures.
+
+    Implements: REQ-SI-FR-008, REQ-SI-FR-019 (ADR-001)
+    """
+    import sys
+
+    def _sink(piece: str) -> None:
+        sys.stdout.write(piece)
+        sys.stdout.flush()
+
+    try:
+        engine.run_turn(
+            record["session_id"],
+            line,
+            profile=record["profile"],
+            render=echo,
+            progress=echo,
+            stream_sink=_sink,
+        )
+    except KeyboardInterrupt:
+        echo("\nturn interrupted")
+    except ProviderError as exc:
+        echo(f"error: {exc}")

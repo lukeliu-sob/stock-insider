@@ -90,10 +90,12 @@ def test_repl_unknown_slash_is_explicit_error(sessions_root) -> None:
 
 
 def test_repl_free_text_fails_explicitly(sessions_root) -> None:
+    # Since TP-007a: free text runs the agent pipeline when configured; without
+    # a provider it fails explicitly with remediation (superseded wording kept
+    # for the INV-003 intent).
     result = runner.invoke(app, [], input="what about 0700.HK?\n/exit\n")
     assert result.exit_code == 0
-    assert "not implemented" in result.output
-    assert "INV-003" in result.output
+    assert "provider unconfigured" in result.output
 
 
 def test_repl_tools_lists_registered_tools(sessions_root) -> None:
@@ -127,3 +129,12 @@ def test_repl_tools_unknown_tool_rejected(sessions_root) -> None:
     result = runner.invoke(app, [], input="/tools magic.wand\n/exit\n")
     assert result.exit_code == 0
     assert "unknown tool" in result.output
+
+
+def test_repl_free_text_with_unconfigured_provider_is_explicit(sessions_root, monkeypatch) -> None:
+    monkeypatch.delenv("PROVIDER_API_KEY", raising=False)
+    monkeypatch.delenv("PROVIDER_BASE_URL", raising=False)
+    result = runner.invoke(app, [], input="hello there\n/exit\n")
+    assert result.exit_code == 0
+    assert "provider unconfigured" in result.output
+    assert "config set" in result.output

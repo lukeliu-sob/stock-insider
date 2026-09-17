@@ -263,6 +263,18 @@ def write_env_api_key(value: str, explicit_file: Path | str | None = None) -> Pa
     return path
 
 
+@dataclass(frozen=True)
+class ChatOutcome:
+    """One provider completion: text and/or tool calls, with usage.
+
+    Implements: REQ-SI-FR-021, REQ-SI-FR-019 (ADR-001)
+    """
+
+    text: str = ""
+    tool_calls: list[dict[str, Any]] = field(default_factory=list)
+    usage: dict[str, int] = field(default_factory=dict)
+
+
 class OpenAICompatibleProvider:
     """Thin stateless client over Chat Completions and embeddings.
 
@@ -325,6 +337,107 @@ class OpenAICompatibleProvider:
             else {}
         )
         return text, usage_dict
+
+    def complete(
+        self,
+        messages: list[dict[str, Any]],
+        *,
+        tools: list[dict[str, Any]] | None = None,
+        stream_sink: Callable[[str], None] | None = None,
+    ) -> ChatOutcome:
+        """One stateless completion with optional tool specs and streaming.
+
+        stream_sink receives text deltas as produced (FR-019: the first
+        delta reaches the caller strictly before completion returns);
+        tools is the OpenAI function-tool list. Returns the aggregated
+        ChatOutcome (text, parsed tool calls, usage).
+
+        Implements: REQ-SI-FR-021, REQ-SI-FR-019 (ADR-001)
+        """
+        if not self._config.chat_base_url:
+            raise ProviderError(
+                "chat base_url is not configured; run `stockinsider config set --chat-base-url ...` "
+                "or set PROVIDER_BASE_URL — refusing to guess an endpoint (INV-003)"
+            )
+        if not self._api_key:
+            raise ProviderError(
+                f"{API_KEY_ENV} is not set; provide it via the environment or "
+                "`stockinsider config set --api-key` (writes the dotenv file)"
+            )
+        kwargs: dict[str, Any] = {
+            "model": self._config.chat_model,
+            "messages": messages,
+        }
+        if tools:
+            kwargs["tools"] = tools
+        client = self._client(self._config.chat_base_url)
+        if stream_sink is None:
+            try:
+                response = client.chat.completions.create(**kwargs)
+            except Exception as exc:
+                raise ProviderError(f"chat call failed: {exc}") from exc
+            choice = response.choices[0]
+            tool_calls = [
+                {
+                    "id": tc.id,
+                    "type": "function",
+                    "function": {"name": tc.function.name, "arguments": tc.function.arguments or ""},
+                }
+                for tc in (choice.message.tool_calls or [])
+            ]
+            response_usage = response.usage
+            return ChatOutcome(
+                text=choice.message.content or "",
+                tool_calls=tool_calls,
+                usage=(
+                    {
+                        "prompt_tokens": response_usage.prompt_tokens,
+                        "completion_tokens": response_usage.completion_tokens,
+                    }
+                    if response_usage
+                    else {}
+                ),
+            )
+        kwargs["stream"] = True
+        kwargs["stream_options"] = {"include_usage": True}
+        try:
+            chunks = client.chat.completions.create(**kwargs)
+        except Exception as exc:
+            raise ProviderError(f"chat call failed: {exc}") from exc
+        text_parts: list[str] = []
+        calls: dict[int, dict[str, Any]] = {}
+        usage: dict[str, int] = {}
+        for chunk in chunks:
+            chunk_usage = getattr(chunk, "usage", None)
+            if chunk_usage:
+                usage = {
+                    "prompt_tokens": chunk_usage.prompt_tokens,
+                    "completion_tokens": chunk_usage.completion_tokens,
+                }
+            for choice in getattr(chunk, "choices", None) or []:
+                delta = getattr(choice, "delta", None)
+                if delta is None:
+                    continue
+                piece = getattr(delta, "content", None)
+                if piece:
+                    text_parts.append(piece)
+                    stream_sink(piece)
+                for tc in getattr(delta, "tool_calls", None) or []:
+                    index = tc.index
+                    slot = calls.setdefault(
+                        index, {"id": "", "type": "function", "function": {"name": "", "arguments": ""}}
+                    )
+                    if tc.id:
+                        slot["id"] = tc.id
+                    if tc.function and tc.function.name:
+                        slot["function"]["name"] = tc.function.name
+                    if tc.function and tc.function.arguments:
+                        slot["function"]["arguments"] += tc.function.arguments
+        return ChatOutcome(
+            text="".join(text_parts),
+            tool_calls=[calls[i] for i in sorted(calls)],
+            usage=usage,
+        )
 
     def embed(self, texts: list[str]) -> list[list[float]]:
         """One embeddings call; returns one vector per input text.

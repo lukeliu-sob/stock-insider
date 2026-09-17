@@ -124,6 +124,18 @@ class SessionStore:
         self._index_update(session_id, status="active")
         return self._index_find(session_id)
 
+    def read_events(self, session_id: str) -> list[dict[str, Any]]:
+        """Replay session.jsonl events in order (read-only history source).
+
+        Implements: REQ-SI-FR-011 (ADR-001)
+        """
+        session_dir = self._require(session_id)
+        events: list[dict[str, Any]] = []
+        for line in (session_dir / "session.jsonl").read_text(encoding="utf-8").splitlines():
+            if line.strip():
+                events.append(json.loads(line))
+        return events
+
     # -- append-only event stream and snapshots ---------------------------
 
     def append_event(self, session_id: str, event: dict[str, Any]) -> None:
