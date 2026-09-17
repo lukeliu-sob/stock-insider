@@ -57,6 +57,9 @@ def iter_files():
         if not path.is_file():
             continue
         rel = path.relative_to(ROOT).as_posix()
+        # Self-declaring fixture marker: test files exercising the language
+        # policy carry intentional CJK; the marker makes the exemption
+        # explicit and reviewable instead of a growing name list.
         if rel in EXEMPT_FILES:
             continue
         if any(part in SKIP_DIRS for part in pathlib.PurePosixPath(rel).parts):
@@ -71,6 +74,11 @@ def main() -> None:
         try:
             text = path.read_text(encoding="utf-8")
         except (UnicodeDecodeError, OSError):
+            continue
+        # Self-declaring fixture marker: test files exercising the language
+        # policy carry intentional CJK; the marker makes the exemption
+        # explicit and reviewable instead of a growing name list.
+        if rel.startswith("test/") and "lang-fixture: intentional-cjk" in text:
             continue
         for lineno, line in enumerate(text.splitlines(), 1):
             if CJK.search(line):
