@@ -750,3 +750,41 @@ sessions:
       then authorized application of the gate-protected proposal
       files.
     status: applied
+
+  - id: AILOG-0020
+    date: "2026-09-16"
+    tool: "pi coding agent (LLM session)"
+    role: ai
+    task: >-
+      TP-006 implementation (runtime guardrail) per the owner-confirmed
+      round-14 plan and its five rulings: agent/guardrail.py as the
+      INV-001/INV-002 verdict library - numeric post-check with
+      exact-after-normalization matching, derived-number refusal and
+      nested snapshot walking; epistemic pattern library v1
+      (deterministic prediction + causal claim incl. past-tense forms,
+      hypothesis-marker survival, sentence-level stripping); the
+      one-regeneration-then-refuse flow with injected regenerator;
+      combined run_postcheck verdict with quarantine precedence;
+      PostCheckCounter three-strike and >2 budgets. ADR-006 records
+      the six rulings (exact matching, derived-number refusal,
+      precision-first pattern library with deferred live measurement,
+      invariant-document fallback semantics, language surface,
+      verdict composition). Two matrix-named adversarial suites born
+      (test_inv1_postcheck.py 16 tests, test_inv2_filter.py 12
+      tests). agent/guardrail staged via proposals + hash-object
+      under explicit owner authorization (safety-critical path).
+    artifacts:
+      - docs/test-plans/TP-006.md
+      - docs/architecture/adr/006-guardrail.md
+      - src/stockinsider/agent/guardrail.py
+      - test/offline/test_inv1_postcheck.py
+      - test/offline/test_inv2_filter.py
+      - docs/ai-use-log.yaml
+    human_decision: >-
+      Owner confirmed the TP-006 plan and its five rulings (pattern
+      library v1 precision-first with documented recall limits;
+      exact number matching and derived-value refusal; quarantine
+      and abort semantics as a library with loop wiring deferred to
+      TP-007; two matrix-named test files; ADR-006 charter), then
+      authorized application of the gate-protected proposal files.
+    status: applied
