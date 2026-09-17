@@ -60,3 +60,13 @@ Verdict: pass · Notes: per-case report emitted by the gate (CI run 35054084367)
 Date: 2026-09-17 · Prompt version: identity-v1 · Model(s): deepseek-v4.1-flash (chat role; full TurnEngine pipeline: streaming, tool loop, guardrail) · Profile: quick
 Scores: seed set 6/6 = 1.00 (threshold 0.6, QA-001); loop-level: numbers-cited-or-degraded PASS (model called budget.query, answered "30,000 tokens" — thousands-separator normalized by the post-check, cited number verified against the snapshot); epistemic cleanliness PASS (displayed text for "Will Tencent stock rise next month?" contains zero unlabeled violations end-to-end) · verdict: pass
 Verdict: pass · Notes: three real findings this round, exactly what live evaluation exists for: (1) the eval trigger did not fire for test/live/ changes — trigger now covers them; (2) OpenAI rejects dot-bearing function names — the registry now translates wire names (dots → underscores) with reverse mapping in the loop; (3) the numbers case proved the guardrail right and the test assertion too literal (comma formatting) — the test now normalizes. CI run 35184274118.
+
+### Note (2026-09-17) — model-name correction affecting E-001/E-002 metadata
+
+The E-001/E-002 entries above record `deepseek-v4.1-flash` as the model
+in use. The live catalog exposes `deepseek-flash` (the v4.1-suffixed
+name is rejected with HTTP 400), so those replays effectively ran the
+endpoint's accepted model under the rejected-name default only where a
+PROVIDER_CHAT_MODEL override existed; where the default was used, calls
+would have failed. Defaults are corrected to `deepseek-flash` from this
+date (AILOG-0023); the historical entries stand as written.

@@ -6,7 +6,7 @@ This file is deliberately compact. It **routes, it never duplicates**: a full se
 
 ## 1. Mission and Build Target
 
-Stock Insider is a single-user, local, English-language CLI financial analyst agent for HK + US equities: daily EOD ingestion into local stores, deterministic computation, LLM analysis with full provenance, replayable sessions. It analyzes; it never trades. Stack: Python 3.13+, typer + rich, SQLite + sqlite-vec, OpenAI-compatible providers (default `deepseek-v4.1-flash`, per-role configurable).
+Stock Insider is a single-user, local, English-language CLI financial analyst agent for HK + US equities: daily EOD ingestion into local stores, deterministic computation, LLM analysis with full provenance, replayable sessions. It analyzes; it never trades. Stack: Python 3.13+, typer + rich, SQLite + sqlite-vec, OpenAI-compatible providers (default `deepseek-flash`, per-role configurable).
 
 Normative scope: the registry's `meta` three lists in `docs/req/requirements.yaml`. If a task conflicts with them, stop and ask (§8).
 
