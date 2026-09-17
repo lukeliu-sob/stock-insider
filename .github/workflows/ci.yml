@@ -125,7 +125,7 @@ jobs:
       - name: Trigger check
         run: |
           CHANGED=$(git diff --name-only ${{ github.event.pull_request.base.sha }}...HEAD)
-          if echo "$CHANGED" | grep -qE '^(prompts/|src/.*provider|src/.*rout)'; then
+          if echo "$CHANGED" | grep -qE '^(prompts/|src/.*provider|src/.*rout|test/live/)'; then
             echo "EVAL_TRIGGERED=true" >> "$GITHUB_ENV"
           else
             echo "No prompt/model-routing change — evaluation gate not triggered"

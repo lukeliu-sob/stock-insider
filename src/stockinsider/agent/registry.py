@@ -27,6 +27,14 @@ from stockinsider.shared.tools import (
 )
 
 
+def wire_name(name: str) -> str:
+    """Dot-free wire-safe form of a tool name (OpenAI function-name rule).
+
+    Implements: REQ-SI-FR-013 (ADR-005)
+    """
+    return name.replace(".", "_")
+
+
 class RegistryError(RuntimeError):
     """Explicit registration-level failure (duplicate names, bad state).
 
@@ -84,13 +92,24 @@ class Registry:
                 {
                     "type": "function",
                     "function": {
-                        "name": spec.name,
+                        # Wire-safe name: OpenAI function names forbid dots.
+                        "name": wire_name(spec.name),
                         "description": spec.description,
                         "parameters": parameters,
                     },
                 }
             )
         return specs
+
+    def resolve_wire_name(self, wire: str) -> str | None:
+        """Map a wire-safe (dot-free) name back to its registered tool name.
+
+        Implements: REQ-SI-FR-013 (ADR-005)
+        """
+        for spec in self._specs.values():
+            if wire_name(spec.name) == wire:
+                return spec.name
+        return None
 
     def execute(self, call: ToolCall, *, allow_write: bool = False) -> ToolResult:
         """Execute one validated tool call; every failure is explicit.

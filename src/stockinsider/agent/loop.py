@@ -107,7 +107,6 @@ class TurnEngine:
         self._provider = provider
         self._prompt_version, self._identity = load_identity_prompt(prompts_dir)
         self._counter = PostCheckCounter()
-        self._turn_seq = 0
 
     @property
     def prompt_version(self) -> str:
@@ -116,6 +115,18 @@ class TurnEngine:
         Implements: REQ-SI-GOV-003 (ADR-001)
         """
         return self._prompt_version
+
+    def _next_turn_id(self, session_id: str) -> str:
+        """Derive the next turn id from the session's existing events (resume-safe).
+
+        Implements: REQ-SI-FR-011, REQ-SI-FR-023 (ADR-001)
+        """
+        numbers = []
+        for event in self._store.read_events(session_id):
+            turn = event.get("turn")
+            if isinstance(turn, str) and turn.startswith("turn-") and turn[5:].isdigit():
+                numbers.append(int(turn[5:]))
+        return f"turn-{max(numbers, default=0) + 1:04d}"
 
     def _history_messages(self, session_id: str) -> list[dict[str, str]]:
         events = self._store.read_events(session_id)
@@ -136,15 +147,14 @@ class TurnEngine:
         profile: str,
         render: RenderFn,
         progress: ProgressFn,
-        stream_sink: SinkFn,
+        stream_sink: SinkFn | None = None,
     ) -> TurnOutcome:
         """Run one full turn; content failures degrade, never crash (INV-003).
 
         Implements: REQ-SI-FR-008, REQ-SI-FR-019, REQ-SI-COST-002,
         REQ-SI-INV-001, REQ-SI-INV-002 (ADR-001)
         """
-        self._turn_seq += 1
-        turn_id = f"turn-{self._turn_seq:04d}"
+        turn_id = self._next_turn_id(session_id)
         self._store.append_event(session_id, {"event": "user-message", "text": user_text, "turn": turn_id})
         usage_total: dict[str, int] = {}
         messages: list[dict[str, Any]] = [
@@ -153,6 +163,11 @@ class TurnEngine:
             {"role": "user", "content": user_text},
         ]
         tool_specs = self._registry.openai_tool_specs()
+        wire_map = {spec["function"]["name"]: spec["function"]["name"] for spec in tool_specs}
+        for spec in self._registry.list_tools():
+            from stockinsider.agent.registry import wire_name
+
+            wire_map[wire_name(spec.name)] = spec.name
         limit = tool_loop_limit(profile)
         candidate = ""
         tools_used = 0
@@ -165,7 +180,8 @@ class TurnEngine:
                 messages.append({"role": "assistant", "tool_calls": outcome.tool_calls})
                 for call in outcome.tool_calls:
                     function = call.get("function") or {}
-                    name = function.get("name") or call.get("name", "")
+                    raw_name = function.get("name") or call.get("name", "")
+                    name = wire_map.get(raw_name, raw_name)
                     raw_arguments = function.get("arguments", call.get("arguments", "{}"))
                     try:
                         arguments = json.loads(raw_arguments or "{}")
@@ -237,7 +253,7 @@ class TurnEngine:
                     "turn": turn_id,
                 },
             )
-            if streamed:
+            if streamed and stream_sink:
                 stream_sink("\n")
             render(verdict.display_text)
             displayed = verdict.display_text
@@ -253,12 +269,12 @@ class TurnEngine:
                 return regen.text
 
             epi = run_with_regeneration(candidate, _regenerator)
-            if streamed and epi.displayed != candidate:
+            if streamed and stream_sink and epi.displayed != candidate:
                 stream_sink("\n")
             render(epi.displayed)
             displayed = epi.displayed
         else:
-            if streamed:
+            if streamed and stream_sink:
                 stream_sink("\n")
             displayed = candidate
         self._store.append_event(

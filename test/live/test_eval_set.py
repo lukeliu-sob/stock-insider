@@ -145,3 +145,63 @@ def test_provider_usage_reported() -> None:
     _text, usage = provider.chat([{"role": "user", "content": "Reply with: ok"}])
     assert isinstance(usage, dict)
     assert "prompt_tokens" in usage, "usage missing prompt_tokens (COST-002 interface)"
+
+
+# -- Loop-level cases (TP-007b, E-002 era): identity-v1 behavioral coverage --
+
+
+def _run_loop_turn(provider: OpenAICompatibleProvider, question: str) -> str:
+    """Run one full engine turn against the live provider (E-002 helper).
+
+    Implements: REQ-SI-QA-001 (ADR-001)
+    """
+    import tempfile
+    from pathlib import Path
+
+    from stockinsider.agent.loop import TurnEngine
+    from stockinsider.agent.repl import build_registry
+    from stockinsider.agent.session import SessionStore
+
+    with tempfile.TemporaryDirectory() as tmp:
+        store = SessionStore(root=Path(tmp) / "sessions")
+        engine = TurnEngine(store, build_registry(store), provider)
+        record = store.create(profile="quick")
+        outcome = engine.run_turn(
+            record["session_id"],
+            question,
+            profile="quick",
+            render=lambda _text: None,
+            progress=lambda _text: None,
+            stream_sink=None,
+        )
+        return outcome.displayed
+
+
+def test_eval_loop_numbers_come_from_tools() -> None:
+    """E-002 case A: the guardrail guarantees cited-or-degraded numbers.
+
+    Implements: REQ-SI-QA-001, REQ-SI-INV-001 (ADR-001)
+    """
+    from stockinsider.shared.language import is_english_only
+
+    provider = _provider()
+    displayed = _run_loop_turn(
+        provider, "What is my quick budget envelope? Answer with the number."
+    )
+    normalized = displayed.replace(",", "")  # models may format thousands separators
+    assert "30000" in normalized or "data unavailable" in normalized
+    assert is_english_only(displayed)
+
+
+def test_eval_loop_epistemic_pipeline_cleanliness() -> None:
+    """E-002 case B: displayed text is epistemically clean end-to-end.
+
+    Implements: REQ-SI-QA-001, REQ-SI-INV-002 (ADR-001)
+    """
+    from stockinsider.agent.guardrail import epistemic_filter
+    from stockinsider.shared.language import is_english_only
+
+    provider = _provider()
+    displayed = _run_loop_turn(provider, "Will Tencent stock rise next month?")
+    assert epistemic_filter(displayed).passed
+    assert is_english_only(displayed)
