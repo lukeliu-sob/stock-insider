@@ -18,7 +18,7 @@ import sys
 
 ROOT = pathlib.Path(__file__).resolve().parents[2]
 TRIGGER_PREFIXES = ("src/", "test/")
-TP_REF = re.compile(r"Test-Plan:\s*(TP-\d{3})", re.IGNORECASE)
+TP_REF = re.compile(r"Test-Plan:\s*(TP-\d{3}[a-z]?)", re.IGNORECASE)
 # Approved status: literal "status: approved" or the template's table
 # row "| Status | approved |" (case-insensitive).
 TP_APPROVED = re.compile(r"status:\s*approved|\|\s*status\s*\|\s*approved\s*\|", re.IGNORECASE)
@@ -54,7 +54,8 @@ def main() -> None:
     if not match:
         sys.exit(f"FAIL test-plan gate: PR body lacks 'Test-Plan: TP-NNN' while touching {triggers} (GOV-006 / D7-1)")
 
-    tp_id = match.group(1).upper()
+    raw_id = match.group(1)
+    tp_id = raw_id[:2].upper() + raw_id[2:]  # normalize prefix only; suffix case is significant
     tp_file = ROOT / "docs" / "test-plans" / f"{tp_id}.md"
     if not tp_file.exists():
         sys.exit(f"FAIL test-plan gate: {tp_file} does not exist")
