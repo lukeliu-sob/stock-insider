@@ -710,3 +710,43 @@ sessions:
       and authorized application of the gate-protected proposal
       files.
     status: applied
+
+  - id: AILOG-0019
+    date: "2026-09-16"
+    tool: "pi coding agent (LLM session)"
+    role: ai
+    task: >-
+      TP-005 implementation (tool registry — the authority membrane)
+      per the owner-confirmed round-13 plan and its five rulings:
+      shared/tools.py wire envelopes (SourceKind/EffectClass, ToolSpec/
+      ToolCall/ToolResult, bidirectional fail-closed validators; ADR-004
+      reopen condition honored under G2); agent/registry.py
+      (injection-based Registry importing only shared; four-stage
+      fail-closed execution with write-effect gate; provenance triple
+      on success); repl build_registry composition registering the
+      default deterministic tool set (budget.query, session.list,
+      context.estimate) and making /tools real per blueprint 7.3;
+      ADR-005 (five rulings incl. the session.list stamp-class
+      decision and the D-6 dual-registry separation);
+      test_inv3_failsafe.py born as the matrix-named INV-003
+      fault-injection home (12 tests) plus five /tools REPL tests.
+      shared/ and agent/registry staged via proposals + hash-object
+      under explicit owner authorization (safety-critical paths).
+    artifacts:
+      - docs/test-plans/TP-005.md
+      - docs/architecture/adr/005-tool-registry.md
+      - src/stockinsider/shared/tools.py
+      - src/stockinsider/agent/registry.py
+      - src/stockinsider/agent/repl.py
+      - test/offline/test_inv3_failsafe.py
+      - test/offline/test_cli_surface.py
+      - docs/ai-use-log.yaml
+    human_decision: >-
+      Owner confirmed the TP-005 plan and its five rulings (injection-
+      based registry preserving the dependency law; first three-tool
+      deterministic set; session.list stamped api without extending
+      the enum; /tools real with write gated; tests landing in the
+      matrix-named test_inv3_failsafe.py with zero matrix edits),
+      then authorized application of the gate-protected proposal
+      files.
+    status: applied
