@@ -915,3 +915,35 @@ sessions:
       (deepseek-flash for all roles; profile-based routing not
       adopted this round).
     status: applied
+
+  - id: AILOG-0024
+    date: "2026-09-17"
+    tool: "pi coding agent (LLM session)"
+    role: ai
+    task: >-
+      In-REPL /resume semantics fix per owner ruling (option A):
+      close-current-then-bind. The REPL /resume now resolves the
+      target first (closed sessions only), refuses self-resume, closes
+      the current session cleanly (visible farewell line), then binds
+      the target with rebuilt engine and reset counters; both REPL
+      entries print a "resume with: stockinsider resume <id>" exit
+      hint. Two new tests pin the semantics (close-first ordering,
+      hint presence). TP-007b carries a dated amendment (GOV-006
+      reference for this fix); bug-diary gains BD-007 (this defect)
+      and BD-008 (default model name rejected by the live endpoint,
+      fixed in PR #10, with a "smoke the default" eval-case candidate
+      noted). This entry's human_decision paraphrases the owner
+      instruction in English (third occurrence of the CJK-quote trap;
+      the language gate caught the first two attempts this round
+      again during drafting).
+    artifacts:
+      - src/stockinsider/agent/repl.py
+      - test/offline/test_resume.py
+      - docs/test-plans/TP-007b.md
+      - docs/bug-diary.md
+      - docs/ai-use-log.yaml
+    human_decision: >-
+      Owner selected option A (close-current-then-bind with
+      self-resume guard and exit hints) after reviewing the current
+      /resume mechanism explanation.
+    status: applied
