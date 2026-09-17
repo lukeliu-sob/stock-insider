@@ -94,3 +94,36 @@ def test_repl_free_text_fails_explicitly(sessions_root) -> None:
     assert result.exit_code == 0
     assert "not implemented" in result.output
     assert "INV-003" in result.output
+
+
+def test_repl_tools_lists_registered_tools(sessions_root) -> None:
+    result = runner.invoke(app, [], input="/tools\n/exit\n")
+    assert result.exit_code == 0
+    for name in ("budget.query", "session.list", "context.estimate"):
+        assert name in result.output
+    assert "[compute]" in result.output and "[read]" in result.output
+
+
+def test_repl_tools_direct_invocation(sessions_root) -> None:
+    result = runner.invoke(app, [], input="/tools budget.query profile=quick\n/exit\n")
+    assert result.exit_code == 0
+    assert "30000" in result.output
+    assert "provenance: computed" in result.output
+
+
+def test_repl_tools_bad_argument_value_fails_explicitly(sessions_root) -> None:
+    result = runner.invoke(app, [], input="/tools budget.query profile=turbo\n/exit\n")
+    assert result.exit_code == 0
+    assert "error:" in result.output and "failed" in result.output
+
+
+def test_repl_tools_malformed_argument_rejected(sessions_root) -> None:
+    result = runner.invoke(app, [], input="/tools budget.query turbo\n/exit\n")
+    assert result.exit_code == 0
+    assert "malformed argument" in result.output
+
+
+def test_repl_tools_unknown_tool_rejected(sessions_root) -> None:
+    result = runner.invoke(app, [], input="/tools magic.wand\n/exit\n")
+    assert result.exit_code == 0
+    assert "unknown tool" in result.output
