@@ -83,7 +83,9 @@ def main() -> None:
                     (src_tier == "data" and tgt in ("agent", "agent.registry"))
                     or (src_tier == "agent" and tgt == "data")
                     or (tgt == "cli" and src_tier != "cli")
-                    or (src_tier == "shared" and tgt is not None)
+                    # shared may not depend on other internal packages,
+                    # but intra-package imports are legitimate.
+                    or (src_tier == "shared" and tgt is not None and tgt != "shared")
                 )
                 if bad:
                     violations.append(f"{rel}: {src_tier} -> {tgt} ({'.'.join(mod)})")

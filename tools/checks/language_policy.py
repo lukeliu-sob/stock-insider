@@ -19,6 +19,9 @@ EXEMPT_FILES = {
     "CS5351-2026-2027-project.md",
     "agent-era-RE-methodology.md",
     pathlib.PurePosixPath("docs/req/glossary.md").as_posix(),
+    # Fixtures for the runtime language policy intentionally contain CJK
+    # to test rejection; the product code under test stays English-only.
+    pathlib.PurePosixPath("test/offline/test_language_policy.py").as_posix(),
 }
 SKIP_DIRS = {
     ".git",

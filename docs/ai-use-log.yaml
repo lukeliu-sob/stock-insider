@@ -665,3 +665,48 @@ sessions:
       set --api-key); then authorized application of the
       gate-protected proposal files.
     status: applied
+
+  - id: AILOG-0018
+    date: "2026-09-16"
+    tool: "pi coding agent (LLM session)"
+    role: ai
+    task: >-
+      TP-004 implementation (shared foundation, first safety-critical
+      change set) per the owner-confirmed round-12 plan and the
+      sequencing ruling (original governance-first order retained:
+      shared, then registry, then guardrail, then the agent loop):
+      shared/ package birth with language.py (runtime English-policy
+      helpers), egress.py (SEC-003 whitelist, fail-closed URL
+      validation, dynamic provider-endpoint allowance),
+      provenance.py (GOV-005 authoritative stamp with validation),
+      events.py (FR-011 authoritative event kinds, forward-only);
+      agent/session adoption (stamp validation at creation, stricter
+      per GOV-005 fit); ADR-004 (charter: single authority, fail-closed
+      semantics, S6 forward-only evolution, G2 operating protocol);
+      two trace-matrix-named test files plus persistence extensions,
+      eleven negative tests. All shared/ content staged via
+      proposals + hash-object under explicit owner authorization
+      (governance gate blocks direct agent writes to the
+      safety-critical path, as designed).
+    artifacts:
+      - docs/test-plans/TP-004.md
+      - docs/architecture/adr/004-shared-foundation.md
+      - src/stockinsider/shared/__init__.py
+      - src/stockinsider/shared/language.py
+      - src/stockinsider/shared/egress.py
+      - src/stockinsider/shared/provenance.py
+      - src/stockinsider/shared/events.py
+      - src/stockinsider/agent/session.py
+      - test/offline/test_language_policy.py
+      - test/offline/test_egress.py
+      - test/offline/test_session_persistence.py
+      - docs/ai-use-log.yaml
+    human_decision: >-
+      Owner confirmed the TP-004 plan and four rulings (scope;
+      whitelist design with dynamic provider allowance; runtime-side
+      language helper with the CI gate unchanged; validate-the-
+      existing-form event schema), selected the original
+      governance-first sequencing over an experience-first reorder,
+      and authorized application of the gate-protected proposal
+      files.
+    status: applied
