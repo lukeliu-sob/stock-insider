@@ -19,6 +19,11 @@ from pathlib import Path
 from typing import Any
 
 from stockinsider.agent.profiles import Profile
+from stockinsider.shared.provenance import (
+    PLACEHOLDER_PREFIX,
+    PROVENANCE_FIELDS,
+    validate_provenance,
+)
 
 
 class SessionError(RuntimeError):
@@ -40,14 +45,8 @@ def _new_session_id() -> str:
 
 
 def _provenance_defaults() -> dict[str, str]:
-    # GOV-005 stamp fields are reserved here and populated from provider
-    # configuration when agent/providers lands (TP-003); placeholders are
-    # explicit, never fabricated values.
-    return {
-        "model_id": "unset-until-providers-land-TP-003",
-        "prompt_version": "unset-until-prompts-land",
-        "provider_config": "unset-until-providers-land-TP-003",
-    }
+    """Explicit placeholders (shared authority) until resolved values are supplied."""
+    return {field: f"{PLACEHOLDER_PREFIX}-supplied-by-creation-context" for field in PROVENANCE_FIELDS}
 
 
 class SessionStore:
@@ -89,6 +88,8 @@ class SessionStore:
         session_dir = self.root / session_id
         (session_dir / "artifacts").mkdir(parents=True)
         (session_dir / "context").mkdir()
+        stamp = {**_provenance_defaults(), **(provenance or {})}
+        validate_provenance(stamp)
         record: dict[str, Any] = {
             "session_id": session_id,
             "profile": prof.value,
@@ -96,7 +97,7 @@ class SessionStore:
             "created": _now(),
             "last_active": _now(),
             "subject_symbols": sorted(set(subject_symbols or [])),
-            "provenance": {**_provenance_defaults(), **(provenance or {})},
+            "provenance": stamp,
         }
         first_line = json.dumps({"event": "session-open", "record": record}) + "\n"
         (session_dir / "session.jsonl").write_text(first_line, encoding="utf-8")

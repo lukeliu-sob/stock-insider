@@ -128,3 +128,50 @@ def test_repl_stamps_resolved_config(tmp_path, monkeypatch) -> None:
     row = store.list_sessions()[0]
     assert row["provenance"]["model_id"] == "rm"
     assert row["provenance"]["provider_config"] == "https://r.example/v1"
+
+
+# -- shared provenance + event schema adoption (TP-004) ----------------------
+
+
+def test_provenance_stamp_roundtrip(store) -> None:
+    from stockinsider.shared.provenance import ProvenanceStamp
+
+    record = store.create(profile="quick", provenance={"model_id": "m", "provider_config": "u"})
+    stamp = ProvenanceStamp.from_record(record["provenance"])
+    assert stamp.model_id == "m"
+    assert stamp.to_record()["model_id"] == "m"
+
+
+def test_blank_provenance_value_rejected(store) -> None:
+    with pytest.raises(Exception, match="non-empty string"):
+        store.create(profile="quick", provenance={"model_id": "  "})
+
+
+def test_non_string_provenance_rejected(store) -> None:
+    with pytest.raises(Exception, match="non-empty string"):
+        store.create(profile="quick", provenance={"model_id": 42})
+
+
+def test_validate_event_replays_real_session_log(store) -> None:
+    from stockinsider.shared.events import validate_event
+
+    record = store.create(profile="standard")
+    store.append_event(record["session_id"], {"event": "user-message", "text": "hello"})
+    log = (store.root / record["session_id"] / "session.jsonl").read_text(encoding="utf-8")
+    for line in log.splitlines():
+        if line.strip():
+            validate_event(json.loads(line))
+
+
+def test_unknown_event_kind_rejected() -> None:
+    from stockinsider.shared.events import EventValidationError, validate_event
+
+    with pytest.raises(EventValidationError, match="unknown event kind"):
+        validate_event({"event": "teleport"})
+
+
+def test_session_open_without_record_rejected() -> None:
+    from stockinsider.shared.events import EventValidationError, validate_event
+
+    with pytest.raises(EventValidationError, match="record"):
+        validate_event({"event": "session-open"})
