@@ -99,3 +99,13 @@ Invariant/process gap exposed → what changed:
 - **Root cause**: dotenv parsing lived only in the provider path (agent/providers) and the data-side resolver read real env only; DataStore constructed SymbolResolver without any transport default; the single error message masked both gaps.
 - **Fix**: shared/envfile.py (dotenv reading as a shared concern, real env wins, ADR-004 governance); resolver resolves the key from env OR file and auto-wires the stdlib transport when a key exists; is_live() probe; CLI tests isolate the env-file lookup; new test_envfile.py suite pins parsing, precedence, wiring, and the explicit-unavailable path.
 - **Gap exposed -> change**: (1) any externally-facing "not configured" error must name every accepted configuration source; (2) wiring defects of this class are caught only by a default-construction test — one now exists; (3) providers' dotenv reader should migrate onto shared/envfile (DE-07).
+
+## BD-010 — Egress whitelist pinned a nonexistent EODHD host
+- **Date / discovered by**: 2026-09-18 / owner live use (first live resolver call)
+- **Symptom**: `watch add` raised `EgressViolationError: host 'eodhd.com' not in whitelist; allowed: ['api.eodhd.com', ...]` — the resolver URL (correct) was blocked by a whitelist entry (wrong).
+- **Reproduction**: any live EODHD call after BD-009.
+- **Verification**: live probes both directions — `https://eodhd.com/api/search/...` returns 403 (host serves the API; 403 is the demo-token refusal), `https://api.eodhd.com` fails to connect (host does not exist).
+- **Classification**: process — second instance of the BD-008 family: a decision-era vendor assumption never verified against the live endpoint. The egress gate itself worked exactly as designed (it blocked the first wrong-host attempt — S2 evidence).
+- **Root cause**: the whitelist constant was authored from an assumed `api.`-subdomain convention; EODHD's API host is the apex domain (`eodhd.com/api/...`).
+- **Fix**: whitelist `api.eodhd.com` -> `eodhd.com`; five pinned test assertions synced (subdomain allowance now `data.eodhd.com`; suffix-attack case now `eodhd.com.evil.example`); GDELT entry verified correct and unchanged. The legacy alias host `eodhistoricaldata.com` also serves but stays off the whitelist (minimal set; noted for the record).
+- **Gap exposed -> change**: vendor-credential artifacts (hosts, endpoints, model names) get one live smoke at first integration; BD-008's "smoke the default" candidate now extends to "smoke the host" — folded into the TP-009 live checklist.

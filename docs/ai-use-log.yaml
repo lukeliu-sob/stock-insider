@@ -1151,3 +1151,34 @@ sessions:
       Owner selected immediate repayment (A) after the redundancy
       discussion; deferred-to-TP-009 alternative rejected.
     status: applied
+
+  - id: AILOG-0030
+    date: "2026-09-18"
+    tool: "pi coding agent (LLM session)"
+    role: ai
+    task: >-
+      BD-010 fix (owner-confirmed): the egress whitelist carried a
+      nonexistent EODHD host from the decision era. Live probes both
+      directions: eodhd.com/api 403-serves the API (demo-token
+      refusal), api.eodhd.com is dead. Whitelist corrected to the apex
+      domain (eodhd.com); five pinned assertions in test_egress.py
+      synced (subdomain allowance data.eodhd.com; suffix-attack case
+      eodhd.com.evil.example still rejected); GDELT entry verified
+      correct and unchanged; legacy alias host noted off-whitelist
+      (minimal set). Second instance of the BD-008 family
+      (unverified vendor assumption at first live contact) — the
+      TP-009 live checklist now includes "smoke the host" alongside
+      "smoke the default model". The gate's first live denial is
+      itself SEC-003 design evidence. Safety-critical path touched:
+      shared/egress.py via proposals protocol under explicit owner
+      confirmation.
+    artifacts:
+      - src/stockinsider/shared/egress.py
+      - test/offline/test_egress.py
+      - docs/bug-diary.md
+      - docs/test-plans/TP-004.md
+      - docs/ai-use-log.yaml
+    human_decision: >-
+      Owner confirmed the one-line whitelist correction after seeing
+      the two-direction live-probe evidence.
+    status: applied
