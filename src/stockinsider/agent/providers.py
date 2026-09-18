@@ -20,6 +20,8 @@ from pathlib import Path
 from typing import Any, Callable
 
 from stockinsider.agent.profiles import PROFILE_BUDGETS, Profile
+from stockinsider.shared.envfile import env_file_path as shared_env_file_path
+from stockinsider.shared.envfile import read_env_file
 
 DEFAULT_CHAT_MODEL = "deepseek-flash"
 DEFAULT_EMBEDDING_MODEL = "deepseek-flash"
@@ -189,35 +191,27 @@ def resolve_config(root: Path | str | None = None) -> ProviderConfig:
 
 
 def env_file_path(explicit: Path | str | None = None) -> Path:
-    """Resolve the .env path: explicit, then env override, then ./.env.
+    """Resolve the env-file path (delegates to the shared reader; DE-07).
 
-    Implements: REQ-SI-SEC-001 (ADR-001)
+    Implements: REQ-SI-SEC-001 (ADR-004)
     """
-    if explicit is not None:
-        return Path(explicit)
-    return Path(os.environ.get("STOCKINSIDER_ENV_FILE", ".env"))
+    return shared_env_file_path(explicit)
 
 
 def resolve_api_key(explicit_file: Path | str | None = None) -> tuple[str | None, str]:
-    """Resolve the API key: environment wins, then .env; returns (key, source).
+    """Resolve the API key: environment wins, then the env file; (key, source).
 
-    Implements: REQ-SI-SEC-001 (ADR-001)
+    Parsing lives in shared/envfile (one dotenv parser for the whole
+    codebase since DE-07); semantics unchanged and test-pinned.
+
+    Implements: REQ-SI-SEC-001 (ADR-004)
     """
-    env_value = os.environ.get(API_KEY_ENV)
-    if env_value:
-        return env_value, "environment"
-    path = env_file_path(explicit_file)
-    if path.exists():
-        for line in path.read_text(encoding="utf-8").splitlines():
-            stripped = line.strip()
-            if not stripped or stripped.startswith("#") or "=" not in stripped:
-                continue
-            name, _, value = stripped.partition("=")
-            if name.strip() == API_KEY_ENV:
-                cleaned = value.strip().strip('"').strip("'")
-                if cleaned:
-                    return cleaned, ".env"
-                return None, "unset"
+    from_env = os.environ.get(API_KEY_ENV)
+    if from_env:
+        return from_env, "environment"
+    from_file = read_env_file(explicit_file).get(API_KEY_ENV)
+    if from_file:
+        return from_file, ".env"
     return None, "unset"
 
 
