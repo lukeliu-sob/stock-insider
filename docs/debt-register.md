@@ -64,3 +64,4 @@ Categories at zero have no current entries; the category opens the moment its fi
 - **Why not now**: providers' path is green and test-pinned; migrating it is mechanical but touches 20+ config tests — deferred to a calm round (TP-009 config touchpoint is a natural moment).
 - **Risk**: semantic drift between the two readers (currently identical: real env wins, STOCKINSIDER_ENV_FILE override, cwd default).
 - **Exit**: providers imports shared/envfile; duplicate parsing removed; parity tests unchanged.
+- **Closed**: 2026-09-18 — owner chose immediate repayment over deferring to TP-009. The provider env-file path helper now delegates to the shared one; the key resolver reads via the shared reader; the in-module parser is deleted. Parity tests unchanged and green (real env wins / file used / other lines preserved / missing key unset). Paying change set: DE-07 repayment PR (TP-003 Amendment 2).
