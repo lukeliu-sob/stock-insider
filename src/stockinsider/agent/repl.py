@@ -32,7 +32,7 @@ from stockinsider.agent.providers import (
     resolve_api_key,
     resolve_config,
 )
-from stockinsider.agent.registry import Registry, register_data_tools
+from stockinsider.agent.registry import Registry, register_data_tools, register_sync_tools
 from stockinsider.agent.session import SessionError, SessionStore
 from stockinsider.shared.tools import (
     EffectClass,
@@ -46,7 +46,6 @@ PROMPT = "stockinsider> "
 #: Commands whose real behavior lands in later test plans; each fails
 #: explicitly, naming its target requirement or design section.
 _NOT_IMPLEMENTED: dict[str, str] = {
-    "sync": "REQ-SI-FR-001",
     "config": "REQ-SI-FR-021",
     "compact": "context compaction (blueprint §7.4)",
 }
@@ -59,7 +58,7 @@ def _explicit_not_implemented(command: str, target: str, echo: Callable[[str], N
 def _cmd_help(echo: Callable[[str], None]) -> None:
     echo(
         "commands: /help /sessions [symbol] /show [id] /resume [id] "
-        "/watch [list|add|remove ...] /tools [name [k=v ...]] /exit"
+        "/watch [list|add|remove ...] /sync [run|status] /tools [name [k=v ...]] /exit"
     )
     echo("not implemented yet (explicit failure): " + ", ".join(f"/{name}" for name in sorted(_NOT_IMPLEMENTED)))
 
@@ -89,6 +88,7 @@ def build_registry(store: SessionStore, data_store: Any = None) -> Registry:
     registry = Registry()
     if data_store is not None:
         register_data_tools(registry, data_store)
+        register_sync_tools(registry, data_store)
     registry.register(
         ToolSpec(
             name="budget.query",
@@ -221,6 +221,51 @@ def _cmd_watch(
     echo(f"error: unknown watch action {action!r} (list | add | remove)")
 
 
+def _cmd_sync(registry: Registry, args: list[str], echo: Callable[[str], None]) -> None:
+    """Sync slash command: run (default) or status, via registry tools.
+
+    Typing /sync is the write confirmation (blueprint §9.1).
+
+    Implements: REQ-SI-FR-001, REQ-SI-FR-013 (ADR-005)
+    """
+    action = args[0] if args else "run"
+    if action == "status":
+        result = registry.execute(ToolCall(tool="sync.status", arguments={}, call_id="slash-sync"))
+        if not result.ok:
+            echo(f"error: {result.error}")
+            return
+        status = result.result
+        budget = status["budget"]
+        echo(
+            f"budget: {budget['used']}/{budget['cap']} calls used, {budget['remaining']} remaining; "
+            f"active symbols: {status['active_symbols']}; pending gaps: {len(status['pending_gaps'])}"
+        )
+        for gap in status["pending_gaps"]:
+            echo(f"  gap: {gap['canonical_symbol']} {gap['from_date']}..{gap['to_date']}")
+        return
+    if action != "run":
+        echo(f"error: unknown sync action {action!r} (run | status)")
+        return
+    result = registry.execute(
+        ToolCall(tool="sync.run", arguments={"user_confirmed": True}, call_id="slash-sync"),
+        allow_write=True,
+    )
+    if not result.ok:
+        echo(f"error: {result.error}")
+        return
+    report = result.result
+    counts = report["counts"]
+    calls = report["calls"]
+    echo(
+        f"sync {report['ran_at']}: {counts['ok']} ok, {counts['failed']} failed, "
+        f"{counts['deferred']} deferred; calls {calls['used']}/{calls['cap']} "
+        f"({calls['remaining']} remaining)"
+    )
+    for item in report["results"]:
+        if item["status"] != "ok":
+            echo(f"  {item['status']}: {item['symbol']} ({item['action']}) — {item['detail']}")
+
+
 def _cmd_tools(registry: Registry, args: list[str], echo: Callable[[str], None]) -> None:
     if not args:
         for spec in registry.list_tools():
@@ -296,9 +341,7 @@ def start_new_session(
     echo(
         f"session {record['session_id']} opened (profile: {record['profile']}); type /help for commands, /exit to leave"
     )
-    record = _session_loop(
-        store, record, data_root=data_root, data_store=data_store, input_fn=input_fn, echo=echo
-    )
+    record = _session_loop(store, record, data_root=data_root, data_store=data_store, input_fn=input_fn, echo=echo)
     store.close(record["session_id"])
     echo(f"session {record['session_id']} closed")
     echo(f"resume with: stockinsider resume {record['session_id']}")
@@ -340,9 +383,7 @@ def resume_session(
         f"session {record['session_id']} resumed (profile: {record['profile']}; "
         f"{restored} events restored); type /help for commands, /exit to leave"
     )
-    record = _session_loop(
-        store, record, data_root=data_root, data_store=data_store, input_fn=input_fn, echo=echo
-    )
+    record = _session_loop(store, record, data_root=data_root, data_store=data_store, input_fn=input_fn, echo=echo)
     store.close(record["session_id"])
     echo(f"session {record['session_id']} closed")
     echo(f"resume with: stockinsider resume {record['session_id']}")
@@ -398,6 +439,8 @@ def _session_loop(
                     input_fn=input_fn,
                     echo=echo,
                 )
+            elif name == "sync":
+                _cmd_sync(registry, args, echo)
             elif name == "resume":
                 try:
                     if args:

@@ -112,6 +112,49 @@ def register_data_tools(registry: Registry, data_store: Any) -> None:
     )
 
 
+def register_sync_tools(registry: Registry, data_store: Any) -> None:
+    """Register sync.run (WRITE, user-confirmed) and sync.status (READ).
+
+    Typing the slash command is the confirmation the write gate needs;
+    the CLI subcommand is the other authorized entry (blueprint §9.1).
+
+    Implements: REQ-SI-FR-001, REQ-SI-FR-013 (ADR-005, ADR-002)
+    """
+
+    def _run(args: dict[str, Any]) -> dict[str, Any]:
+        return data_store.run_sync()
+
+    def _status(args: dict[str, Any]) -> dict[str, Any]:
+        return data_store.sync_status()
+
+    registry.register(
+        ToolSpec(
+            name="sync.run",
+            description=(
+                "Run one market-data sync (indices first, gap queue, "
+                "incrementals) under the daily call budget. The report "
+                "lists per-symbol outcomes and deferred items."
+            ),
+            arguments_spec={"user_confirmed": "bool"},
+            result_spec="dict",
+            effect_class=EffectClass.WRITE,
+            source_kind=SourceKind.API,
+        ),
+        _run,
+    )
+    registry.register(
+        ToolSpec(
+            name="sync.status",
+            description="Budget usage, pending gap queue, and tracked-symbol counts.",
+            arguments_spec={},
+            result_spec="dict",
+            effect_class=EffectClass.READ,
+            source_kind=SourceKind.API,
+        ),
+        _status,
+    )
+
+
 def wire_name(name: str) -> str:
     """Dot-free wire-safe form of a tool name (OpenAI function-name rule).
 
