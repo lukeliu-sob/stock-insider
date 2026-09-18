@@ -90,3 +90,12 @@ Invariant/process gap exposed → what changed:
 - **Root cause**: decision-time model name baked into code defaults, docs, and registry-adjacent artifacts without a live catalog check; CI eval masked it where a PROVIDER_CHAT_MODEL secret override existed.
 - **Fix**: defaults corrected to deepseek-flash (PR #10) with marked-not-silent doc corrections (ADR-001 note, TP-003 amendment, evalbook note); layered config covered users immediately with zero code change.
 - **Gap exposed → change**: provider-dependent defaults should be verified against the live catalog at first integration (a "smoke the default" live check belongs in the eval set — noted as a candidate case).
+
+## BD-009 — Resolver ignored the env-file key and never wired its live transport
+- **Date / discovered by**: 2026-09-18 / owner live use ("set the key in the dotenv file, why is it not read")
+- **Symptom**: `watch add` failed with "symbol search is not configured: set EODHD_API_KEY" even with the key correctly placed in the local dotenv file — and, worse, would have failed the same way with a real environment variable.
+- **Reproduction**: any `watch add <mention>` after TP-008, regardless of key configuration.
+- **Classification**: process — misleading error text plus a test blind spot: every offline test injected a fake transport, so CI stayed green while the end-to-end live path was dead.
+- **Root cause**: dotenv parsing lived only in the provider path (agent/providers) and the data-side resolver read real env only; DataStore constructed SymbolResolver without any transport default; the single error message masked both gaps.
+- **Fix**: shared/envfile.py (dotenv reading as a shared concern, real env wins, ADR-004 governance); resolver resolves the key from env OR file and auto-wires the stdlib transport when a key exists; is_live() probe; CLI tests isolate the env-file lookup; new test_envfile.py suite pins parsing, precedence, wiring, and the explicit-unavailable path.
+- **Gap exposed -> change**: (1) any externally-facing "not configured" error must name every accepted configuration source; (2) wiring defects of this class are caught only by a default-construction test — one now exists; (3) providers' dotenv reader should migrate onto shared/envfile (DE-07).

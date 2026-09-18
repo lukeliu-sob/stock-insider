@@ -61,8 +61,10 @@ def test_stub_commands_fail_explicitly() -> None:
 
 @pytest.fixture(autouse=True)
 def data_root(tmp_path, monkeypatch):
-    """Isolate the SQLite store away from the live worktree (every test)."""
+    """Isolate the SQLite store AND the env-file lookup away from the live worktree."""
     monkeypatch.setenv("STOCKINSIDER_DATA_ROOT", str(tmp_path / "data"))
+    monkeypatch.setenv("STOCKINSIDER_ENV_FILE", str(tmp_path / "no-keys.env"))
+    monkeypatch.delenv("EODHD_API_KEY", raising=False)
 
 
 @pytest.fixture()

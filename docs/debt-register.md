@@ -57,3 +57,10 @@ Categories at zero have no current entries; the category opens the moment its fi
 - **Description**: references between artifacts (ADR ↔ AI-log ↔ registry ↔ blueprint baselines) are human-maintained; BD-4 showed the class of error. No `reference_lint.py` exists.
 - **Repayment trigger**: second incident of this class, or reference count grows past ~30 → add a reference-lint structural script.
 - **Status**: open (2026-09-15)
+
+## DE-07 — Provider dotenv reader duplicates shared/envfile
+- **Opened**: 2026-09-18 (BD-009 fix round)
+- **What**: `agent/providers.resolve_api_key` carries its own dotenv parsing; the shared helper (`shared/envfile.py`, born this round) now owns that concern for the data side.
+- **Why not now**: providers' path is green and test-pinned; migrating it is mechanical but touches 20+ config tests — deferred to a calm round (TP-009 config touchpoint is a natural moment).
+- **Risk**: semantic drift between the two readers (currently identical: real env wins, STOCKINSIDER_ENV_FILE override, cwd default).
+- **Exit**: providers imports shared/envfile; duplicate parsing removed; parity tests unchanged.
