@@ -9,7 +9,7 @@ provider configuration (FR-021, SEC-001).
 Implements: REQ-SI-FR-013, REQ-SI-INV-003 (ADR-001)
 """
 
-from typing import NoReturn
+from typing import NoReturn, Optional
 
 import typer
 
@@ -24,6 +24,11 @@ from stockinsider.agent.providers import (
 )
 from stockinsider.agent.repl import render_session, repl, resume_session
 from stockinsider.agent.session import SessionError, SessionStore
+from stockinsider.data import (
+    ResolverUnavailable,
+    WatchlistError,
+    open_data_store,
+)
 
 app = typer.Typer(
     name="stockinsider",
@@ -51,12 +56,78 @@ def sync() -> None:
 
 
 @app.command()
-def watch() -> None:
+def watch(
+    action: str = typer.Argument("list", help="list | add | remove"),
+    query: Optional[str] = typer.Argument(None, help="mention/name for add; canonical symbol for remove"),
+) -> None:
     """Manage the watchlist (add/remove/list; verified symbol resolution).
 
     Implements: REQ-SI-FR-004
     """
-    _stub("watch", "REQ-SI-FR-004")
+    data_store = open_data_store()
+    try:
+        if action == "list":
+            rows = data_store.watchlist.list()
+            if not rows:
+                typer.echo("watchlist is empty")
+                return
+            for row in rows:
+                typer.echo(
+                    f"{row['canonical_symbol']}  {row['official_name']}  {row['exchange']}  added {row['added_at']}"
+                )
+            return
+        if action == "add":
+            if not query:
+                typer.secho("error: `watch add` requires a mention or name to resolve", fg=typer.colors.RED, err=True)
+                raise typer.Exit(code=2)
+            try:
+                candidates = data_store.resolver.search(query)
+            except ResolverUnavailable as exc:
+                typer.secho(f"error: {exc}", fg=typer.colors.RED, err=True)
+                raise typer.Exit(code=2) from exc
+            if not candidates:
+                typer.secho(
+                    f"not found: no verified resolution for {query!r}; watchlist unchanged",
+                    fg=typer.colors.RED,
+                    err=True,
+                )
+                raise typer.Exit(code=1)
+            for cand in candidates:
+                data_store.record(cand)
+            for i, cand in enumerate(candidates, start=1):
+                typer.echo(f"{i}) {cand.canonical_symbol}  {cand.official_name}  exchange {cand.exchange}")
+            if len(candidates) == 1:
+                choice = 1
+            else:
+                raw = typer.prompt(f"select 1-{len(candidates)}")
+                if not raw.isdigit() or not 1 <= int(raw) <= len(candidates):
+                    typer.secho("error: invalid selection; cancelled", fg=typer.colors.RED, err=True)
+                    raise typer.Exit(code=2)
+                choice = int(raw)
+            picked = candidates[choice - 1]
+            if not typer.confirm(f"add {picked.canonical_symbol} ({picked.official_name})?"):
+                typer.echo("cancelled; watchlist unchanged")
+                return
+            result = data_store.watchlist.add_verified(picked.canonical_symbol, user_confirmed=True, via="cli")
+            typer.echo(
+                f"added {result['canonical_symbol']} ({result['official_name']}); "
+                f"backfill enqueued {result['backfill_enqueued']}"
+            )
+            return
+        if action == "remove":
+            if not query:
+                typer.secho("error: `watch remove` requires a canonical symbol", fg=typer.colors.RED, err=True)
+                raise typer.Exit(code=2)
+            result = data_store.watchlist.remove(query)
+            typer.echo(f"removed {result['canonical_symbol']} (status: {result['status']})")
+            return
+        typer.secho(f"error: unknown watch action {action!r} (list | add | remove)", fg=typer.colors.RED, err=True)
+        raise typer.Exit(code=2)
+    except WatchlistError as exc:
+        typer.secho(f"error: {exc}", fg=typer.colors.RED, err=True)
+        raise typer.Exit(code=1) from exc
+    finally:
+        data_store.close()
 
 
 @app.command()
@@ -74,7 +145,7 @@ def analyze() -> None:
 
     Implements: REQ-SI-FR-013
     """
-    repl(SessionStore())
+    repl(SessionStore(), data_store=open_data_store())
 
 
 @app.command()
@@ -86,7 +157,7 @@ def resume(
     Implements: REQ-SI-FR-023
     """
     try:
-        resume_session(SessionStore(), session_id)
+        resume_session(SessionStore(), session_id, data_store=open_data_store())
     except SessionError as exc:
         typer.secho(f"error: {exc}", fg=typer.colors.RED, err=True)
         raise typer.Exit(code=2) from None
@@ -237,7 +308,7 @@ def _root(
 ) -> None:
     """Local CLI financial analyst for HK + US equities."""
     if ctx.invoked_subcommand is None:
-        repl(SessionStore())
+        repl(SessionStore(), data_store=open_data_store())
 
 
 def main() -> None:

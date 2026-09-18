@@ -1015,3 +1015,69 @@ sessions:
       D1-D4; authorized authoring the design note and the TP-008
       draft.
     status: applied
+
+  - id: AILOG-0027
+    date: "2026-09-17"
+    tool: "pi coding agent (LLM session)"
+    role: ai
+    task: >-
+      TP-008 implementation (owner approved; plan flipped to approved in
+      the same PR, first commit — two-commit pattern). Birth of
+      data/store: SQLite store (WAL, forward-only schema_history
+      migrations, explicit newer-schema refusal), full v1 table set
+      (symbols/watchlist/market_bars/fundamentals/news+quarantine/
+      event_scores/fx_rates/sync_state/sync_gaps) defined once,
+      SymbolResolver (seeded benchmark indices HSI/HSTECH/GSPC/NDX +
+      EODHD-search parsing behind an injectable transport; live path =
+      stdlib urllib, egress-gated, EODHD_API_KEY env, free tier),
+      WatchlistService with the INV-004 gate (verified resolution
+      record + user_confirmed flag, both required) and the GOV-004
+      100-active cap; add enqueues the 5-year backfill gap. Registry
+      gains register_data_tools (symbol.search records verified
+      candidates; watchlist.add/remove are WRITE tools gated by the
+      user_confirmed argument) — agent/registry now imports the data
+      facade, the single sanctioned agent-to-data channel per
+      blueprint §5 / AGENTS §5 (module docstring updated; no ADR
+      change needed, ADR-005 mechanics extended within TP-008's
+      approved scope). TurnEngine write-gate rule: allow_write only
+      when the call carries user_confirmed=true. CLI watch subcommand
+      real (list/add/remove with candidate presentation and
+      confirmation); REPL /watch slash routes through the registry
+      tools; repl entries accept an injected DataStore (constructed by
+      the CLI composition layer; repl never imports data). identity.md
+      v1 -> v2: new-symbols-need-confirmation discipline (GOV-003;
+      eval replay in CI). data/ingest and data/compute gain package
+      shells. Discovered during implementation: src/stockinsider/data
+      had never been committed (the on-disk __init__ was an untracked
+      TP-001-era leftover) — noted for the record. Three adversarial
+      classes pin INV-004 to literal 0-addition assertions
+      (test_inv4_symbol_gate.py); cap boundary pair and benchmark
+      refusal in test_watchlist.py; migration machinery in
+      test_store_schema.py. Shell hazards this round: one edit- write
+      clipped a quote in registry.py (caught by ast.parse sweep before
+      staging); heredoc avoided for source files entirely.
+    artifacts:
+      - src/stockinsider/data/__init__.py
+      - src/stockinsider/data/store/__init__.py
+      - src/stockinsider/data/store/db.py
+      - src/stockinsider/data/store/schema.py
+      - src/stockinsider/data/store/resolver.py
+      - src/stockinsider/data/store/watchlist.py
+      - src/stockinsider/data/ingest/__init__.py
+      - src/stockinsider/data/compute/__init__.py
+      - src/stockinsider/agent/registry.py
+      - src/stockinsider/agent/repl.py
+      - src/stockinsider/agent/loop.py
+      - src/stockinsider/cli/app.py
+      - prompts/identity.md
+      - test/offline/test_store_schema.py
+      - test/offline/test_watchlist.py
+      - test/offline/test_inv4_symbol_gate.py
+      - test/offline/test_cli_surface.py
+      - docs/test-plans/TP-008.md
+      - docs/ai-use-log.yaml
+    human_decision: >-
+      Owner approved TP-008 (instruction: implement) after confirming
+      the data-side route and the free-tier-first EODHD policy;
+      registry extension is within the approved plan scope (item 5).
+    status: applied

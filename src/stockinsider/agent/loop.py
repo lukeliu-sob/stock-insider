@@ -188,7 +188,11 @@ class TurnEngine:
                     except json.JSONDecodeError:
                         arguments = {}
                     result = self._registry.execute(
-                        ToolCall(tool=name, arguments=arguments, call_id=call.get("id") or turn_id)
+                        ToolCall(tool=name, arguments=arguments, call_id=call.get("id") or turn_id),
+                        # Write gate: a write tool executes only when its call
+                        # carries an explicit user confirmation (INV-004 pattern);
+                        # the tool re-checks its own gate on the data side.
+                        allow_write=arguments.get("user_confirmed") is True,
                     )
                     tools_used += 1
                     self._store.append_event(
