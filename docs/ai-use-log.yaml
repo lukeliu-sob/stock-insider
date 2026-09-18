@@ -1081,3 +1081,41 @@ sessions:
       the data-side route and the free-tier-first EODHD policy;
       registry extension is within the approved plan scope (item 5).
     status: applied
+
+  - id: AILOG-0028
+    date: "2026-09-18"
+    tool: "pi coding agent (LLM session)"
+    role: ai
+    task: >-
+      BD-009 fix (owner-authorized after live failure): shared/envfile.py
+      born (dotenv reading as a shared concern under ADR-004 governance;
+      real env wins, STOCKINSIDER_ENV_FILE override, cwd default —
+      semantics identical to the provider path); resolver now resolves
+      EODHD_API_KEY from env OR the env file and auto-wires the stdlib
+      live transport when a key exists (previously the transport was
+      never wired, so even a correct key raised the misleading
+      "set EODHD_API_KEY" error — the agent's own workaround
+      instruction was broken by this); is_live() probe added; error
+      text now names both accepted configuration sources; CLI tests
+      isolate the env-file lookup (a developer's real dotenv file can
+      no longer make offline tests fire live HTTP). New suite
+      test_envfile.py (6 tests). TP-008 Amendment 2; BD-009 recorded
+      (misleading error + CI blind spot: every offline test injected
+      a fake transport, so six gates stayed green while the
+      end-to-end live path was dead); DE-07 opened (provider dotenv
+      reader duplicates shared/envfile; migrate at the TP-009 config
+      touchpoint). Safety-critical paths touched: shared/ (new module
+      via proposals protocol; owner instruction "implement").
+    artifacts:
+      - src/stockinsider/shared/envfile.py
+      - src/stockinsider/data/store/resolver.py
+      - test/offline/test_envfile.py
+      - test/offline/test_cli_surface.py
+      - docs/test-plans/TP-008.md
+      - docs/bug-diary.md
+      - docs/debt-register.md
+      - docs/ai-use-log.yaml
+    human_decision: >-
+      Owner reported the live failure and authorized the fix bundle
+      after review (single word: implement).
+    status: applied

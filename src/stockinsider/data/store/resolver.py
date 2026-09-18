@@ -12,7 +12,6 @@ Implements: REQ-SI-FR-004, REQ-SI-INV-004 (ADR-002)
 from __future__ import annotations
 
 import json
-import os
 import urllib.request
 from collections.abc import Callable
 from dataclasses import dataclass
@@ -21,6 +20,7 @@ from typing import Any
 from urllib.parse import quote
 
 from stockinsider.shared.egress import validate_egress_url
+from stockinsider.shared.envfile import env_value
 
 #: Transport contract: (url, params) -> response body text.
 Transport = Callable[[str, dict[str, str]], str]
@@ -107,8 +107,28 @@ class SymbolResolver:
     """
 
     def __init__(self, transport: Transport | None = None, api_key: str | None = None) -> None:
-        self._transport = transport
-        self._api_key = api_key if api_key is not None else os.environ.get(EODHD_KEY_ENV)
+        """Wire resolution: explicit injection wins; else an env-or-file key
+        with the stdlib live transport (BD-009 fix).
+
+        Implements: REQ-SI-FR-004, REQ-SI-SEC-001 (ADR-002)
+        """
+        if api_key is not None:
+            self._api_key: str | None = api_key
+        else:
+            self._api_key = env_value(EODHD_KEY_ENV) or None
+        if transport is not None:
+            self._transport: Transport | None = transport
+        elif self._api_key:
+            self._transport = stdlib_transport
+        else:
+            self._transport = None
+
+    def is_live(self) -> bool:
+        """True when a live search path (key + transport) is wired.
+
+        Implements: REQ-SI-INV-003 (ADR-002)
+        """
+        return self._transport is not None and self._api_key is not None
 
     def search(self, query: str) -> list[Resolution]:
         """Return candidates for a mention; deterministic seed match first.
@@ -133,7 +153,9 @@ class SymbolResolver:
             return seeds
         if self._transport is None or self._api_key is None:
             raise ResolverUnavailable(
-                "symbol search is not configured: set EODHD_API_KEY (free tier) to enable live resolution (INV-003)"
+                "symbol search is not configured: set EODHD_API_KEY (free tier; real "
+                "environment variable or the local dotenv file) to enable live "
+                "resolution (INV-003)"
             )
         body = self._transport(EODHD_SEARCH_URL.format(query=quote(q)), {"api_token": self._api_key})
         return parse_search_response(body)
