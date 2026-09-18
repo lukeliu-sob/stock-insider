@@ -128,7 +128,7 @@ def test_in_repl_resume_closes_current_first(store, tmp_path, monkeypatch) -> No
     closed = _seed_closed(store)  # a pre-existing closed session
     monkeypatch.setenv("STOCKINSIDER_DATA_ROOT", str(tmp_path / "data"))
     lines: list[str] = []
-    feed = iter(["/resume", "/exit"])
+    feed = iter(["/resume", "", "/exit"])
     start_new_session(store, profile="standard", input_fn=lambda _p: next(feed), echo=lines.append)
     joined = "\n".join(lines)
     current_id = None
@@ -148,3 +148,73 @@ def test_exit_hint_printed(store, tmp_path, monkeypatch) -> None:
     lines: list[str] = []
     resume_session(store, _seed_closed(store), input_fn=lambda _p: "/exit", echo=lines.append)
     assert any("resume with: stockinsider resume" in line for line in lines)
+
+
+# -- bare /resume interactive picker -------------------------------------------
+
+
+def _seed_two_closed(store) -> list[str]:
+    ids = [_seed_closed(store), _seed_closed(store)]
+    return list(reversed(ids))  # [newer, older] since list_sessions is oldest-first
+
+
+def test_resume_picker_lists_and_binds_choice(store, tmp_path, monkeypatch) -> None:
+    from stockinsider.agent.repl import start_new_session
+
+    newer, older = _seed_two_closed(store)
+    monkeypatch.setenv("STOCKINSIDER_DATA_ROOT", str(tmp_path / "data"))
+    lines: list[str] = []
+    feed = iter(["/resume", "2", "/exit"])
+    start_new_session(store, profile="standard", input_fn=lambda _p: next(feed), echo=lines.append)
+    joined = "\n".join(lines)
+    assert "closed sessions (most recent first):" in joined
+    assert f"1) {newer}" in joined
+    assert f"2) {older}" in joined
+    assert f"session {older} resumed" in joined
+    statuses = {row["session_id"]: row["status"] for row in store.list_sessions()}
+    assert statuses[older] == "closed"
+    assert statuses[newer] == "closed"
+
+
+def test_resume_picker_enter_defaults_to_most_recent(store, tmp_path, monkeypatch) -> None:
+    from stockinsider.agent.repl import start_new_session
+
+    newer, older = _seed_two_closed(store)
+    monkeypatch.setenv("STOCKINSIDER_DATA_ROOT", str(tmp_path / "data"))
+    lines: list[str] = []
+    feed = iter(["/resume", "", "/exit"])
+    start_new_session(store, profile="standard", input_fn=lambda _p: next(feed), echo=lines.append)
+    assert f"session {newer} resumed" in "\n".join(lines)
+
+
+def test_resume_picker_cancel_keeps_current(store, tmp_path, monkeypatch) -> None:
+    from stockinsider.agent.repl import start_new_session
+
+    _seed_two_closed(store)
+    monkeypatch.setenv("STOCKINSIDER_DATA_ROOT", str(tmp_path / "data"))
+    lines: list[str] = []
+    feed = iter(["/resume", "q", "/exit"])
+    start_new_session(store, profile="standard", input_fn=lambda _p: next(feed), echo=lines.append)
+    joined = "\n".join(lines)
+    assert "resume cancelled" in joined
+    assert "resumed" not in joined
+    current_id = next(line.split()[1] for line in lines if "opened (profile" in line)
+    statuses = {row["session_id"]: row["status"] for row in store.list_sessions()}
+    assert statuses[current_id] == "closed"  # closed by /exit, not by a switch
+    # neither seeded session was touched
+    others = [row for row in store.list_sessions() if row["session_id"] != current_id]
+    assert all(row["status"] == "closed" for row in others)
+
+
+def test_resume_picker_invalid_choice_cancels(store, tmp_path, monkeypatch) -> None:
+    from stockinsider.agent.repl import start_new_session
+
+    _seed_two_closed(store)
+    monkeypatch.setenv("STOCKINSIDER_DATA_ROOT", str(tmp_path / "data"))
+    lines: list[str] = []
+    feed = iter(["/resume", "7", "/exit"])
+    start_new_session(store, profile="standard", input_fn=lambda _p: next(feed), echo=lines.append)
+    joined = "\n".join(lines)
+    assert "invalid selection '7'" in joined
+    assert "resume cancelled" not in joined  # invalid path says error+cancelled inline
+    assert "resumed" not in joined

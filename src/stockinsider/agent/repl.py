@@ -279,7 +279,35 @@ def _session_loop(
                     echo(f"error: {exc}")
             elif name == "resume":
                 try:
-                    resolved = args[0] if args else _most_recent(store, closed_only=True)["session_id"]
+                    if args:
+                        resolved = args[0]
+                    else:
+                        closed = [
+                            row
+                            for row in store.list_sessions()
+                            if row["status"] == "closed"
+                        ]
+                        if not closed:
+                            _most_recent(store, closed_only=True)  # raises the canonical error
+                            continue
+                        closed.reverse()  # most recent first (index order is oldest-first)
+                        echo("closed sessions (most recent first):")
+                        for i, row in enumerate(closed, start=1):
+                            symbols = ",".join(row["subject_symbols"]) or "-"
+                            echo(
+                                f"  {i}) {row['session_id']}  {row['created']}  "
+                                f"{row['profile']}  {symbols}"
+                            )
+                        choice = input_fn(f"select 1-{len(closed)} (enter=1, q=cancel): ").strip()
+                        if choice.lower() == "q":
+                            echo("resume cancelled")
+                            continue
+                        if choice == "":
+                            choice = "1"
+                        if not choice.isdigit() or not 1 <= int(choice) <= len(closed):
+                            echo(f"error: invalid selection {choice!r}; resume cancelled")
+                            continue
+                        resolved = closed[int(choice) - 1]["session_id"]
                     if resolved == record["session_id"]:
                         echo("error: already in this session; /resume switches to a different closed session")
                         continue
