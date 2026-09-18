@@ -72,3 +72,21 @@ Invariant/process gap exposed → what changed:
 - **Root cause**: unidentified external process on the development machine reverting tracked-file modifications (candidates: cloud-sync/backup agent on the repo path, editor auto-restore of stale buffers, or similar). Not a defect of the agent, the gates, or git.
 - **Fix**: atomic apply→stage→verify-staged-bytes→commit→push in a single shell invocation, so the commit captures verified content before any revert window opens. CI confirmed the completed change set green on all six contexts.
 - **Gap exposed → change**: (1) local pre-push verification must validate the STAGED content (`git diff --cached`), not just the worktree; (2) the environment issue must be identified and eliminated by the owner — until then the atomic-commit discipline stands; (3) the incident doubles as evidence that the change-set gates (D7-5/D7-6) catch incomplete change sets that local worktree checks can miss.
+
+## BD-007 — In-REPL /resume orphaned the current session
+- **Date / discovered by**: 2026-09-17 / owner live-use feedback ("not intuitive")
+- **Symptom**: /resume inside the REPL swapped the binding without closing the current session — it stayed `active` in the index forever, with no REPL command able to close it; bare /resume also jumped to an unexpected (most-recent-closed) target.
+- **Reproduction**: open a session, /resume another closed session, /exit — the first session remains active in `sessions` listing.
+- **Classification**: process — usability defect in session lifecycle semantics (design gap in TP-007b's in-place swap).
+- **Root cause**: binding-swap implemented without lifecycle ownership transfer; no close operation existed in the REPL loop.
+- **Fix**: close-current-then-bind (owner ruling, option A): resolve target first, refuse self-resume, close the current session cleanly, then bind; exit hints added to both REPL entries.
+- **Gap exposed → change**: in-REPL session-switching now has an explicit lifecycle rule; exit hints make the CLI resume path discoverable. Two new tests pin the semantics.
+
+## BD-008 — Default model name did not exist in the live endpoint catalog
+- **Date / discovered by**: 2026-09-17 / owner first live conversation (HTTP 400)
+- **Symptom**: free-text turn failed with `The supported API model names are deepseek-flash, deepseek-v4-pro, but you passed deepseek-v4.1-flash.`
+- **Reproduction**: any chat turn with defaults and no PROVIDER_CHAT_MODEL/config override.
+- **Classification**: §7.2-adjacent process — requirement-era assumption never validated against the live API (the registry's named default was aspirational).
+- **Root cause**: decision-time model name baked into code defaults, docs, and registry-adjacent artifacts without a live catalog check; CI eval masked it where a PROVIDER_CHAT_MODEL secret override existed.
+- **Fix**: defaults corrected to deepseek-flash (PR #10) with marked-not-silent doc corrections (ADR-001 note, TP-003 amendment, evalbook note); layered config covered users immediately with zero code change.
+- **Gap exposed → change**: provider-dependent defaults should be verified against the live catalog at first integration (a "smoke the default" live check belongs in the eval set — noted as a candidate case).

@@ -188,9 +188,10 @@ def start_new_session(
     echo(
         f"session {record['session_id']} opened (profile: {record['profile']}); type /help for commands, /exit to leave"
     )
-    _session_loop(store, record, data_root=data_root, input_fn=input_fn, echo=echo)
+    record = _session_loop(store, record, data_root=data_root, input_fn=input_fn, echo=echo)
     store.close(record["session_id"])
     echo(f"session {record['session_id']} closed")
+    echo(f"resume with: stockinsider resume {record['session_id']}")
 
 
 def _most_recent(store: SessionStore, *, closed_only: bool) -> dict:
@@ -228,9 +229,10 @@ def resume_session(
         f"session {record['session_id']} resumed (profile: {record['profile']}; "
         f"{restored} events restored); type /help for commands, /exit to leave"
     )
-    _session_loop(store, record, data_root=data_root, input_fn=input_fn, echo=echo)
+    record = _session_loop(store, record, data_root=data_root, input_fn=input_fn, echo=echo)
     store.close(record["session_id"])
     echo(f"session {record['session_id']} closed")
+    echo(f"resume with: stockinsider resume {record['session_id']}")
 
 
 def _session_loop(
@@ -240,8 +242,11 @@ def _session_loop(
     data_root: "str | None" = None,
     input_fn: Callable[[str], str] = input,
     echo: Callable[[str], None] = print,
-) -> None:
-    """Run the interactive loop bound to one open session record.
+) -> dict:
+    """Run the interactive loop; returns the FINAL bound record.
+
+    /resume may switch the binding mid-loop; the returned record is
+    the session the entry must close.
 
     Implements: REQ-SI-FR-013, REQ-SI-FR-023 (ADR-001)
     """
@@ -275,10 +280,15 @@ def _session_loop(
             elif name == "resume":
                 try:
                     resolved = args[0] if args else _most_recent(store, closed_only=True)["session_id"]
+                    if resolved == record["session_id"]:
+                        echo("error: already in this session; /resume switches to a different closed session")
+                        continue
+                    store.close(record["session_id"])
+                    echo(f"session {record['session_id']} closed (switching)")
                     record = store.resume(resolved)
                     engine = _build_engine(store, registry, config)
                     echo(
-                        f"session {record['session_id']} resumed in-place "
+                        f"session {record['session_id']} resumed "
                         f"(profile: {record['profile']}; guardrail counters reset)"
                     )
                 except SessionError as exc:
@@ -296,6 +306,7 @@ def _session_loop(
                 )
             else:
                 _run_conversational_turn(engine, record, line, echo)
+    return record
 
 
 def _build_engine(store: SessionStore, registry: Registry, config: ProviderConfig) -> TurnEngine | None:

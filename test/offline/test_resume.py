@@ -117,3 +117,34 @@ def test_resume_with_no_closed_sessions_is_explicit(store) -> None:
     store.create(profile="standard")  # active, not closed
     with pytest.raises(SessionError, match="no closed session to resume"):
         resume_session(store, None, input_fn=lambda _p: "/exit", echo=lambda _l: None)
+
+
+# -- in-REPL /resume semantics (fix: close-current-then-bind) ------------------
+
+
+def test_in_repl_resume_closes_current_first(store, tmp_path, monkeypatch) -> None:
+    from stockinsider.agent.repl import start_new_session
+
+    closed = _seed_closed(store)  # a pre-existing closed session
+    monkeypatch.setenv("STOCKINSIDER_DATA_ROOT", str(tmp_path / "data"))
+    lines: list[str] = []
+    feed = iter(["/resume", "/exit"])
+    start_new_session(store, profile="standard", input_fn=lambda _p: next(feed), echo=lines.append)
+    joined = "\n".join(lines)
+    current_id = None
+    for line in lines:
+        if "opened (profile" in line:
+            current_id = line.split()[1]
+    assert current_id and current_id != closed
+    assert f"session {current_id} closed (switching)" in joined
+    assert f"session {closed} resumed" in joined
+    statuses = {row["session_id"]: row["status"] for row in store.list_sessions()}
+    assert statuses[current_id] == "closed"
+    assert statuses[closed] == "closed"
+
+
+def test_exit_hint_printed(store, tmp_path, monkeypatch) -> None:
+    monkeypatch.setenv("STOCKINSIDER_DATA_ROOT", str(tmp_path / "data"))
+    lines: list[str] = []
+    resume_session(store, _seed_closed(store), input_fn=lambda _p: "/exit", echo=lines.append)
+    assert any("resume with: stockinsider resume" in line for line in lines)
