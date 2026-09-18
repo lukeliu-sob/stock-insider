@@ -15,12 +15,12 @@ from stockinsider.shared.egress import (
 
 
 def test_whitelisted_vendor_domain_passes() -> None:
-    validate_egress_url("https://api.eodhd.com/eod/TSLA.US")
+    validate_egress_url("https://eodhd.com/eod/TSLA.US")
     validate_egress_url("https://api.gdeltproject.org/api/v2/doc/doc")
 
 
 def test_whitelisted_subdomain_passes() -> None:
-    validate_egress_url("https://data.api.eodhd.com/xyz")
+    validate_egress_url("https://data.eodhd.com/xyz")
 
 
 def test_unknown_domain_rejected() -> None:
@@ -30,7 +30,7 @@ def test_unknown_domain_rejected() -> None:
 
 def test_plain_http_rejected() -> None:
     with pytest.raises(EgressViolationError, match="non-HTTPS"):
-        validate_egress_url("http://api.eodhd.com/eod")
+        validate_egress_url("http://eodhd.com/eod")
 
 
 def test_ip_literal_rejected() -> None:
@@ -40,7 +40,7 @@ def test_ip_literal_rejected() -> None:
 
 def test_lookalike_domain_rejected() -> None:
     with pytest.raises(EgressViolationError, match="not in whitelist"):
-        validate_egress_url("https://api.eodhd.com.evil.example/x")
+        validate_egress_url("https://eodhd.com.evil.example/x")
 
 
 def test_extra_allowed_dynamic_endpoint_passes() -> None:
@@ -53,4 +53,4 @@ def test_extra_allowed_scoped_to_its_domain() -> None:
 
 
 def test_whitelist_contents_are_the_vendor_domains() -> None:
-    assert EGRESS_WHITELIST == frozenset({"api.eodhd.com", "api.gdeltproject.org"})
+    assert EGRESS_WHITELIST == frozenset({"eodhd.com", "api.gdeltproject.org"})

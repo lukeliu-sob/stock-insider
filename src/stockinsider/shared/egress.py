@@ -14,9 +14,12 @@ from urllib.parse import urlparse
 
 #: Static data-vendor domains (ADR-002); the HTTP choke point adopts
 #: this when the data side lands (S2 evidence: egress denials).
+#: BD-010: the EODHD API host is the apex domain (eodhd.com/api/...);
+#: the decision-era "api." subdomain does not resolve (verified live
+#: 2026-09-18: eodhd.com 403-serves, api.eodhd.com dead).
 EGRESS_WHITELIST: frozenset[str] = frozenset(
     {
-        "api.eodhd.com",
+        "eodhd.com",
         "api.gdeltproject.org",
     }
 )
