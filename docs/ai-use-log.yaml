@@ -979,3 +979,39 @@ sessions:
       default, q=cancel, explicit-id path unchanged) and instructed
       implementation.
     status: applied
+
+  - id: AILOG-0026
+    date: "2026-09-17"
+    tool: "pi coding agent (LLM session)"
+    role: ai
+    task: >-
+      Data-side era opens. Authored two owner-authorized documents:
+      (1) docs/architecture/news-filtering-design.md v1.0.0 — the
+      pre-TP-011 news filtering design (five-stage deterministic
+      pipeline, tau=1.0, dual-key dedup, quarantine visibility,
+      fixture precision gate >= 0.8), grounded in same-day verified
+      external facts: GDELT DOC artlist returns metadata only with a
+      3-month rolling window; EODHD free tier is 20 API calls/day with
+      fundamentals at 10 calls/request (drives the TP-009 call-budget
+      guard design). Owner confirmed four decisions (D1 phased title
+      corpus; D2 tau + tier lists; D3 3-month corpus limit; D4 macro
+      keyword groups) — recorded in the document's decision table.
+      (2) docs/test-plans/TP-008.md (status: draft, awaiting owner
+      approval) — data store skeleton test plan: migration framework,
+      full v1 table set, SymbolResolver protocol with seeded
+      benchmarks, INV-004-gated watchlist service and registry tools,
+      watch CLI; three adversarial classes pin INV-004 to literal
+      0-addition assertions; GOV-004 cap boundary pair included.
+      EODHD runs free-tier-first per owner instruction (logic
+      shakeout; paid upgrade for FR-002 coverage remains an owner
+      procurement action when needed).
+    artifacts:
+      - docs/architecture/news-filtering-design.md
+      - docs/test-plans/TP-008.md
+      - docs/ai-use-log.yaml
+    human_decision: >-
+      Owner confirmed the data-side route (TP-008..TP-013), chose
+      EODHD free tier first, and confirmed news-filtering decisions
+      D1-D4; authorized authoring the design note and the TP-008
+      draft.
+    status: applied
