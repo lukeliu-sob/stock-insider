@@ -25,7 +25,7 @@ SUBCOMMANDS = [
 #: Commands still explicit-failure stubs after TP-003 (sessions, analyze,
 #: and config are real behavior now; the negative stub guard covers the rest).
 STUB_SUBCOMMANDS = [
-    name for name in SUBCOMMANDS if name not in ("sessions", "analyze", "config", "show", "resume")
+    name for name in SUBCOMMANDS if name not in ("sessions", "analyze", "config", "show", "resume", "watch")
 ]
 STUB_ARGS = {"info": ["0700.HK"]}
 
@@ -57,6 +57,12 @@ def test_stub_commands_fail_explicitly() -> None:
         assert result.exit_code != 0, f"{name}: stub must not exit 0"
         assert "not implemented" in combined, f"{name}: explicit failure message missing"
         assert "REQ-SI-" in combined, f"{name}: message must name its target requirement"
+
+
+@pytest.fixture(autouse=True)
+def data_root(tmp_path, monkeypatch):
+    """Isolate the SQLite store away from the live worktree (every test)."""
+    monkeypatch.setenv("STOCKINSIDER_DATA_ROOT", str(tmp_path / "data"))
 
 
 @pytest.fixture()
@@ -140,3 +146,31 @@ def test_repl_free_text_with_unconfigured_provider_is_explicit(sessions_root, mo
     assert result.exit_code == 0
     assert "provider unconfigured" in result.output
     assert "config set" in result.output
+
+
+# -- watch (TP-008): real subcommand with INV-004 gating --------------------
+
+
+def test_watch_help_renders() -> None:
+    result = runner.invoke(app, ["watch", "--help"])
+    assert result.exit_code == 0
+    assert "list | add | remove" in result.output
+
+
+def test_watch_list_empty() -> None:
+    result = runner.invoke(app, ["watch", "list"])
+    assert result.exit_code == 0
+    assert "watchlist is empty" in result.output
+
+
+def test_watch_add_requires_eodhd_key_or_fails_explicitly() -> None:
+    result = runner.invoke(app, ["watch", "add", "Tencent"], env={"EODHD_API_KEY": ""})
+    # Without a live search path the failure is explicit (INV-003), never a fake add.
+    assert result.exit_code != 0
+    assert "not configured" in result.output
+
+
+def test_watch_remove_unknown_symbol_explicit() -> None:
+    result = runner.invoke(app, ["watch", "remove", "9999.HK"])
+    assert result.exit_code == 1
+    assert "not on the watchlist" in result.output

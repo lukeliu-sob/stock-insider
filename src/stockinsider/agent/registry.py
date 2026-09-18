@@ -3,8 +3,8 @@
 The LLM never touches storage, network, or computation directly; every
 access flows through registered tools with validated schemas, gated
 effect classes, and provenance-stamped results. Handlers are injected
-by the composition layer — this module imports only shared, preserving
-the dependency law (agent/registry -> shared + later the data facade).
+by the composition layer. Imports: shared, plus the data facade —
+the single sanctioned agent-to-data channel (blueprint §5; ADR-005).
 
 Implements: REQ-SI-INV-003, REQ-SI-INV-001, REQ-SI-SEC-002 (ADR-005)
 """
@@ -18,6 +18,7 @@ from typing import Any
 from stockinsider.shared.tools import (
     JSON_SCHEMA_TYPES,
     EffectClass,
+    SourceKind,
     ToolCall,
     ToolResult,
     ToolSpec,
@@ -25,6 +26,90 @@ from stockinsider.shared.tools import (
     validate_arguments,
     validate_result_payload,
 )
+
+
+def register_data_tools(registry: Registry, data_store: Any) -> None:
+    """Register the data-facade tool set (the only agent-to-data channel).
+
+    symbol.search resolves mentions and records verified candidates in
+    the symbol map; watchlist.add/remove are write tools whose gate is
+    the user_confirmed argument plus the verified-resolution record
+    (INV-004 deterministic backstop behind the prompt-level flow).
+
+    Implements: REQ-SI-FR-004, REQ-SI-INV-004 (ADR-005, ADR-003)
+    """
+
+    def _symbol_search(args: dict[str, Any]) -> list[dict[str, Any]]:
+        candidates = data_store.resolver.search(args["query"])
+        out: list[dict[str, Any]] = []
+        for cand in candidates:
+            data_store.record(cand)
+            out.append(cand.as_dict())
+        return out
+
+    def _watchlist_add(args: dict[str, Any]) -> dict[str, Any]:
+        return data_store.watchlist.add_verified(
+            args["canonical_symbol"], user_confirmed=args["user_confirmed"], via="agent-tool"
+        )
+
+    def _watchlist_remove(args: dict[str, Any]) -> dict[str, Any]:
+        return data_store.watchlist.remove(args["canonical_symbol"])
+
+    registry.register(
+        ToolSpec(
+            name="symbol.search",
+            description=(
+                "Resolve a security mention against the symbol map and the EODHD "
+                "search API; returns verified candidates. Present candidates to "
+                "the user before any watchlist add."
+            ),
+            arguments_spec={"query": "str"},
+            result_spec="list",
+            effect_class=EffectClass.READ,
+            source_kind=SourceKind.API,
+        ),
+        _symbol_search,
+    )
+    registry.register(
+        ToolSpec(
+            name="watchlist.list",
+            description="List active watchlist symbols with names and exchanges.",
+            arguments_spec={},
+            result_spec="list",
+            effect_class=EffectClass.READ,
+            source_kind=SourceKind.API,
+        ),
+        lambda args: data_store.watchlist.list(),
+    )
+    registry.register(
+        ToolSpec(
+            name="watchlist.add",
+            description=(
+                "Add a verified symbol to the watchlist. Requires a prior "
+                "symbol.search whose candidate the user explicitly confirmed; "
+                "pass user_confirmed=true only after that confirmation."
+            ),
+            arguments_spec={"canonical_symbol": "str", "user_confirmed": "bool"},
+            result_spec="dict",
+            effect_class=EffectClass.WRITE,
+            source_kind=SourceKind.API,
+        ),
+        _watchlist_add,
+    )
+    registry.register(
+        ToolSpec(
+            name="watchlist.remove",
+            description=(
+                "Remove a symbol from the watchlist; requires user_confirmed=true "
+                "after showing the user what will be removed."
+            ),
+            arguments_spec={"canonical_symbol": "str", "user_confirmed": "bool"},
+            result_spec="dict",
+            effect_class=EffectClass.WRITE,
+            source_kind=SourceKind.API,
+        ),
+        _watchlist_remove,
+    )
 
 
 def wire_name(name: str) -> str:
@@ -81,10 +166,7 @@ class Registry:
             required = sorted(spec.arguments_spec)
             parameters: dict[str, Any] = {
                 "type": "object",
-                "properties": {
-                    name: {"type": JSON_SCHEMA_TYPES[type_name]}
-                    for name, type_name in properties.items()
-                },
+                "properties": {name: {"type": JSON_SCHEMA_TYPES[type_name]} for name, type_name in properties.items()},
             }
             if required:
                 parameters["required"] = required

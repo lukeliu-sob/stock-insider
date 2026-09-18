@@ -19,6 +19,8 @@ import sys
 import uuid
 from collections.abc import Callable
 
+from typing import Any
+
 from stockinsider.agent.context import estimate_tokens
 from stockinsider.agent.loop import TurnEngine, load_identity_prompt
 from stockinsider.agent.profiles import Profile, apply_budget_overrides, envelope_for
@@ -30,7 +32,7 @@ from stockinsider.agent.providers import (
     resolve_api_key,
     resolve_config,
 )
-from stockinsider.agent.registry import Registry
+from stockinsider.agent.registry import Registry, register_data_tools
 from stockinsider.agent.session import SessionError, SessionStore
 from stockinsider.shared.tools import (
     EffectClass,
@@ -44,7 +46,6 @@ PROMPT = "stockinsider> "
 #: Commands whose real behavior lands in later test plans; each fails
 #: explicitly, naming its target requirement or design section.
 _NOT_IMPLEMENTED: dict[str, str] = {
-    "watch": "REQ-SI-FR-004",
     "sync": "REQ-SI-FR-001",
     "config": "REQ-SI-FR-021",
     "compact": "context compaction (blueprint §7.4)",
@@ -56,7 +57,10 @@ def _explicit_not_implemented(command: str, target: str, echo: Callable[[str], N
 
 
 def _cmd_help(echo: Callable[[str], None]) -> None:
-    echo("commands: /help /sessions [symbol] /show [id] /resume [id] /tools [name [k=v ...]] /exit")
+    echo(
+        "commands: /help /sessions [symbol] /show [id] /resume [id] "
+        "/watch [list|add|remove ...] /tools [name [k=v ...]] /exit"
+    )
     echo("not implemented yet (explicit failure): " + ", ".join(f"/{name}" for name in sorted(_NOT_IMPLEMENTED)))
 
 
@@ -71,15 +75,20 @@ def _cmd_sessions(store: SessionStore, args: list[str], echo: Callable[[str], No
         echo(f"{row['session_id']}  {row['created']}  {row['status']}  {symbols}  {row['profile']}")
 
 
-def build_registry(store: SessionStore) -> Registry:
+def build_registry(store: SessionStore, data_store: Any = None) -> Registry:
     """Register the default deterministic tool set (ADR-005).
 
     Handlers are closures over existing agent modules; the registry
-    itself stays free of non-shared imports (dependency law).
+    itself stays free of non-shared imports (dependency law). When a
+    data store is provided (injected by the CLI composition layer),
+    the data tools from agent/registry.register_data_tools are added —
+    the repl never imports the data facade directly.
 
-    Implements: REQ-SI-FR-013 (ADR-005)
+    Implements: REQ-SI-FR-013, REQ-SI-FR-004 (ADR-005)
     """
     registry = Registry()
+    if data_store is not None:
+        register_data_tools(registry, data_store)
     registry.register(
         ToolSpec(
             name="budget.query",
@@ -122,6 +131,96 @@ def _budget_query(args: dict) -> dict:
     return {"profile": envelope.profile.value, "max_session_tokens": envelope.max_session_tokens}
 
 
+def _cmd_watch(
+    registry: Registry,
+    args: list[str],
+    *,
+    input_fn: Callable[[str], str],
+    echo: Callable[[str], None],
+) -> None:
+    """Watchlist slash command, routed through registry tools (FR-004).
+
+    The interactive confirmation happens here; the registry write gate
+    opens only for calls carrying user_confirmed=true (INV-004).
+
+    Implements: REQ-SI-FR-004, REQ-SI-INV-004 (ADR-005)
+    """
+    action = args[0] if args else "list"
+    rest = args[1:]
+    if action == "list":
+        result = registry.execute(ToolCall(tool="watchlist.list", arguments={}, call_id="slash-watch"))
+        if not result.ok:
+            echo(f"error: {result.error}")
+            return
+        rows = result.result or []
+        if not rows:
+            echo("watchlist is empty")
+            return
+        for row in rows:
+            echo(f"{row['canonical_symbol']}  {row['official_name']}  {row['exchange']}")
+        return
+    if action == "add":
+        if not rest:
+            echo("error: /watch add requires a mention or name to resolve")
+            return
+        search = registry.execute(
+            ToolCall(tool="symbol.search", arguments={"query": " ".join(rest)}, call_id="slash-watch")
+        )
+        if not search.ok:
+            echo(f"error: {search.error}")
+            return
+        candidates = search.result or []
+        if not candidates:
+            echo("not found: no verified resolution; watchlist unchanged")
+            return
+        for i, cand in enumerate(candidates, start=1):
+            echo(f"{i}) {cand['canonical_symbol']}  {cand['official_name']}  exchange {cand['exchange']}")
+        if len(candidates) == 1:
+            picked = candidates[0]
+        else:
+            choice = input_fn(f"select 1-{len(candidates)}: ").strip()
+            if not choice.isdigit() or not 1 <= int(choice) <= len(candidates):
+                echo("error: invalid selection; cancelled")
+                return
+            picked = candidates[int(choice) - 1]
+        confirm = input_fn(f"add {picked['canonical_symbol']} ({picked['official_name']})? [y/N]: ").strip().lower()
+        if confirm not in ("y", "yes"):
+            echo("cancelled; watchlist unchanged")
+            return
+        result = registry.execute(
+            ToolCall(
+                tool="watchlist.add",
+                arguments={"canonical_symbol": picked["canonical_symbol"], "user_confirmed": True},
+                call_id="slash-watch",
+            ),
+            allow_write=True,
+        )
+        if result.ok:
+            echo(f"added {picked['canonical_symbol']}; backfill enqueued")
+        else:
+            echo(f"error: {result.error}")
+        return
+    if action == "remove":
+        if not rest:
+            echo("error: /watch remove requires a canonical symbol")
+            return
+        confirm = input_fn(f"remove {rest[0]}? [y/N]: ").strip().lower()
+        if confirm not in ("y", "yes"):
+            echo("cancelled; watchlist unchanged")
+            return
+        result = registry.execute(
+            ToolCall(
+                tool="watchlist.remove",
+                arguments={"canonical_symbol": rest[0], "user_confirmed": True},
+                call_id="slash-watch",
+            ),
+            allow_write=True,
+        )
+        echo(f"removed {rest[0]}" if result.ok else f"error: {result.error}")
+        return
+    echo(f"error: unknown watch action {action!r} (list | add | remove)")
+
+
 def _cmd_tools(registry: Registry, args: list[str], echo: Callable[[str], None]) -> None:
     if not args:
         for spec in registry.list_tools():
@@ -150,6 +249,7 @@ def repl(
     *,
     profile: Profile | str = Profile.standard,
     data_root: "str | None" = None,
+    data_store: Any = None,
     input_fn: Callable[[str], str] = input,
     echo: Callable[[str], None] = print,
 ) -> None:
@@ -157,7 +257,14 @@ def repl(
 
     Implements: REQ-SI-FR-013, REQ-SI-GOV-005 (ADR-001)
     """
-    start_new_session(store, profile=profile, data_root=data_root, input_fn=input_fn, echo=echo)
+    start_new_session(
+        store,
+        profile=profile,
+        data_root=data_root,
+        data_store=data_store,
+        input_fn=input_fn,
+        echo=echo,
+    )
 
 
 def start_new_session(
@@ -165,6 +272,7 @@ def start_new_session(
     *,
     profile: Profile | str = Profile.standard,
     data_root: "str | None" = None,
+    data_store: Any = None,
     input_fn: Callable[[str], str] = input,
     echo: Callable[[str], None] = print,
 ) -> None:
@@ -188,7 +296,9 @@ def start_new_session(
     echo(
         f"session {record['session_id']} opened (profile: {record['profile']}); type /help for commands, /exit to leave"
     )
-    record = _session_loop(store, record, data_root=data_root, input_fn=input_fn, echo=echo)
+    record = _session_loop(
+        store, record, data_root=data_root, data_store=data_store, input_fn=input_fn, echo=echo
+    )
     store.close(record["session_id"])
     echo(f"session {record['session_id']} closed")
     echo(f"resume with: stockinsider resume {record['session_id']}")
@@ -210,6 +320,7 @@ def resume_session(
     *,
     profile: Profile | str | None = None,
     data_root: "str | None" = None,
+    data_store: Any = None,
     input_fn: Callable[[str], str] = input,
     echo: Callable[[str], None] = print,
 ) -> None:
@@ -229,7 +340,9 @@ def resume_session(
         f"session {record['session_id']} resumed (profile: {record['profile']}; "
         f"{restored} events restored); type /help for commands, /exit to leave"
     )
-    record = _session_loop(store, record, data_root=data_root, input_fn=input_fn, echo=echo)
+    record = _session_loop(
+        store, record, data_root=data_root, data_store=data_store, input_fn=input_fn, echo=echo
+    )
     store.close(record["session_id"])
     echo(f"session {record['session_id']} closed")
     echo(f"resume with: stockinsider resume {record['session_id']}")
@@ -240,6 +353,7 @@ def _session_loop(
     record: dict,
     *,
     data_root: "str | None" = None,
+    data_store: Any = None,
     input_fn: Callable[[str], str] = input,
     echo: Callable[[str], None] = print,
 ) -> dict:
@@ -252,7 +366,7 @@ def _session_loop(
     """
     config = resolve_config(data_root)
     apply_budget_overrides(config.budgets)
-    registry = build_registry(store)
+    registry = build_registry(store, data_store)
     engine = _build_engine(store, registry, config)
     while True:
         try:
@@ -277,16 +391,19 @@ def _session_loop(
                     render_session(store, target, echo)
                 except SessionError as exc:
                     echo(f"error: {exc}")
+            elif name == "watch":
+                _cmd_watch(
+                    registry,
+                    args,
+                    input_fn=input_fn,
+                    echo=echo,
+                )
             elif name == "resume":
                 try:
                     if args:
                         resolved = args[0]
                     else:
-                        closed = [
-                            row
-                            for row in store.list_sessions()
-                            if row["status"] == "closed"
-                        ]
+                        closed = [row for row in store.list_sessions() if row["status"] == "closed"]
                         if not closed:
                             _most_recent(store, closed_only=True)  # raises the canonical error
                             continue
@@ -294,10 +411,7 @@ def _session_loop(
                         echo("closed sessions (most recent first):")
                         for i, row in enumerate(closed, start=1):
                             symbols = ",".join(row["subject_symbols"]) or "-"
-                            echo(
-                                f"  {i}) {row['session_id']}  {row['created']}  "
-                                f"{row['profile']}  {symbols}"
-                            )
+                            echo(f"  {i}) {row['session_id']}  {row['created']}  {row['profile']}  {symbols}")
                         choice = input_fn(f"select 1-{len(closed)} (enter=1, q=cancel): ").strip()
                         if choice.lower() == "q":
                             echo("resume cancelled")
@@ -386,9 +500,7 @@ def render_session(store: SessionStore, session_id: str, echo: Callable[[str], N
     """
     events = store.read_events(session_id)
     header = dict(events[0].get("record", {})) if events else {}
-    current = next(
-        (row for row in store.list_sessions() if row["session_id"] == session_id), None
-    )
+    current = next((row for row in store.list_sessions() if row["session_id"] == session_id), None)
     if current:
         header.update({k: current[k] for k in ("profile", "status") if k in current})
     provenance = header.get("provenance", {})
