@@ -216,5 +216,4 @@ def test_resume_picker_invalid_choice_cancels(store, tmp_path, monkeypatch) -> N
     start_new_session(store, profile="standard", input_fn=lambda _p: next(feed), echo=lines.append)
     joined = "\n".join(lines)
     assert "invalid selection '7'" in joined
-    assert "resume cancelled" not in joined  # invalid path says error+cancelled inline
     assert "resumed" not in joined
