@@ -1209,3 +1209,56 @@ sessions:
       Owner instructed continuation into TP-009 after the live
       resolver milestone.
     status: applied
+
+  - id: AILOG-0032
+    date: "2026-09-18"
+    tool: "pi coding agent (LLM session)"
+    role: ai
+    task: >-
+      TP-009 implementation (owner approved; approval commit precedes
+      this implementation commit in the same PR). data/ingest becomes
+      real: http.py (stdlib transport seam; responses classified once
+      — 402 becomes the ADR-002 capacity-is-bought report, zero
+      retries), market.py (EODHD EOD adapter, one request per date
+      range, strict row validation where any invalid row fails the
+      whole batch with nothing stored; raw OHLC + adjusted_close both
+      stored), budget.py (20/day free-tier cap persisted in sync_state
+      with lazy date reset; EODHD_DAILY_CALLS override),
+      calendar.py (trading days derived from HSI.IND/GSPC.IND bars;
+      CalendarUnavailable explicit), sync.py (plan priority:
+      index backfills -> gap queue -> incrementals; completeness pass
+      enqueues newly found gaps for the NEXT run per FR-001 wording;
+      per-symbol ok/failed/deferred report with budget numbers).
+      Schema migration v2 adds market_bars.adjusted_close (the
+      migration machinery's first real forward-only run). DataStore
+      gains run_sync/sync_status; registry gains sync.run (WRITE,
+      slash-typing is the confirmation) and sync.status (READ); CLI
+      sync real with non-zero exit on failures. Tests: 12 offline
+      (adapter/store, batch-failure semantics, deleted-bar refetch,
+      calendar completeness, holiday boundary, priority order under
+      tight budget, budget boundary pair, lazy reset, exhaustion
+      deferral, 402 single-shot, env override, tool gating, migration
+      v2) + live smoke (host/row-shape/search once, env-key-gated,
+      never blocking). Draft residue in calendar.py (aborted loop
+      fragments) caught by self-review before staging and rewritten.
+    artifacts:
+      - src/stockinsider/data/ingest/__init__.py
+      - src/stockinsider/data/ingest/http.py
+      - src/stockinsider/data/ingest/market.py
+      - src/stockinsider/data/ingest/budget.py
+      - src/stockinsider/data/ingest/calendar.py
+      - src/stockinsider/data/ingest/sync.py
+      - src/stockinsider/data/store/schema.py
+      - src/stockinsider/data/store/__init__.py
+      - src/stockinsider/agent/registry.py
+      - src/stockinsider/agent/repl.py
+      - src/stockinsider/cli/app.py
+      - test/offline/test_ingest_market.py
+      - test/offline/test_sync_budget.py
+      - test/live/test_market_smoke.py
+      - docs/test-plans/TP-009.md
+      - docs/ai-use-log.yaml
+    human_decision: >-
+      Owner approved TP-009 (instruction: implement) after reviewing
+      the draft plan (PR #18) and confirming the route decisions.
+    status: applied

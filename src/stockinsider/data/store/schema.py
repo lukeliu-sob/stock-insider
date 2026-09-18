@@ -119,8 +119,12 @@ CREATE TABLE sync_gaps (
 );
 """
 
+#: Migration v2 (TP-009): EODHD rows carry raw OHLC plus a separate
+#: adjusted_close; storing both preserves fidelity for the compute layer.
+MIGRATION_V2 = "ALTER TABLE market_bars ADD COLUMN adjusted_close REAL;"
+
 #: Append-only migration list: index i holds migration to version i+1.
-MIGRATIONS: tuple[str, ...] = (MIGRATION_V1,)
+MIGRATIONS: tuple[str, ...] = (MIGRATION_V1, MIGRATION_V2)
 
 #: Latest schema version this code understands.
 SCHEMA_VERSION = len(MIGRATIONS)

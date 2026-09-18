@@ -54,6 +54,24 @@ class DataStore:
 
         record_resolution(self._conn, resolution)
 
+    def run_sync(self) -> dict[str, Any]:
+        """Execute one sync run (plan, budget, gaps, completeness) and report.
+
+        Implements: REQ-SI-FR-001, REQ-SI-QA-003, REQ-SI-INV-003 (ADR-002)
+        """
+        from stockinsider.data.ingest.sync import SyncService
+
+        return SyncService(self._conn).run().as_dict()
+
+    def sync_status(self) -> dict[str, Any]:
+        """Read-only sync status (budget, pending gaps, tracked symbols).
+
+        Implements: REQ-SI-FR-001 (ADR-002)
+        """
+        from stockinsider.data.ingest.sync import sync_status
+
+        return sync_status(self._conn)
+
     def close(self) -> None:
         """Close the underlying connection.
 

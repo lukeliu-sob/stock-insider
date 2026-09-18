@@ -11,7 +11,7 @@ import sqlite3
 
 import pytest
 
-from stockinsider.data.store.db import SchemaVersionError, open_db
+from stockinsider.data.store.db import SCHEMA_VERSION, SchemaVersionError, open_db
 
 V1_TABLES = {
     "symbols",
@@ -38,7 +38,7 @@ def test_migration_v1_applies_idempotently(tmp_path) -> None:
     tables = _table_names(conn)
     assert V1_TABLES <= tables
     version = conn.execute("SELECT MAX(version) FROM schema_history").fetchone()[0]
-    assert version == 1
+    assert version == SCHEMA_VERSION  # current top migration (v2 since TP-009)
     conn.close()
     conn = open_db(root)  # reopen: no re-run, no error
     assert _table_names(conn) == tables

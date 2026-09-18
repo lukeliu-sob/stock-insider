@@ -48,11 +48,26 @@ def _stub(command: str, req: str) -> NoReturn:
 
 @app.command()
 def sync() -> None:
-    """Ingest daily EOD market data, fundamentals, and news (idempotent).
+    """Ingest daily EOD market data under the call budget (idempotent).
 
     Implements: REQ-SI-FR-001
     """
-    _stub("sync", "REQ-SI-FR-001")
+    data_store = open_data_store()
+    try:
+        report = data_store.run_sync()
+    finally:
+        data_store.close()
+    counts = report["counts"]
+    calls = report["calls"]
+    typer.echo(
+        f"sync {report['ran_at']}: {counts['ok']} ok, {counts['failed']} failed, "
+        f"{counts['deferred']} deferred; calls {calls['used']}/{calls['cap']} "
+        f"({calls['remaining']} remaining)"
+    )
+    for item in report["results"]:
+        typer.echo(f"{item['status']:8} {item['symbol']:12} {item['action']:11} {item['detail']}")
+    if counts["failed"]:
+        raise typer.Exit(code=1)
 
 
 @app.command()
