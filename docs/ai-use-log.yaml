@@ -1182,3 +1182,30 @@ sessions:
       Owner confirmed the one-line whitelist correction after seeing
       the two-direction live-probe evidence.
     status: applied
+
+  - id: AILOG-0031
+    date: "2026-09-18"
+    tool: "pi coding agent (LLM session)"
+    role: ai
+    task: >-
+      TP-009 test plan drafted (market ingestion: EODHD EOD adapter,
+      20-calls/day free-tier budget guard with explicit deferral and
+      the ADR-002 402 single-shot policy, benchmark-index-derived
+      trading calendars, gap detection + 5y backfill execution, sync
+      CLI + sync.run/sync.status registry tools, schema migration v2
+      adding market_bars.adjusted_close). Grounded in a same-day live
+      probe: EOD endpoint shape confirmed (date/open/high/low/close/
+      adjusted_close/volume; demo symbol) — the adjusted_close column
+      decision (store raw + adjusted, compute layer picks) follows
+      from the observed payload. The BD-008/BD-010 family lesson is
+      institutionalized: test/live/test_market_smoke.py (never
+      blocking) smokes host, endpoint shape, row schema, and 402
+      semantics before implementation merges. Status: draft, awaiting
+      owner approval.
+    artifacts:
+      - docs/test-plans/TP-009.md
+      - docs/ai-use-log.yaml
+    human_decision: >-
+      Owner instructed continuation into TP-009 after the live
+      resolver milestone.
+    status: applied
