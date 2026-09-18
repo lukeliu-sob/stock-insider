@@ -947,3 +947,35 @@ sessions:
       self-resume guard and exit hints) after reviewing the current
       /resume mechanism explanation.
     status: applied
+
+  - id: AILOG-0025
+    date: "2026-09-17"
+    tool: "pi coding agent (LLM session)"
+    role: ai
+    task: >-
+      Bare /resume made into an interactive session picker per owner
+      request. Previously selection existed only via the undiscovered
+      explicit path (/resume <id> after /sessions); bare /resume
+      silently bound the most recent closed session (FR-023's stated
+      default), which read as "can only resume the last one". The
+      picker lists closed sessions (most recent first — list_sessions
+      index order is oldest-first, reversed for display), numbered;
+      enter=1 keeps the most-recent default; an explicit number binds
+      that session; q cancels; invalid input cancels with an error.
+      Explicit /resume <id> and the non-interactive CLI entry are
+      unchanged; Amendment-1 close-then-bind semantics apply to the
+      selection. Four new tests (list+bind, enter default, cancel,
+      invalid choice); the prior bare-/resume test now feeds an empty
+      selection through the picker. TP-007b Amendment 2 documents the
+      interaction change; no registry change (FR-023 wording
+      unaffected — its default remains most-recent via enter=1).
+    artifacts:
+      - src/stockinsider/agent/repl.py
+      - test/offline/test_resume.py
+      - docs/test-plans/TP-007b.md
+      - docs/ai-use-log.yaml
+    human_decision: >-
+      Owner confirmed the picker design (numbered list, enter=1
+      default, q=cancel, explicit-id path unchanged) and instructed
+      implementation.
+    status: applied
