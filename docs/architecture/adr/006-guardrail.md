@@ -39,3 +39,21 @@
 - Per-number source attribution (provenance ledger consumption).
 - Derived-number support only via registered compute tools — never by relaxing the post-check.
 - New fallback thresholds are invariant-document changes, not code tweaks.
+
+## Amendment 1 (2026-09-21) — BD-012: display-rounding allowance in the numeric match
+
+INV-001's exact-after-normalization match predates contact with real
+vendor data, where indices and adjusted closes carry four decimals
+and models render two. The postcheck correctly refused the
+transformed values — but refusing a standard decimal rendering of a
+pooled value turns every conversational quote into a false
+quarantine. Refined semantics: a token with exactly d decimals
+(d in 2..4) matches a pool value within half an ulp of that decimal
+place; such tokens are tracked as `rounded` in the NumberCheck for
+audit. This is a rendering convention, not a numeric tolerance:
+integer-scale deviations (the ±1 adversarial class) still fail —
+zero- and one-decimal tokens never display-round-match, and the
+bound tightens with d (a truncation like ...241 against ...2402
+exceeds the d=3 bound). The identity prompt (v3) instructs exact
+rendering as belt-and-braces. The adversarial suite grows four
+cases pinning the allowance's edges.
