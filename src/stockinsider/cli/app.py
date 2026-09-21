@@ -151,7 +151,17 @@ def info(symbol: str = typer.Argument(..., help="Canonical symbol, e.g. 0700.HK"
 
     Implements: REQ-SI-FR-005
     """
-    _stub("info", "REQ-SI-FR-005")
+    data_store = open_data_store()
+    try:
+        try:
+            lines = data_store.info_lines(symbol)
+        except Exception as exc:  # noqa: BLE001 — explicit not-found path
+            typer.secho(f"error: {exc}", fg=typer.colors.RED, err=True)
+            raise typer.Exit(code=1) from exc
+        for line in lines:
+            typer.echo(line)
+    finally:
+        data_store.close()
 
 
 @app.command()

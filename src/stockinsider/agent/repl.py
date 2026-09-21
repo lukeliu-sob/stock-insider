@@ -32,7 +32,12 @@ from stockinsider.agent.providers import (
     resolve_api_key,
     resolve_config,
 )
-from stockinsider.agent.registry import Registry, register_data_tools, register_sync_tools
+from stockinsider.agent.registry import (
+    Registry,
+    register_data_tools,
+    register_market_tools,
+    register_sync_tools,
+)
 from stockinsider.agent.session import SessionError, SessionStore
 from stockinsider.shared.tools import (
     EffectClass,
@@ -89,6 +94,7 @@ def build_registry(store: SessionStore, data_store: Any = None) -> Registry:
     if data_store is not None:
         register_data_tools(registry, data_store)
         register_sync_tools(registry, data_store)
+        register_market_tools(registry, data_store)
     registry.register(
         ToolSpec(
             name="budget.query",

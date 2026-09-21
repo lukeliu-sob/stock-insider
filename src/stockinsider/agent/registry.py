@@ -155,6 +155,62 @@ def register_sync_tools(registry: Registry, data_store: Any) -> None:
     )
 
 
+def register_market_tools(registry: Registry, data_store: Any) -> None:
+    """Register the read tools that expose real market numerics (TP-010).
+
+    market.quote returns the latest stored bar; fundamentals.summary
+    returns the latest quarter plus the FR-002 coverage ratio. These
+    are the first real market numbers flowing through the membrane
+    into INV-001 snapshots.
+
+    Implements: REQ-SI-FR-005, REQ-SI-FR-002 (ADR-005, ADR-002)
+    """
+
+    def _quote(args: dict[str, Any]) -> dict[str, Any]:
+        row = data_store.conn.execute(
+            "SELECT date, open, high, low, close, adjusted_close, volume, currency "
+            "FROM market_bars WHERE canonical_symbol = ? ORDER BY date DESC LIMIT 1",
+            (args["symbol"],),
+        ).fetchone()
+        if row is None:
+            raise KeyError(f"{args['symbol']}: no stored market data (sync first; INV-003)")
+        return dict(row) | {"symbol": args["symbol"]}
+
+    def _fundamentals(args: dict[str, Any]) -> dict[str, Any]:
+        from stockinsider.data.ingest.fundamentals import coverage
+
+        return coverage(data_store.conn, args["symbol"])
+
+    registry.register(
+        ToolSpec(
+            name="market.quote",
+            description=(
+                "Latest stored EOD bar for a canonical symbol: date, OHLC, "
+                "adjusted close, volume, currency. Deterministic; data date included."
+            ),
+            arguments_spec={"symbol": "str"},
+            result_spec="dict",
+            effect_class=EffectClass.READ,
+            source_kind=SourceKind.API,
+        ),
+        _quote,
+    )
+    registry.register(
+        ToolSpec(
+            name="fundamentals.summary",
+            description=(
+                "Latest stored fundamentals for a symbol with the FR-002 coverage "
+                "ratio and explicit gap list; empty when the feed has not been ingested."
+            ),
+            arguments_spec={"symbol": "str"},
+            result_spec="dict",
+            effect_class=EffectClass.READ,
+            source_kind=SourceKind.API,
+        ),
+        _fundamentals,
+    )
+
+
 def wire_name(name: str) -> str:
     """Dot-free wire-safe form of a tool name (OpenAI function-name rule).
 

@@ -193,5 +193,5 @@ def test_migration_v2_adds_adjusted_close(tmp_path) -> None:
     cols = {r["name"] for r in conn.execute("PRAGMA table_info(market_bars)")}
     assert "adjusted_close" in cols
     version = conn.execute("SELECT MAX(version) FROM schema_history").fetchone()[0]
-    assert version == SCHEMA_VERSION == 2
+    assert version == SCHEMA_VERSION  # top migration (v3 since TP-010)
     conn.close()

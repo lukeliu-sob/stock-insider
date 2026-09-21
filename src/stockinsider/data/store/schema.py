@@ -123,8 +123,22 @@ CREATE TABLE sync_gaps (
 #: adjusted_close; storing both preserves fidelity for the compute layer.
 MIGRATION_V2 = "ALTER TABLE market_bars ADD COLUMN adjusted_close REAL;"
 
+#: Migration v3 (TP-010): company profile rows sourced from the
+#: fundamentals feed's General section.
+MIGRATION_V3 = """
+CREATE TABLE symbol_profiles (
+    canonical_symbol TEXT PRIMARY KEY REFERENCES symbols(canonical_symbol),
+    name TEXT,
+    exchange TEXT,
+    sector TEXT,
+    industry TEXT,
+    country TEXT,
+    updated_at TEXT NOT NULL
+);
+"""
+
 #: Append-only migration list: index i holds migration to version i+1.
-MIGRATIONS: tuple[str, ...] = (MIGRATION_V1, MIGRATION_V2)
+MIGRATIONS: tuple[str, ...] = (MIGRATION_V1, MIGRATION_V2, MIGRATION_V3)
 
 #: Latest schema version this code understands.
 SCHEMA_VERSION = len(MIGRATIONS)

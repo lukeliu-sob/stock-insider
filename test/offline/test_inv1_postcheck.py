@@ -108,3 +108,36 @@ def test_counter_resets_on_pass() -> None:
     assert counter.record(good) is None  # streak reset
     assert counter.record(bad) is None
     assert counter.record(bad) is None  # streak is only 2 again
+
+
+# -- market.quote: first real numerics through the membrane (TP-010) --------
+
+
+def test_market_quote_tool_stamps_provenance(tmp_path) -> None:
+    import json as _json
+
+    from stockinsider.agent.registry import Registry, register_data_tools, register_market_tools
+    from stockinsider.data import open_data_store
+    from stockinsider.data.ingest.market import parse_eod_rows, store_bars
+    from stockinsider.data.store.resolver import Resolution, record_resolution
+    from stockinsider.shared.tools import ToolCall
+
+    ds = open_data_store(tmp_path / "data")
+    record_resolution(ds.conn, Resolution(canonical_symbol="0700.HK", exchange="HK", official_name="Tencent"))
+    store_bars(
+        ds.conn,
+        "0700.HK",
+        parse_eod_rows(
+            _json.dumps([{"date": "2026-09-21", "open": 1, "high": 1, "low": 1, "close": 320.4, "volume": 1}]),
+            "0700.HK",
+        ),
+    )
+    registry = Registry()
+    register_data_tools(registry, ds)
+    register_market_tools(registry, ds)
+    result = registry.execute(ToolCall(tool="market.quote", arguments={"symbol": "0700.HK"}, call_id="t"))
+    assert result.ok
+    assert result.result["close"] == 320.4 and result.result["date"] == "2026-09-21"
+    assert result.provenance["tool"] == "market.quote"
+    assert result.provenance["source_kind"] == "api"  # enters the INV-001 snapshot pool
+    ds.close()
