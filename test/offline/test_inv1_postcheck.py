@@ -141,3 +141,42 @@ def test_market_quote_tool_stamps_provenance(tmp_path) -> None:
     assert result.provenance["tool"] == "market.quote"
     assert result.provenance["source_kind"] == "api"  # enters the INV-001 snapshot pool
     ds.close()
+
+
+# -- BD-012: display-rounding match (2-4 decimals) vs fabrication --------
+
+
+def test_display_rounded_two_decimals_passes() -> None:
+    from stockinsider.agent.guardrail import postcheck_numbers
+
+    snapshot = {"market.quote": {"close": 24879.2402, "open": 24748.4492}}
+    check = postcheck_numbers("close is 24,879.24 and open 24,748.45", snapshot)
+    assert check.passed
+    assert sorted(check.rounded) == ["24748.45", "24879.24"]
+    assert check.failed == []
+
+
+def test_display_rounded_near_misses_rejected() -> None:
+    from stockinsider.agent.guardrail import postcheck_numbers
+
+    snapshot = {"market.quote": {"close": 24879.2402}}
+    for candidate in ("close is 24,879.23", "close is 24,879.241", "close is 24,879.2"):
+        check = postcheck_numbers(candidate, snapshot)
+        assert not check.passed, candidate
+
+
+def test_integer_rendering_of_fractional_value_rejected() -> None:
+    from stockinsider.agent.guardrail import postcheck_numbers
+
+    snapshot = {"market.quote": {"close": 24879.2402}}
+    check = postcheck_numbers("close is 24879", snapshot)
+    assert not check.passed  # 0-decimal rendering: not a display-rounding match
+
+
+def test_plus_minus_one_adversarial_unchanged() -> None:
+    from stockinsider.agent.guardrail import postcheck_numbers
+
+    snapshot = {"tool": {"value": 100.0}}
+    for token in ("101", "99", "100.5", "100.99"):
+        check = postcheck_numbers(f"value is {token}", snapshot)
+        assert not check.passed, token

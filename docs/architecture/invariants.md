@@ -23,7 +23,7 @@ The requirement registry (`REQ-SI-INV-001..004`) is the normative source for inv
 
 ## INV-001 — Numeric provenance
 
-- **Statement**: every numeric value in agent output must trace to a database record or computed result registered in the response's context snapshot; a deterministic post-check verifies each numeric against that snapshot; on mismatch the response degrades to an explicit data-unavailable statement (registry `REQ-SI-INV-001`).
+- **Statement**: every numeric value in agent output must trace to a database record or computed result registered in the response's context snapshot; a deterministic post-check verifies each numeric against that snapshot; on mismatch the response degrades to an explicit data-unavailable statement (registry `REQ-SI-INV-001`). Match semantics (BD-012): exact after normalization, plus a bounded display-rounding allowance — a token with exactly 2–4 decimals matches a pool value within half an ulp of that decimal place (tracked as `rounded` for audit); integer-scale deviations never match.
 - **Source requirement**: REQ-SI-INV-001 (owner requirement R1 item 1; core anti-hallucination demand).
 - **Enforcing component(s)**: `agent/guardrail` (post-check executor); supported by `agent/session` (values-as-seen snapshots, FR-011) and `agent/context` (provenance ledger, ADR-001 §6.4).
 - **Verification**: `test/offline/test_inv1_postcheck.py` — adversarial suite (injected fabricated numbers rejected with 0 escapes), boundary ±1 cases (correctly cited numbers pass 100%); companion measurement QA-004.

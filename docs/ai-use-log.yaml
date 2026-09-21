@@ -1389,3 +1389,42 @@ sessions:
       Owner ruled: fundamentals package deferred (no urgency), the
       remainder of TP-010 implemented as planned.
     status: applied
+
+  - id: AILOG-0036
+    date: "2026-09-21"
+    tool: "pi coding agent (LLM session)"
+    role: ai
+    task: >-
+      BD-012 fix (owner-confirmed): the numeric postcheck gains a
+      bounded display-rounding allowance. Root cause trail: the
+      owner's first conversational quote question was quarantined
+      because the model rendered two decimals for four-decimal vendor
+      values (on-disk snapshot: 24879.2402 vs response 24,879.24);
+      an offline repro with clean literals passed, proving the
+      algorithm right and pointing at the live data path. Refined
+      match: exact after normalization, or a token with exactly 2-4
+      decimals within half an ulp of a pool value (tracked as
+      'rounded' in NumberCheck for audit). Not a numeric tolerance:
+      0- and 1-decimal tokens never display-round-match; the bound
+      tightens with d (truncation attacks exceed it); the ±1
+      adversarial class keeps failing — four new tests pin the
+      edges. identity.md v2 -> v3 adds "Numbers render as returned"
+      (GOV-003; eval replay in CI). ADR-006 Amendment 1; invariants
+      INV-001 match-semantics note; TP-006 Amendment 2 (GOV-006
+      reference); BD-012 recorded with the full investigation trail.
+      Safety-critical path touched: agent/guardrail via proposals
+      protocol under explicit owner confirmation.
+    artifacts:
+      - src/stockinsider/agent/guardrail.py
+      - prompts/identity.md
+      - test/offline/test_inv1_postcheck.py
+      - docs/bug-diary.md
+      - docs/architecture/invariants.md
+      - docs/architecture/adr/006-guardrail.md
+      - docs/test-plans/TP-006.md
+      - docs/ai-use-log.yaml
+    human_decision: >-
+      Owner reviewed the root-cause evidence (snapshot vs response)
+      and the bounded-allowance proposal, then instructed
+      implementation.
+    status: applied

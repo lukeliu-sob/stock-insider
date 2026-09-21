@@ -118,3 +118,12 @@ Invariant/process gap exposed → what changed:
 - **Root cause**: benchmark seed constants were authored from recollection of a `.IND` convention; EODHD uses `.INDX`.
 - **Fix**: seeds/calendar map/currency map/tests switched to `.INDX` (21 occurrences); stale `.IND` seed rows in existing databases are inert (INSERT OR IGNORE reseeds the correct four); sync smoke checklist extended — "smoke the symbol" joins host/default/row-shape.
 - **Gap exposed -> change**: vendor CONSTANT artifacts (symbols, hosts, model names, endpoints) now get a mandatory live probe at first integration, no exceptions; the probe evidence lives in the AI-log entry that introduces them.
+
+## BD-012 — Postcheck exact-match flagged display-rounded citations (false positive)
+- **Date / discovered by**: 2026-09-21 / owner live use (first conversational quote question)
+- **Symptom**: the model answered with tool-returned prices rounded to two decimals (24,879.24 for a pool value of 24879.2402); the postcheck quarantined the response ("data unavailable for: 24748.45 ...") — a correctly-cited number rejected, violating INV-001's "correctly cited numbers must pass in 100 percent of cases".
+- **Investigation**: offline repro with clean literals PASSED — the algorithm was right; the on-disk values-as-seen snapshot revealed the four-decimal vendor values (indices and adjusted closes) and the model's two-decimal rendering.
+- **Classification**: process/design gap — the exact-match spec predates contact with real four-decimal data; "display rounding" and "fabrication" were indistinguishable to the check.
+- **Root cause**: models humanize numeric rendering; vendor precision exceeds display precision; exact match has no rendering-convention allowance.
+- **Fix**: display-rounding match — a token with exactly d decimals (d in 2..4) matches a pool value within half an ulp of that decimal place, tracked as `rounded` for audit; integer-scale deviations (the ±1 adversarial class) still fail (tokens with 0 or 1 decimals never display-round-match; the bound shrinks with d; truncation attacks like ...241 against ...2402 exceed the d=3 bound). identity.md v2 -> v3 adds "Numbers render as returned" (belt-and-braces; GOV-003 eval replay). ADR-006 amendment; invariants INV-001 note.
+- **Gap exposed -> change**: the invariant's first live contact — the check did its job by refusing an unaudited transformation; the refinement makes the allowance explicit and bounded rather than implicit. Any future matching relaxation must carry its own adversarial suite.

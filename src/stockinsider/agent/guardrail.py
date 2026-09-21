@@ -20,7 +20,7 @@ from __future__ import annotations
 
 import re
 from collections.abc import Callable
-from dataclasses import dataclass
+from dataclasses import dataclass, field
 
 from stockinsider.shared.language import is_english_only
 
@@ -77,6 +77,58 @@ def _values_pool(snapshot_values: object) -> set[str]:
     return pool
 
 
+def _pool_floats(snapshot_values: object) -> list[float]:
+    """Numeric leaf values as floats (display-rounding match candidates).
+
+    Implements: REQ-SI-INV-001 (ADR-006, BD-012 amendment)
+    """
+    floats: list[float] = []
+
+    def _sink(value: object) -> None:
+        if isinstance(value, bool):
+            return
+        if isinstance(value, (int, float)):
+            floats.append(float(value))
+        elif isinstance(value, str):
+            for token in extract_numbers(value):
+                try:
+                    floats.append(float(token))
+                except ValueError:
+                    continue
+
+    _walk(snapshot_values, _sink)
+    return floats
+
+
+#: Display-rounding tolerance: a token with exactly d decimals (d in 2..4)
+#: matches a pool value within half an ulp of that decimal place. This is a
+#: rendering convention, not a numeric tolerance: integer-scale deviations
+#: (the ±1 adversarial class) still fail — tokens with 0 or 1 decimals never
+#: display-round-match, and the bound shrinks with d (BD-012).
+_DISPLAY_DECIMALS = (2, 3, 4)
+
+
+def _token_decimals(token: str) -> int | None:
+    if "." not in token:
+        return 0
+    return len(token.split(".", 1)[1]) or None
+
+
+def _display_rounds_to(value: float, token: str) -> bool:
+    """True when token is a standard decimal rendering of value.
+
+    Implements: REQ-SI-INV-001 (ADR-006, BD-012 amendment)
+    """
+    decimals = _token_decimals(token)
+    if decimals not in _DISPLAY_DECIMALS:
+        return False
+    try:
+        rendered = float(token)
+    except ValueError:
+        return False
+    return abs(value - rendered) <= 0.5 * 10**-decimals + 1e-12
+
+
 @dataclass(frozen=True)
 class NumberCheck:
     """INV-001 verdict: matched and failed numeric tokens.
@@ -87,22 +139,33 @@ class NumberCheck:
     passed: bool
     matched: list[str]
     failed: list[str]
+    rounded: list[str] = field(default_factory=list)
 
 
 def postcheck_numbers(candidate: str, snapshot_values: object) -> NumberCheck:
-    """Verify every numeric token against the snapshot pool (exact match).
+    """Verify every numeric token against the snapshot pool.
 
-    Implements: REQ-SI-INV-001 (ADR-006)
+    Exact match after normalization; a token that is a standard display
+    rounding (2-4 decimals) of a pool value also matches, tracked as
+    `rounded` for audit. Integer-scale deviations still fail (BD-012).
+
+    Implements: REQ-SI-INV-001 (ADR-006, BD-012 amendment)
     """
     pool = _values_pool(snapshot_values)
+    floats = _pool_floats(snapshot_values)
     matched: list[str] = []
     failed: list[str] = []
+    rounded: list[str] = []
     for token in extract_numbers(candidate):
-        if _canon_token(token) in pool:
+        canon = _canon_token(token)
+        if canon in pool:
             matched.append(token)
-        else:
-            failed.append(token)
-    return NumberCheck(passed=not failed, matched=matched, failed=failed)
+            continue
+        if any(_display_rounds_to(value, token) for value in floats):
+            rounded.append(token)
+            continue
+        failed.append(token)
+    return NumberCheck(passed=not failed, matched=matched, failed=failed, rounded=rounded)
 
 
 # ---- INV-002: epistemic filter -----------------------------------------------
