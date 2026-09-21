@@ -21,16 +21,27 @@ from typing import Any
 from stockinsider.data.ingest.budget import CallBudget
 from stockinsider.data.ingest.calendar import CalendarUnavailable, missing_ranges, trading_dates
 from stockinsider.data.ingest.http import Transport
+from stockinsider.data.ingest.fundamentals import (
+    CALL_COST as FUNDAMENTALS_COST,
+    EodhdFundamentalsAdapter,
+    FundamentalsNotInPlan,
+)
 from stockinsider.data.ingest.market import (
     EodhdMarketAdapter,
     InvalidMarketData,
     MarketKeyMissing,
     store_bars,
 )
+
 from stockinsider.data.store.resolver import BENCHMARK_INDICES
 
 BACKFILL_DAYS = 5 * 365
 MARKET_TRACK = "market:{symbol}"
+FUND_TRACK = "fundamentals:{symbol}"
+FUND_ACCESS_TRACK = "fundamentals-access"
+#: Staleness rule: refetch when the newest stored quarter is older than
+#: ~a quarter (95 days) behind the newest market bar. No calendar API.
+FUND_STALENESS_DAYS = 95
 
 
 @dataclass
@@ -107,6 +118,7 @@ class SyncService:
         self._conn = conn
         self._budget = budget if budget is not None else CallBudget(conn)
         self._adapter = adapter if adapter is not None else EodhdMarketAdapter(transport=transport)
+        self._fund_adapter = EodhdFundamentalsAdapter(transport=transport)
 
     # -- helpers ----------------------------------------------------------
 
@@ -136,6 +148,36 @@ class SyncService:
                 (MARKET_TRACK.format(symbol=symbol), value, datetime.now(timezone.utc).isoformat(timespec="seconds")),
             )
 
+    def _fundamentals_enabled(self) -> bool:
+        """True unless a recorded plan denial stands (re-probe via env override)."""
+        import os
+
+        if os.environ.get("EODHD_FUNDAMENTALS") == "1":
+            return True
+        row = self._conn.execute(
+            "SELECT last_status FROM sync_state WHERE track = ?", (FUND_ACCESS_TRACK,)
+        ).fetchone()
+        return row is None or row["last_status"] != "denied"
+
+    def _fundamentals_stale(self, symbol: str) -> bool:
+        """True when statements are absent or lag the newest bar by a quarter."""
+        bar = self._conn.execute(
+            "SELECT MAX(date) AS d FROM market_bars WHERE canonical_symbol = ?", (symbol,)
+        ).fetchone()
+        newest_bar = bar["d"] if bar else None
+        if newest_bar is None:
+            return False  # no market data yet: fundamentals wait for the market track
+        row = self._conn.execute(
+            "SELECT MAX(period_end) AS p FROM fundamentals WHERE canonical_symbol = ?", (symbol,)
+        ).fetchone()
+        if row is None or row["p"] is None:
+            return True
+        from datetime import date as _date, timedelta
+
+        y, m, d = (int(part) for part in newest_bar.split("-"))
+        cutoff = (_date(y, m, d) - timedelta(days=FUND_STALENESS_DAYS)).isoformat()
+        return row["p"] < cutoff
+
     def _has_bars(self, symbol: str) -> bool:
         row = self._conn.execute("SELECT 1 FROM market_bars WHERE canonical_symbol = ? LIMIT 1", (symbol,)).fetchone()
         return row is not None
@@ -143,8 +185,14 @@ class SyncService:
     def _execute(self, item: tuple[str, str, str, str], report: SyncReport) -> ItemResult:
         """Fetch+store one item under budget; every failure explicit."""
         symbol, action, from_date, to_date = item
-        if not self._budget.try_spend(1):
-            return ItemResult(symbol, action, "deferred", "daily call budget exhausted; runs next sync")
+        cost = FUNDAMENTALS_COST if action == "fundamentals" else 1
+        if not self._budget.try_spend(cost):
+            return ItemResult(
+                symbol, action, "deferred",
+                f"daily call budget exhausted (needs {cost}); runs next sync",
+            )
+        if action == "fundamentals":
+            return self._execute_fundamentals(symbol)
         try:
             rows = self._adapter.fetch_eod(symbol, from_date, to_date)
             stored = store_bars(self._conn, symbol, rows)
@@ -165,6 +213,41 @@ class SyncService:
         except Exception as exc:  # noqa: BLE001 — classified transports arrive as TransportError
             kind = getattr(exc, "kind", type(exc).__name__)
             return ItemResult(symbol, action, "failed", f"[{kind}] {exc}")
+
+    def _execute_fundamentals(self, symbol: str) -> ItemResult:
+        """One fundamentals fetch; plan denial is recorded and skipped after."""
+        try:
+            outcome = self._fund_adapter.fetch_and_store(self._conn, symbol)
+            with self._conn:
+                self._conn.execute(
+                    "INSERT INTO sync_state (track, cursor, last_run_at, last_status) "
+                    "VALUES (?, (SELECT MAX(period_end) FROM fundamentals WHERE canonical_symbol = ?), ?, 'ok') "
+                    "ON CONFLICT(track) DO UPDATE SET cursor = excluded.cursor, "
+                    "last_run_at = excluded.last_run_at, last_status = excluded.last_status",
+                    (
+                        FUND_TRACK.format(symbol=symbol),
+                        symbol,
+                        datetime.now(timezone.utc).isoformat(timespec="seconds"),
+                    ),
+                )
+            return ItemResult(
+                symbol, "fundamentals", "ok",
+                (
+                    f"{outcome['statements']} statement rows stored; "
+                    f"profile {'updated' if outcome['profile'] else 'absent'}"
+                ),
+            )
+        except FundamentalsNotInPlan as exc:
+            with self._conn:
+                self._conn.execute(
+                    "INSERT INTO sync_state (track, last_run_at, last_status) VALUES (?, ?, 'denied') "
+                    "ON CONFLICT(track) DO UPDATE SET last_status = 'denied', last_run_at = excluded.last_run_at",
+                    (FUND_ACCESS_TRACK, datetime.now(timezone.utc).isoformat(timespec="seconds")),
+                )
+            return ItemResult(symbol, "fundamentals", "failed", str(exc))
+        except Exception as exc:  # noqa: BLE001 — surfaced per-item, run continues (INV-003)
+            kind = getattr(exc, "kind", type(exc).__name__)
+            return ItemResult(symbol, "fundamentals", "failed", f"[{kind}] {exc}")
 
     # -- planning ---------------------------------------------------------
 
@@ -191,6 +274,11 @@ class SyncService:
                 plan.append((symbol, "backfill", start, today))
             elif cursor < today:
                 plan.append((symbol, "incremental", cursor, today))
+        if self._fundamentals_enabled():
+            for row in active:
+                symbol = row["canonical_symbol"]
+                if self._fundamentals_stale(symbol):
+                    plan.append((symbol, "fundamentals", "", today))
         return plan
 
     def _completeness_pass(self, report: SyncReport) -> None:

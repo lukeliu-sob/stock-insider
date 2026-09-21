@@ -25,7 +25,9 @@ SUBCOMMANDS = [
 #: Commands still explicit-failure stubs after TP-003 (sessions, analyze,
 #: and config are real behavior now; the negative stub guard covers the rest).
 STUB_SUBCOMMANDS = [
-    name for name in SUBCOMMANDS if name not in ("sessions", "analyze", "config", "show", "resume", "watch", "sync")
+    name
+    for name in SUBCOMMANDS
+    if name not in ("sessions", "analyze", "config", "show", "resume", "watch", "sync", "info")
 ]
 STUB_ARGS = {"info": ["0700.HK"]}
 

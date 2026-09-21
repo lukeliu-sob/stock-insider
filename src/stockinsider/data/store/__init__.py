@@ -72,6 +72,23 @@ class DataStore:
 
         return sync_status(self._conn)
 
+    @property
+    def conn(self) -> sqlite3.Connection:
+        """The underlying connection (read tools and services; single store).
+
+        Implements: REQ-SI-FR-005 (ADR-003)
+        """
+        return self._conn
+
+    def info_lines(self, symbol: str) -> list[str]:
+        """Render the deterministic FR-005 snapshot lines for a symbol.
+
+        Implements: REQ-SI-FR-005 (ADR-002)
+        """
+        from stockinsider.data.store.info import render_info
+
+        return render_info(self._conn, symbol)
+
     def close(self) -> None:
         """Close the underlying connection.
 

@@ -1333,3 +1333,59 @@ sessions:
       ingestion run; package purchase decision pending (deferred
       development on demo symbols recommended).
     status: applied
+
+  - id: AILOG-0035
+    date: "2026-09-21"
+    tool: "pi coding agent (LLM session)"
+    role: ai
+    task: >-
+      TP-010 implementation (owner approved with fundamentals package
+      deferred: develop on demo symbols + fixtures; production breadth
+      is a key-only change when the package is added). Delivered:
+      data/compute birth (pct_change, max_abs_daily_move, move_vs,
+      period_over_period, format_compact — pure functions, golden
+      fixtures; the FR-006 static gate now guards real code);
+      fundamentals adapter (quarterly statements + profile from the
+      General section, strict validation, explicit-gap coverage grid
+      of 8 quarters x 5 required fields with ratio and meets-flag);
+      sync fundamentals track (staleness rule: newest stored quarter
+      lagging the newest bar by 95 days; budget cost 10 units per
+      request; a 403 raises FundamentalsNotInPlan and caches a
+      'denied' access flag so later runs skip the track without
+      burning budget — re-probe via EODHD_FUNDAMENTALS=1);
+      migration v3 (symbol_profiles); deterministic info renderer
+      (every numeric line carries a data date; missing sections are
+      explicit unavailable lines; no provider import on the path);
+      CLI info real; registry market.quote and fundamentals.summary
+      (READ) — the first real market numerics through the membrane,
+      provenance-stamped for the INV-001 snapshot pool. Tests: 5
+      fundamentals (incl. 403 semantics + denial caching + 10-unit
+      accounting), 4 info (DB-only render, explicit unknown symbol,
+      fundamentals-unavailable degradation, numeric-with-date
+      assertion), 4 compute golden, 1 inv1 provenance extension, and
+      a live fundamentals smoke running on the vendor's DEMO token
+      (no owner key or plan needed — never blocking).
+    artifacts:
+      - src/stockinsider/data/compute/__init__.py
+      - src/stockinsider/data/compute/compute.py
+      - src/stockinsider/data/ingest/fundamentals.py
+      - src/stockinsider/data/ingest/sync.py
+      - src/stockinsider/data/ingest/__init__.py
+      - src/stockinsider/data/store/schema.py
+      - src/stockinsider/data/store/__init__.py
+      - src/stockinsider/data/store/info.py
+      - src/stockinsider/agent/registry.py
+      - src/stockinsider/agent/repl.py
+      - src/stockinsider/cli/app.py
+      - test/offline/test_ingest_fundamentals.py
+      - test/offline/test_cli_info.py
+      - test/offline/test_indicators.py
+      - test/offline/test_inv1_postcheck.py
+      - test/offline/test_cli_surface.py
+      - test/live/test_fundamentals_smoke.py
+      - docs/test-plans/TP-010.md
+      - docs/ai-use-log.yaml
+    human_decision: >-
+      Owner ruled: fundamentals package deferred (no urgency), the
+      remainder of TP-010 implemented as planned.
+    status: applied
