@@ -1302,3 +1302,34 @@ sessions:
       Owner chose the paid tier (B) over ETF proxies (A) after the
       BD-011 evidence; the tier choice did not affect this fix.
     status: applied
+
+  - id: AILOG-0034
+    date: "2026-09-21"
+    tool: "pi coding agent (LLM session)"
+    role: ai
+    task: >-
+      First real market ingestion completed on the owner's machine
+      after BD-011 merged: HSI.INDX and HSTECH.INDX 1226 bars each
+      (through the current HK session), GSPC.INDX and NDX.INDX 1253
+      bars each (through the US session) — counts self-consistent
+      with 5y x ~245/250 trading days. TP-010 draft authored
+      (fundamentals ingestion + deterministic info + data/compute
+      birth + market.quote/fundamentals.summary tools). Per the new
+      vendor-constant discipline, the fundamentals endpoint was
+      live-probed BEFORE design: 403 on the owner's current plan
+      (All World) — the Fundamentals Data Feed is a separate package.
+      The plan therefore develops against the vendor's demo symbols
+      (AAPL.US exposes all APIs without limitation) plus fixtures;
+      production HK/US breadth activates as a key-only change when
+      the owner adds the package. Fundamentals budget accounting set
+      to 10 units per request (vendor call price). Migration v3 adds
+      symbol_profiles. Status: draft, awaiting owner approval and
+      the package purchase decision.
+    artifacts:
+      - docs/test-plans/TP-010.md
+      - docs/ai-use-log.yaml
+    human_decision: >-
+      Owner instructed continuation after the first successful
+      ingestion run; package purchase decision pending (deferred
+      development on demo symbols recommended).
+    status: applied
