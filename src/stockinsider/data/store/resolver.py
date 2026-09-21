@@ -31,29 +31,29 @@ EODHD_KEY_ENV = "EODHD_API_KEY"
 #: Built-in benchmark indices (FR-001): always tracked, never watchlist-managed.
 BENCHMARK_INDICES: tuple[dict[str, Any], ...] = (
     {
-        "canonical_symbol": "HSI.IND",
-        "exchange": "IND",
+        "canonical_symbol": "HSI.INDX",
+        "exchange": "INDX",
         "official_name": "Hang Seng Index",
         "asset_type": "index",
         "aliases": ["Hang Seng", "HSI"],
     },
     {
-        "canonical_symbol": "HSTECH.IND",
-        "exchange": "IND",
+        "canonical_symbol": "HSTECH.INDX",
+        "exchange": "INDX",
         "official_name": "Hang Seng TECH Index",
         "asset_type": "index",
         "aliases": ["HSTECH", "Hang Seng Tech"],
     },
     {
-        "canonical_symbol": "GSPC.IND",
-        "exchange": "IND",
+        "canonical_symbol": "GSPC.INDX",
+        "exchange": "INDX",
         "official_name": "S&P 500 Index",
         "asset_type": "index",
         "aliases": ["S&P 500", "GSPC"],
     },
     {
-        "canonical_symbol": "NDX.IND",
-        "exchange": "IND",
+        "canonical_symbol": "NDX.INDX",
+        "exchange": "INDX",
         "official_name": "Nasdaq-100 Index",
         "asset_type": "index",
         "aliases": ["Nasdaq 100", "NDX"],

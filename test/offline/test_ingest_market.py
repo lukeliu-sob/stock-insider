@@ -111,10 +111,10 @@ def _seed_full_environment(store, monkeypatch, cap: int | None = None, symbol_ba
         monkeypatch.setenv("EODHD_DAILY_CALLS", str(cap))
     transport = FakeTransport(
         {
-            "HSI.IND": _bars(HK_DATES),
-            "HSTECH.IND": _bars(HK_DATES),
-            "GSPC.IND": _bars(HK_DATES),
-            "NDX.IND": _bars(HK_DATES),
+            "HSI.INDX": _bars(HK_DATES),
+            "HSTECH.INDX": _bars(HK_DATES),
+            "GSPC.INDX": _bars(HK_DATES),
+            "NDX.INDX": _bars(HK_DATES),
             "0700.HK": symbol_bars if symbol_bars is not None else _bars(HK_DATES),
         }
     )
@@ -162,16 +162,16 @@ def test_market_holiday_not_counted(store) -> None:
     _ = store
     conn = store._conn  # noqa: SLF001
     dates = ["2026-09-07", "2026-09-08", "2026-09-10", "2026-09-11"]  # the 9th is a HK holiday
-    rows = parse_eod_rows(_bars(dates), "HSI.IND")
-    store_bars(conn, "HSI.IND", rows)
-    stored = {r["date"] for r in conn.execute("SELECT date FROM market_bars WHERE canonical_symbol='HSI.IND'")}
+    rows = parse_eod_rows(_bars(dates), "HSI.INDX")
+    store_bars(conn, "HSI.INDX", rows)
+    stored = {r["date"] for r in conn.execute("SELECT date FROM market_bars WHERE canonical_symbol='HSI.INDX'")}
     assert missing_ranges(stored, trading_dates(conn, "HK", "2026-09-07", "2026-09-11")) == []
 
 
 def test_indices_backfill_priority_first(store, monkeypatch) -> None:
     transport = _seed_full_environment(store, monkeypatch, cap=2)
     # cap=2: only the first two index backfills ran; everything else deferred
-    assert transport.calls[:2] == ["HSI.IND", "HSTECH.IND"]
+    assert transport.calls[:2] == ["HSI.INDX", "HSTECH.INDX"]
 
 
 def test_sync_tools_registered_and_gated(store, tmp_path, monkeypatch) -> None:
