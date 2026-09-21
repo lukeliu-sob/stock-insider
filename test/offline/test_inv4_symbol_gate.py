@@ -87,8 +87,8 @@ def test_wrong_exchange_collision_presented_not_picked(tmp_path) -> None:
 def test_seed_indices_resolvable_unaddable(tmp_path) -> None:
     registry, ds = _registry(tmp_path)
     search = registry.execute(ToolCall(tool="symbol.search", arguments={"query": "Hang Seng Index"}, call_id="t"))
-    assert search.ok and search.result[0]["canonical_symbol"] == "HSI.IND"
-    result = _add(registry, "HSI.IND", confirmed=True)
+    assert search.ok and search.result[0]["canonical_symbol"] == "HSI.INDX"
+    result = _add(registry, "HSI.INDX", confirmed=True)
     assert result.ok is False and "benchmark" in result.error
     assert ds.watchlist.active_count() == 0
     ds.close()

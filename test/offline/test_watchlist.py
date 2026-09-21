@@ -37,7 +37,7 @@ def _store(tmp_path, body: str | None = TENCENT_BODY) -> "object":
 def test_seed_benchmarks_present(tmp_path) -> None:
     ds = _store(tmp_path)
     row = ds._conn.execute(  # noqa: SLF001 — test seam
-        "SELECT official_name, asset_type FROM symbols WHERE canonical_symbol = 'HSI.IND'"
+        "SELECT official_name, asset_type FROM symbols WHERE canonical_symbol = 'HSI.INDX'"
     ).fetchone()
     assert row is not None and row["asset_type"] == "index"
     ds.close()
@@ -115,6 +115,6 @@ def test_remove_list_roundtrip(tmp_path) -> None:
 def test_benchmark_index_add_refused(tmp_path) -> None:
     ds = _store(tmp_path)
     with pytest.raises(WatchlistError, match="built-in benchmark index"):
-        ds.watchlist.add_verified("HSI.IND", user_confirmed=True, via="cli")
+        ds.watchlist.add_verified("HSI.INDX", user_confirmed=True, via="cli")
     assert ds.watchlist.active_count() == 0
     ds.close()

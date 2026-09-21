@@ -1,7 +1,7 @@
 """Trading calendars derived from benchmark index bars (D3 decision).
 
-HK trading days are the dates present in HSI.IND bars; US days are the
-dates present in GSPC.IND bars. Zero extra API surface, and the FR-001
+HK trading days are the dates present in HSI.INDX bars; US days are the
+dates present in GSPC.INDX bars. Zero extra API surface, and the FR-001
 completeness rule is self-consistent by construction: the calendar IS
 the benchmark's own bar dates. Missing index bars raise an explicit
 CalendarUnavailable — the sync service always backfills indices first.
@@ -14,7 +14,7 @@ from __future__ import annotations
 import sqlite3
 from datetime import date as _date, timedelta
 
-CALENDAR_INDEX = {"HK": "HSI.IND", "US": "GSPC.IND"}
+CALENDAR_INDEX = {"HK": "HSI.INDX", "US": "GSPC.INDX"}
 
 
 class CalendarUnavailable(RuntimeError):

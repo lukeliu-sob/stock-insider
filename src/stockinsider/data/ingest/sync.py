@@ -86,7 +86,7 @@ def _exchange_of(symbol: str) -> str:
 
 def _calendar_exchange(symbol: str) -> str:
     """Which benchmark calendar governs this symbol (HK vs US)."""
-    if symbol.endswith(".HK") or symbol in ("HSI.IND", "HSTECH.IND"):
+    if symbol.endswith(".HK") or symbol in ("HSI.INDX", "HSTECH.INDX"):
         return "HK"
     return "US"
 

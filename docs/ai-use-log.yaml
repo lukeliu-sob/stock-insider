@@ -1262,3 +1262,43 @@ sessions:
       Owner approved TP-009 (instruction: implement) after reviewing
       the draft plan (PR #18) and confirming the route decisions.
     status: applied
+
+  - id: AILOG-0033
+    date: "2026-09-18"
+    tool: "pi coding agent (LLM session)"
+    role: ai
+    task: >-
+      BD-011 fix: benchmark index suffix corrected from the
+      decision-era .IND to the vendor's real .INDX. Investigation
+      trail recorded in the bug diary: demo-token 403s were a red
+      herring (demo refuses every non-demo symbol, including
+      nonexistent ones — verified with a garbage ticker); the paid
+      key 404'd; the exchange list has no IND exchange; the HK
+      ticker list holds only index-tracking ETFs; the vendor's
+      index-constituents post revealed GSPC.INDX in an example. All
+      four benchmarks verified live after the swap (HSI/HSTECH
+      include the current HK session). 21 occurrences updated across
+      seeds, calendar map, currency map (POINTS), and tests; the
+      stale .IND seed rows in existing databases are inert (INSERT
+      OR IGNORE reseeds). The mid-round purchase recommendation
+      ("All World covers indices") is acknowledged in the diary as
+      itself an unverified assumption — the subscription was not the
+      fix for this failure (it remains useful: 100k calls/day).
+      Smoke checklist extended: "smoke the symbol" joins host,
+      default, and row-shape; vendor constants now require a live
+      probe at first integration, evidence recorded in the
+      introducing AI-log entry. TP-009 Amendment 1.
+    artifacts:
+      - src/stockinsider/data/store/resolver.py
+      - src/stockinsider/data/ingest/calendar.py
+      - src/stockinsider/data/ingest/market.py
+      - src/stockinsider/data/ingest/sync.py
+      - test/offline/test_ingest_market.py
+      - test/offline/test_watchlist.py
+      - docs/test-plans/TP-009.md
+      - docs/bug-diary.md
+      - docs/ai-use-log.yaml
+    human_decision: >-
+      Owner chose the paid tier (B) over ETF proxies (A) after the
+      BD-011 evidence; the tier choice did not affect this fix.
+    status: applied

@@ -28,7 +28,7 @@ EOD_URL = "https://eodhd.com/api/eod/{symbol}"
 EODHD_KEY_ENV = "EODHD_API_KEY"
 
 #: Native currency per exchange suffix (FR-001); indices are dimensionless.
-CURRENCY_BY_EXCHANGE: dict[str, str] = {"HK": "HKD", "US": "USD", "IND": "POINTS"}
+CURRENCY_BY_EXCHANGE: dict[str, str] = {"HK": "HKD", "US": "USD", "INDX": "POINTS"}
 
 _DATE_RE = re.compile(r"^\d{4}-\d{2}-\d{2}$")
 _REQUIRED_FLOATS = ("open", "high", "low", "close")
