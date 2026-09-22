@@ -1,0 +1,2005 @@
+{
+ "version": 1,
+ "items": [
+  {
+   "id": 1,
+   "title": "Apple shares rise after AAPL earnings beat forecasts",
+   "domain": "reuters.com",
+   "seendate": "20260918T090000Z",
+   "language": "English",
+   "url": "https://www.reuters.com/news/2026/apple-shares-rise-after-aapl-earnings-be",
+   "class": "positive_ticker_tierA",
+   "label": "keep"
+  },
+  {
+   "id": 2,
+   "title": "AAPL closes at record high as services revenue accelerates",
+   "domain": "bloomberg.com",
+   "seendate": "20260918T090000Z",
+   "language": "English",
+   "url": "https://www.bloomberg.com/news/2026/aapl-closes-at-record-high-as-services-r",
+   "class": "positive_ticker_tierA",
+   "label": "keep"
+  },
+  {
+   "id": 3,
+   "title": "Tencent's 0700 gains after regulator clears new game titles",
+   "domain": "scmp.com",
+   "seendate": "20260918T090000Z",
+   "language": "English",
+   "url": "https://www.scmp.com/news/2026/tencent's-0700-gains-after-regulator-cle",
+   "class": "positive_ticker_tierA",
+   "label": "keep"
+  },
+  {
+   "id": 4,
+   "title": "0700 leads Hong Kong tech rally on mainland inflows",
+   "domain": "scmp.com",
+   "seendate": "20260918T090000Z",
+   "language": "English",
+   "url": "https://www.scmp.com/news/2026/0700-leads-hong-kong-tech-rally-on-mainl",
+   "class": "positive_ticker_tierA",
+   "label": "keep"
+  },
+  {
+   "id": 5,
+   "title": "Microsoft tops estimates; MSFT jumps in late trading",
+   "domain": "cnbc.com",
+   "seendate": "20260918T090000Z",
+   "language": "English",
+   "url": "https://www.cnbc.com/news/2026/microsoft-tops-estimates;-msft-jumps-in-",
+   "class": "positive_ticker_tierA",
+   "label": "keep"
+  },
+  {
+   "id": 6,
+   "title": "MSFT unveils new cloud region for European clients",
+   "domain": "ft.com",
+   "seendate": "20260918T090000Z",
+   "language": "English",
+   "url": "https://www.ft.com/news/2026/msft-unveils-new-cloud-region-for-europe",
+   "class": "positive_ticker_tierA",
+   "label": "keep"
+  },
+  {
+   "id": 7,
+   "title": "NVIDIA surges as data-center demand keeps outstripping supply",
+   "domain": "marketwatch.com",
+   "seendate": "20260918T090000Z",
+   "language": "English",
+   "url": "https://www.marketwatch.com/story/nvidia-datacenter-2026",
+   "class": "alias_insufficient",
+   "label": "reject"
+  },
+  {
+   "id": 8,
+   "title": "NVDA supply chain checks point to stronger quarter, analysts say",
+   "domain": "wsj.com",
+   "seendate": "20260918T090000Z",
+   "language": "English",
+   "url": "https://www.wsj.com/news/2026/nvda-supply-chain-checks-point-to-strong",
+   "class": "positive_ticker_tierA",
+   "label": "keep"
+  },
+  {
+   "id": 9,
+   "title": "Tesla cuts prices across Europe; TSLA slips in premarket",
+   "domain": "cnbc.com",
+   "seendate": "20260918T090000Z",
+   "language": "English",
+   "url": "https://www.cnbc.com/news/2026/tesla-cuts-prices-across-europe;-tsla-sl",
+   "class": "positive_ticker_tierA",
+   "label": "keep"
+  },
+  {
+   "id": 10,
+   "title": "TSLA deliveries top expectations on strong China demand",
+   "domain": "reuters.com",
+   "seendate": "20260918T090000Z",
+   "language": "English",
+   "url": "https://www.reuters.com/news/2026/tsla-deliveries-top-expectations-on-stro",
+   "class": "positive_ticker_tierA",
+   "label": "keep"
+  },
+  {
+   "id": 11,
+   "title": "Alibaba cloud unit wins banking contract; 9988 climbs",
+   "domain": "scmp.com",
+   "seendate": "20260918T090000Z",
+   "language": "English",
+   "url": "https://www.scmp.com/news/2026/alibaba-cloud-unit-wins-banking-contract",
+   "class": "positive_ticker_tierA",
+   "label": "keep"
+  },
+  {
+   "id": 12,
+   "title": "9988 extends logistics network into Southeast Asia",
+   "domain": "bloomberg.com",
+   "seendate": "20260918T090000Z",
+   "language": "English",
+   "url": "https://www.bloomberg.com/news/articles/2026-09-18/alibaba-logistics",
+   "class": "positive_ticker_tierA",
+   "label": "keep"
+  },
+  {
+   "id": 13,
+   "title": "Hang Seng Index ends three-day losing streak; HSI up 1.2 pct",
+   "domain": "scmp.com",
+   "seendate": "20260918T090000Z",
+   "language": "English",
+   "url": "https://www.scmp.com/news/2026/hang-seng-index-ends-three-day-losing-st",
+   "class": "positive_ticker_tierA",
+   "label": "keep"
+  },
+  {
+   "id": 14,
+   "title": "HSI swings between gains and losses as banks weigh",
+   "domain": "bloomberg.com",
+   "seendate": "20260918T090000Z",
+   "language": "English",
+   "url": "https://www.bloomberg.com/news/2026/hsi-swings-between-gains-and-losses-as-b",
+   "class": "positive_ticker_tierA",
+   "label": "keep"
+  },
+  {
+   "id": 15,
+   "title": "AMZN warehouse automation drive lifts margins, company says",
+   "domain": "ft.com",
+   "seendate": "20260918T090000Z",
+   "language": "English",
+   "url": "https://www.ft.com/news/2026/amzn-warehouse-automation-drive-lifts-ma",
+   "class": "positive_ticker_tierA",
+   "label": "keep"
+  },
+  {
+   "id": 16,
+   "title": "Amazon's AMZN Prime Day sets order-volume record",
+   "domain": "cnbc.com",
+   "seendate": "20260918T090000Z",
+   "language": "English",
+   "url": "https://www.cnbc.com/news/2026/amazon's-amzn-prime-day-sets-order-volum",
+   "class": "positive_ticker_tierA",
+   "label": "keep"
+  },
+  {
+   "id": 17,
+   "title": "Apple suppliers rally after AAPL guidance upgrade",
+   "domain": "nikkei tier",
+   "seendate": "20260918T090000Z",
+   "language": "English",
+   "url": "https://www.reuters.com/technology/apple-suppliers-2026",
+   "class": "positive_ticker_tierA",
+   "label": "keep"
+  },
+  {
+   "id": 18,
+   "title": "0700 buyback extended by HKD 20 billion, filing shows",
+   "domain": "hkexnews.hk",
+   "seendate": "20260918T090000Z",
+   "language": "English",
+   "url": "https://www.hkexnews.hk/listedco/listconews/sehk/2026/0918/0700.pdf",
+   "class": "positive_ticker_tierA",
+   "label": "keep"
+  },
+  {
+   "id": 19,
+   "title": "MSFT and Oracle expand interoperability pact",
+   "domain": "wsj.com",
+   "seendate": "20260918T090000Z",
+   "language": "English",
+   "url": "https://www.wsj.com/news/2026/msft-and-oracle-expand-interoperability-",
+   "class": "positive_ticker_tierA",
+   "label": "keep"
+  },
+  {
+   "id": 20,
+   "title": "NVDA chief says sovereign AI orders doubling this year",
+   "domain": "ft.com",
+   "seendate": "20260918T090000Z",
+   "language": "English",
+   "url": "https://www.ft.com/news/2026/nvda-chief-says-sovereign-ai-orders-doub",
+   "class": "positive_ticker_tierA",
+   "label": "keep"
+  },
+  {
+   "id": 21,
+   "title": "TSLA robotaxi permit advances in California",
+   "domain": "bloomberg.com",
+   "seendate": "20260918T090000Z",
+   "language": "English",
+   "url": "https://www.bloomberg.com/news/2026/tsla-robotaxi-permit-advances-in-califor",
+   "class": "positive_ticker_tierA",
+   "label": "keep"
+  },
+  {
+   "id": 22,
+   "title": "AAPL services growth cushions hardware slowdown",
+   "domain": "marketwatch.com",
+   "seendate": "20260918T090000Z",
+   "language": "English",
+   "url": "https://www.marketwatch.com/news/2026/aapl-services-growth-cushions-hardware-s",
+   "class": "positive_ticker_tierA",
+   "label": "keep"
+  },
+  {
+   "id": 23,
+   "title": "Tencent music streaming margins improve; 0700 unit files update",
+   "domain": "scmp.com",
+   "seendate": "20260918T090000Z",
+   "language": "English",
+   "url": "https://www.scmp.com/news/2026/tencent-music-streaming-margins-improve;",
+   "class": "positive_ticker_tierA",
+   "label": "keep"
+  },
+  {
+   "id": 24,
+   "title": "Alibaba 9988 ADR buyback pace quickens in August",
+   "domain": "reuters.com",
+   "seendate": "20260918T090000Z",
+   "language": "English",
+   "url": "https://www.reuters.com/news/2026/alibaba-9988-adr-buyback-pace-quickens-i",
+   "class": "positive_ticker_tierA",
+   "label": "keep"
+  },
+  {
+   "id": 25,
+   "title": "Microsoft beats; MSFT raises dividend 9 pct",
+   "domain": "cnbc.com",
+   "seendate": "20260918T090000Z",
+   "language": "English",
+   "url": "https://www.cnbc.com/news/2026/microsoft-beats;-msft-raises-dividend-9-",
+   "class": "positive_ticker_tierA",
+   "label": "keep"
+  },
+  {
+   "id": 26,
+   "title": "Amazon AMZN grocery format expands to 40 more cities",
+   "domain": "ft.com",
+   "seendate": "20260918T090000Z",
+   "language": "English",
+   "url": "https://www.ft.com/news/2026/amazon-amzn-grocery-format-expands-to-40",
+   "class": "positive_ticker_tierA",
+   "label": "keep"
+  },
+  {
+   "id": 27,
+   "title": "HSI constituents review adds two mainland names",
+   "domain": "hkexnews.hk",
+   "seendate": "20260918T090000Z",
+   "language": "English",
+   "url": "https://www.hkexnews.hk/indexes/hsi-review-2026.pdf",
+   "class": "positive_ticker_tierA",
+   "label": "keep"
+  },
+  {
+   "id": 28,
+   "title": "NVIDIA NVDA announces next-gen accelerator roadmap",
+   "domain": "wsj.com",
+   "seendate": "20260918T090000Z",
+   "language": "English",
+   "url": "https://www.wsj.com/news/2026/nvidia-nvda-announces-next-gen-accelerat",
+   "class": "positive_ticker_tierA",
+   "label": "keep"
+  },
+  {
+   "id": 29,
+   "title": "0700 WeChat mini-program commerce grows 18 pct",
+   "domain": "scmp.com",
+   "seendate": "20260918T090000Z",
+   "language": "English",
+   "url": "https://www.scmp.com/news/2026/0700-wechat-mini-program-commerce-grows-",
+   "class": "positive_ticker_tierA",
+   "label": "keep"
+  },
+  {
+   "id": 30,
+   "title": "TSLA energy storage deployments triple year over year",
+   "domain": "reuters.com",
+   "seendate": "20260918T090000Z",
+   "language": "English",
+   "url": "https://www.reuters.com/news/2026/tsla-energy-storage-deployments-triple-y",
+   "class": "positive_ticker_tierA",
+   "label": "keep"
+  },
+  {
+   "id": 31,
+   "title": "AAPL becomes first company to close above new milestone",
+   "domain": "apnews.com",
+   "seendate": "20260918T090000Z",
+   "language": "English",
+   "url": "https://www.apnews.com/news/2026/aapl-becomes-first-company-to-close-abov",
+   "class": "positive_ticker_general",
+   "label": "keep"
+  },
+  {
+   "id": 32,
+   "title": "Microsoft outage grounded flights; MSFT patches cited",
+   "domain": "nytimes.com",
+   "seendate": "20260918T090000Z",
+   "language": "English",
+   "url": "https://www.nytimes.com/news/2026/microsoft-outage-grounded-flights;-msft-",
+   "class": "positive_ticker_general",
+   "label": "keep"
+  },
+  {
+   "id": 33,
+   "title": "TSLA recall covers 120,000 vehicles for software fix",
+   "domain": "apnews.com",
+   "seendate": "20260918T090000Z",
+   "language": "English",
+   "url": "https://www.apnews.com/news/2026/tsla-recall-covers-120,000-vehicles-for-",
+   "class": "positive_ticker_general",
+   "label": "keep"
+  },
+  {
+   "id": 34,
+   "title": "Amazon AMZN workers vote on warehouse representation",
+   "domain": "theguardian.com",
+   "seendate": "20260918T090000Z",
+   "language": "English",
+   "url": "https://www.theguardian.com/news/2026/amazon-amzn-workers-vote-on-warehouse-re",
+   "class": "positive_ticker_general",
+   "label": "keep"
+  },
+  {
+   "id": 35,
+   "title": "NVIDIA NVDA chips to power new climate research cluster",
+   "domain": "bbc.com",
+   "seendate": "20260918T090000Z",
+   "language": "English",
+   "url": "https://www.bbc.com/news/2026/nvidia-nvda-chips-to-power-new-climate-r",
+   "class": "positive_ticker_general",
+   "label": "keep"
+  },
+  {
+   "id": 36,
+   "title": "Tencent 0700 game approval process explained",
+   "domain": "cnn.com",
+   "seendate": "20260918T090000Z",
+   "language": "English",
+   "url": "https://www.cnn.com/news/2026/tencent-0700-game-approval-process-expla",
+   "class": "positive_ticker_general",
+   "label": "keep"
+  },
+  {
+   "id": 37,
+   "title": "HSI volatility explained as Hong Kong benchmarks wobble",
+   "domain": "bbc.com",
+   "seendate": "20260918T090000Z",
+   "language": "English",
+   "url": "https://www.bbc.com/news/2026/hsi-volatility-explained-as-hong-kong-be",
+   "class": "positive_ticker_general",
+   "label": "keep"
+  },
+  {
+   "id": 38,
+   "title": "Alibaba 9988 anticloud complaint dismissed by regulator",
+   "domain": "nytimes.com",
+   "seendate": "20260918T090000Z",
+   "language": "English",
+   "url": "https://www.nytimes.com/news/2026/alibaba-9988-anticloud-complaint-dismiss",
+   "class": "positive_ticker_general",
+   "label": "keep"
+  },
+  {
+   "id": 39,
+   "title": "MSFT outage hit hospitals; systems restored overnight",
+   "domain": "washingtonpost.com",
+   "seendate": "20260918T090000Z",
+   "language": "English",
+   "url": "https://www.washingtonpost.com/news/2026/msft-outage-hit-hospitals;-systems-resto",
+   "class": "positive_ticker_general",
+   "label": "keep"
+  },
+  {
+   "id": 40,
+   "title": "AAPL privacy label changes draw advertiser criticism",
+   "domain": "theguardian.com",
+   "seendate": "20260918T090000Z",
+   "language": "English",
+   "url": "https://www.theguardian.com/news/2026/aapl-privacy-label-changes-draw-advertis",
+   "class": "positive_ticker_general",
+   "label": "keep"
+  },
+  {
+   "id": 41,
+   "title": "AAPL options volume spikes ahead of event",
+   "domain": "marketrealist.com",
+   "seendate": "20260918T090000Z",
+   "language": "English",
+   "url": "https://www.marketrealist.com/news/2026/aapl-options-volume-spikes-ahead-of-even",
+   "class": "positive_ticker_unknown",
+   "label": "keep"
+  },
+  {
+   "id": 42,
+   "title": "Is MSFT still a buy after the rally? A valuation check",
+   "domain": "benzinga.com",
+   "seendate": "20260918T090000Z",
+   "language": "English",
+   "url": "https://www.benzinga.com/news/2026/is-msft-still-a-buy-after-the-rally?-a-v",
+   "class": "positive_ticker_unknown",
+   "label": "keep"
+  },
+  {
+   "id": 43,
+   "title": "TSLA technical setup: resistance holds for now",
+   "domain": "investing.com",
+   "seendate": "20260918T090000Z",
+   "language": "English",
+   "url": "https://www.investing.com/news/2026/tsla-technical-setup:-resistance-holds-f",
+   "class": "positive_ticker_unknown",
+   "label": "keep"
+  },
+  {
+   "id": 44,
+   "title": "NVIDIA NVDA insider filing shows director sale",
+   "domain": "finanzblog.example",
+   "seendate": "20260918T090000Z",
+   "language": "English",
+   "url": "https://finanzblog.example/nvda-filing-2026",
+   "class": "positive_ticker_unknown",
+   "label": "keep"
+  },
+  {
+   "id": 45,
+   "title": "Alibaba 9988 short interest declines for third week",
+   "domain": "sahmcapital.example",
+   "seendate": "20260918T090000Z",
+   "language": "English",
+   "url": "https://sahmcapital.example/9988-short-interest",
+   "class": "positive_ticker_unknown",
+   "label": "keep"
+  },
+  {
+   "id": 46,
+   "title": "Tencent 0700 dividend yield at five-year high",
+   "domain": "hkvalue.example",
+   "seendate": "20260918T090000Z",
+   "language": "English",
+   "url": "https://hkvalue.example/0700-yield-2026",
+   "class": "positive_ticker_unknown",
+   "label": "keep"
+  },
+  {
+   "id": 47,
+   "title": "AMZN logistics leases expand near Porto",
+   "domain": "iberialog.example",
+   "seendate": "20260918T090000Z",
+   "language": "English",
+   "url": "https://iberialog.example/amzn-porto-lease",
+   "class": "positive_ticker_unknown",
+   "label": "keep"
+  },
+  {
+   "id": 48,
+   "title": "HSI futures roll sees basis widen",
+   "domain": "derigauge.example",
+   "seendate": "20260918T090000Z",
+   "language": "English",
+   "url": "https://derigauge.example/hsi-roll-2026",
+   "class": "positive_ticker_unknown",
+   "label": "keep"
+  },
+  {
+   "id": 49,
+   "title": "Apple AAPL supplier list adds two Viet Nam assemblers",
+   "domain": "seanote.example",
+   "seendate": "20260918T090000Z",
+   "language": "English",
+   "url": "https://seanote.example/aapl-suppliers-q3",
+   "class": "positive_ticker_unknown",
+   "label": "keep"
+  },
+  {
+   "id": 50,
+   "title": "Microsoft MSFT cloud margin debate resurfaces",
+   "domain": "stackpeak.example",
+   "seendate": "20260918T090000Z",
+   "language": "English",
+   "url": "https://stackpeak.example/msft-margins",
+   "class": "positive_ticker_unknown",
+   "label": "keep"
+  },
+  {
+   "id": 51,
+   "title": "Tesla TSLA registration counts by region, September",
+   "domain": "countline.example",
+   "seendate": "20260918T090000Z",
+   "language": "English",
+   "url": "https://countline.example/tsla-sep-registrations",
+   "class": "positive_ticker_unknown",
+   "label": "keep"
+  },
+  {
+   "id": 52,
+   "title": "NVIDIA NVDA export licence tracker updated",
+   "domain": "tradebeat.example",
+   "seendate": "20260918T090000Z",
+   "language": "English",
+   "url": "https://tradebeat.example/nvda-licences",
+   "class": "positive_ticker_unknown",
+   "label": "keep"
+  },
+  {
+   "id": 53,
+   "title": "Tencent wins approval for two mobile titles, regulator says",
+   "domain": "reuters.com",
+   "seendate": "20260918T090000Z",
+   "language": "English",
+   "url": "https://www.reuters.com/news/2026/tencent-wins-approval-for-two-mobile-tit",
+   "class": "alias_insufficient",
+   "label": "reject"
+  },
+  {
+   "id": 54,
+   "title": "Microsoft and Oracle widen cloud alliance in Europe",
+   "domain": "ft.com",
+   "seendate": "20260918T090000Z",
+   "language": "English",
+   "url": "https://www.ft.com/news/2026/microsoft-and-oracle-widen-cloud-allianc",
+   "class": "alias_insufficient",
+   "label": "reject"
+  },
+  {
+   "id": 55,
+   "title": "Alibaba restructures international commerce arm",
+   "domain": "bloomberg.com",
+   "seendate": "20260918T090000Z",
+   "language": "English",
+   "url": "https://www.bloomberg.com/news/2026/alibaba-restructures-international-comme",
+   "class": "alias_insufficient",
+   "label": "reject"
+  },
+  {
+   "id": 56,
+   "title": "NVIDIA supply commitments stretch into late 2027",
+   "domain": "wsj.com",
+   "seendate": "20260918T090000Z",
+   "language": "English",
+   "url": "https://www.wsj.com/news/2026/nvidia-supply-commitments-stretch-into-l",
+   "class": "alias_insufficient",
+   "label": "reject"
+  },
+  {
+   "id": 57,
+   "title": "Tesla reshapes European pricing strategy amid competition",
+   "domain": "cnbc.com",
+   "seendate": "20260918T090000Z",
+   "language": "English",
+   "url": "https://www.cnbc.com/news/2026/tesla-reshapes-european-pricing-strategy",
+   "class": "alias_insufficient",
+   "label": "reject"
+  },
+  {
+   "id": 58,
+   "title": "Amazon adds same-day delivery to four more metros",
+   "domain": "marketwatch.com",
+   "seendate": "20260918T090000Z",
+   "language": "English",
+   "url": "https://www.marketwatch.com/news/2026/amazon-adds-same-day-delivery-to-four-mo",
+   "class": "alias_insufficient",
+   "label": "reject"
+  },
+  {
+   "id": 59,
+   "title": "Apple delays smart-home hub to next spring",
+   "domain": "bloomberg.com",
+   "seendate": "20260918T090000Z",
+   "language": "English",
+   "url": "https://www.bloomberg.com/news/2026/apple-delays-smart-home-hub-to-next-spri",
+   "class": "alias_insufficient",
+   "label": "reject"
+  },
+  {
+   "id": 60,
+   "title": "Hang Seng gauge of mainland tech firms rebounds",
+   "domain": "scmp.com",
+   "seendate": "20260918T090000Z",
+   "language": "English",
+   "url": "https://www.scmp.com/news/2026/hang-seng-gauge-of-mainland-tech-firms-r",
+   "class": "alias_insufficient",
+   "label": "reject"
+  },
+  {
+   "id": 61,
+   "title": "Tencent Music lifts parent outlook with paid-user growth",
+   "domain": "reuters.com",
+   "seendate": "20260918T090000Z",
+   "language": "English",
+   "url": "https://www.reuters.com/news/2026/tencent-music-lifts-parent-outlook-with-",
+   "class": "alias_insufficient",
+   "label": "reject"
+  },
+  {
+   "id": 62,
+   "title": "Microsoft invests in new underwater cable consortium",
+   "domain": "ft.com",
+   "seendate": "20260918T090000Z",
+   "language": "English",
+   "url": "https://www.ft.com/news/2026/microsoft-invests-in-new-underwater-cabl",
+   "class": "alias_insufficient",
+   "label": "reject"
+  },
+  {
+   "id": 63,
+   "title": "Alibaba Cloud opens region in Saudi Arabia",
+   "domain": "scmp.com",
+   "seendate": "20260918T090000Z",
+   "language": "English",
+   "url": "https://www.scmp.com/news/2026/alibaba-cloud-opens-region-in-saudi-arab",
+   "class": "alias_insufficient",
+   "label": "reject"
+  },
+  {
+   "id": 64,
+   "title": "NVIDIA research lab in Shanghai expands staff",
+   "domain": "scmp.com",
+   "seendate": "20260918T090000Z",
+   "language": "English",
+   "url": "https://www.scmp.com/news/2026/nvidia-research-lab-in-shanghai-expands-",
+   "class": "alias_insufficient",
+   "label": "reject"
+  },
+  {
+   "id": 65,
+   "title": "Tesla battery supplier breaks ground in Nevada",
+   "domain": "cnbc.com",
+   "seendate": "20260918T090000Z",
+   "language": "English",
+   "url": "https://www.cnbc.com/news/2026/tesla-battery-supplier-breaks-ground-in-",
+   "class": "alias_insufficient",
+   "label": "reject"
+  },
+  {
+   "id": 66,
+   "title": "Amazon Prime Video ad tier tops forecast",
+   "domain": "wsj.com",
+   "seendate": "20260918T090000Z",
+   "language": "English",
+   "url": "https://www.wsj.com/news/2026/amazon-prime-video-ad-tier-tops-forecast",
+   "class": "alias_insufficient",
+   "label": "reject"
+  },
+  {
+   "id": 67,
+   "title": "Apple opens flagship store in Macau",
+   "domain": "scmp.com",
+   "seendate": "20260918T090000Z",
+   "language": "English",
+   "url": "https://www.scmp.com/news/2026/apple-opens-flagship-store-in-macau",
+   "class": "alias_insufficient",
+   "label": "reject"
+  },
+  {
+   "id": 68,
+   "title": "Microsoft Excel tips that save hours each week",
+   "domain": "nytimes.com",
+   "seendate": "20260918T090000Z",
+   "language": "English",
+   "url": "https://www.nytimes.com/news/2026/microsoft-excel-tips-that-save-hours-eac",
+   "class": "alias_only_general",
+   "label": "reject"
+  },
+  {
+   "id": 69,
+   "title": "Apple season arrives early in Washington state",
+   "domain": "apnews.com",
+   "seendate": "20260918T090000Z",
+   "language": "English",
+   "url": "https://www.apnews.com/news/2026/apple-season-arrives-early-in-washington",
+   "class": "alias_only_general",
+   "label": "reject"
+  },
+  {
+   "id": 70,
+   "title": "Amazon river communities track falling water levels",
+   "domain": "theguardian.com",
+   "seendate": "20260918T090000Z",
+   "language": "English",
+   "url": "https://www.theguardian.com/news/2026/amazon-river-communities-track-falling-w",
+   "class": "alias_only_general",
+   "label": "reject"
+  },
+  {
+   "id": 71,
+   "title": "Tesla coil demonstration lights up science fair",
+   "domain": "bbc.com",
+   "seendate": "20260918T090000Z",
+   "language": "English",
+   "url": "https://www.bbc.com/news/2026/tesla-coil-demonstration-lights-up-scien",
+   "class": "alias_only_general",
+   "label": "reject"
+  },
+  {
+   "id": 72,
+   "title": "Tencent-backed studio premieres documentary series",
+   "domain": "cnn.com",
+   "seendate": "20260918T090000Z",
+   "language": "English",
+   "url": "https://www.cnn.com/style/tencent-documentary-2026",
+   "class": "alias_only_general",
+   "label": "reject"
+  },
+  {
+   "id": 73,
+   "title": "Alibaba scholarship fund sends 200 students abroad",
+   "domain": "nytimes.com",
+   "seendate": "20260918T090000Z",
+   "language": "English",
+   "url": "https://www.nytimes.com/news/2026/alibaba-scholarship-fund-sends-200-stude",
+   "class": "alias_only_general",
+   "label": "reject"
+  },
+  {
+   "id": 74,
+   "title": "Microsoft cofounder pledges new ocean research grant",
+   "domain": "apnews.com",
+   "seendate": "20260918T090000Z",
+   "language": "English",
+   "url": "https://www.apnews.com/news/2026/microsoft-cofounder-pledges-new-ocean-re",
+   "class": "alias_only_general",
+   "label": "reject"
+  },
+  {
+   "id": 75,
+   "title": "Amazon tribe wins land-rights case in appeals court",
+   "domain": "bbc.com",
+   "seendate": "20260918T090000Z",
+   "language": "English",
+   "url": "https://www.bbc.com/news/2026/amazon-tribe-wins-land-rights-case-in-ap",
+   "class": "alias_only_general",
+   "label": "reject"
+  },
+  {
+   "id": 76,
+   "title": "Apple picking guide for the autumn harvest",
+   "domain": "countrylife.example",
+   "seendate": "20260918T090000Z",
+   "language": "English",
+   "url": "https://countrylife.example/apple-picking-guide",
+   "class": "alias_only_unknown",
+   "label": "reject"
+  },
+  {
+   "id": 77,
+   "title": "Amazon of the North: canoe routes mapped",
+   "domain": "voyaging.example",
+   "seendate": "20260918T090000Z",
+   "language": "English",
+   "url": "https://voyaging.example/amazon-canoe-routes",
+   "class": "alias_only_unknown",
+   "label": "reject"
+  },
+  {
+   "id": 78,
+   "title": "Tesla museum exhibit opens in Belgrade wing",
+   "domain": "sparkhall.example",
+   "seendate": "20260918T090000Z",
+   "language": "English",
+   "url": "https://sparkhall.example/tesla-exhibit",
+   "class": "alias_only_unknown",
+   "label": "reject"
+  },
+  {
+   "id": 79,
+   "title": "Microsoftsupport forums answer printer woes",
+   "domain": "forumpost.example",
+   "seendate": "20260918T090000Z",
+   "language": "English",
+   "url": "https://forumpost.example/msft-printers",
+   "class": "alias_only_unknown",
+   "label": "reject"
+  },
+  {
+   "id": 80,
+   "title": "Tencent corner: where Hong Kong streets meet",
+   "domain": "streets.example",
+   "seendate": "20260918T090000Z",
+   "language": "English",
+   "url": "https://streets.example/tencent-corner",
+   "class": "alias_only_unknown",
+   "label": "reject"
+  },
+  {
+   "id": 81,
+   "title": "Alibaba cave trail restored by volunteers",
+   "domain": "hikers.example",
+   "seendate": "20260918T090000Z",
+   "language": "English",
+   "url": "https://hikers.example/alibaba-cave-trail",
+   "class": "alias_only_unknown",
+   "label": "reject"
+  },
+  {
+   "id": 82,
+   "title": "Hang seng of soaps: cable dramas reviewed",
+   "domain": "sudstv.example",
+   "seendate": "20260918T090000Z",
+   "language": "English",
+   "url": "https://sudstv.example/hang-seng-dramas",
+   "class": "alias_only_unknown",
+   "label": "reject"
+  },
+  {
+   "id": 83,
+   "title": "Nvidia joins list of common baby-name spellings",
+   "domain": "namestat.example",
+   "seendate": "20260918T090000Z",
+   "language": "English",
+   "url": "https://namestat.example/nvidia-names-2026",
+   "class": "alias_only_unknown",
+   "label": "reject"
+  },
+  {
+   "id": 84,
+   "title": "Tesla unit conversion table for physics class",
+   "domain": "studyaid.example",
+   "seendate": "20260918T090000Z",
+   "language": "English",
+   "url": "https://studyaid.example/tesla-units",
+   "class": "alias_only_unknown",
+   "label": "reject"
+  },
+  {
+   "id": 85,
+   "title": "Microsoft bundle: office chairs reviewed",
+   "domain": "deskwars.example",
+   "seendate": "20260918T090000Z",
+   "language": "English",
+   "url": "https://deskwars.example/microsoft-chairs",
+   "class": "alias_only_unknown",
+   "label": "reject"
+  },
+  {
+   "id": 86,
+   "title": "Tencent Holdings files quarterly results announcement",
+   "domain": "hkexnews.hk",
+   "seendate": "20260918T090000Z",
+   "language": "English",
+   "url": "https://www.hkexnews.hk/listedco/listconews/sehk/2026/0917/0700results.pdf",
+   "class": "official_phrase",
+   "label": "keep"
+  },
+  {
+   "id": 87,
+   "title": "Apple Inc names new chief operating officer",
+   "domain": "reuters.com",
+   "seendate": "20260918T090000Z",
+   "language": "English",
+   "url": "https://www.reuters.com/news/2026/apple-inc-names-new-chief-operating-offi",
+   "class": "official_phrase",
+   "label": "keep"
+  },
+  {
+   "id": 88,
+   "title": "Amazon.com Inc settles delivery-driver classification suit",
+   "domain": "bloomberg.com",
+   "seendate": "20260918T090000Z",
+   "language": "English",
+   "url": "https://www.bloomberg.com/news/2026/amazon.com-inc-settles-delivery-driver-c",
+   "class": "official_phrase",
+   "label": "keep"
+  },
+  {
+   "id": 89,
+   "title": "Microsoft Corporation declares quarterly dividend",
+   "domain": "wsj.com",
+   "seendate": "20260918T090000Z",
+   "language": "English",
+   "url": "https://www.wsj.com/news/2026/microsoft-corporation-declares-quarterly",
+   "class": "official_phrase",
+   "label": "keep"
+  },
+  {
+   "id": 90,
+   "title": "NVIDIA Corporation opens Taipei engineering site",
+   "domain": "cnbc.com",
+   "seendate": "20260918T090000Z",
+   "language": "English",
+   "url": "https://www.cnbc.com/news/2026/nvidia-corporation-opens-taipei-engineer",
+   "class": "official_phrase",
+   "label": "keep"
+  },
+  {
+   "id": 91,
+   "title": "Tesla Inc recalls Cybertruck windscreen wipers",
+   "domain": "marketwatch.com",
+   "seendate": "20260918T090000Z",
+   "language": "English",
+   "url": "https://www.marketwatch.com/news/2026/tesla-inc-recalls-cybertruck-windscreen-",
+   "class": "official_phrase",
+   "label": "keep"
+  },
+  {
+   "id": 92,
+   "title": "Alibaba Group Holding prices dual-tranche notes",
+   "domain": "ft.com",
+   "seendate": "20260918T090000Z",
+   "language": "English",
+   "url": "https://www.ft.com/news/2026/alibaba-group-holding-prices-dual-tranch",
+   "class": "official_phrase",
+   "label": "keep"
+  },
+  {
+   "id": 93,
+   "title": "Hang Seng Index Series adds new thematic gauge",
+   "domain": "scmp.com",
+   "seendate": "20260918T090000Z",
+   "language": "English",
+   "url": "https://www.scmp.com/news/2026/hang-seng-index-series-adds-new-thematic",
+   "class": "official_phrase",
+   "label": "keep"
+  },
+  {
+   "id": 94,
+   "title": "Apple Inc supplier audit summary published",
+   "domain": "stackpeak.example",
+   "seendate": "20260918T090000Z",
+   "language": "English",
+   "url": "https://stackpeak.example/apple-inc-audit-2026",
+   "class": "official_phrase",
+   "label": "keep"
+  },
+  {
+   "id": 95,
+   "title": "Amazon.com Inc warehouse safety report released",
+   "domain": "iberialog.example",
+   "seendate": "20260918T090000Z",
+   "language": "English",
+   "url": "https://iberialog.example/amazon-com-safety",
+   "class": "official_phrase",
+   "label": "keep"
+  },
+  {
+   "id": 96,
+   "title": "Amazon deforestation alerts spike in Rondonia",
+   "domain": "forestwatch.example",
+   "seendate": "20260918T090000Z",
+   "language": "English",
+   "url": "https://forestwatch.example/amazon-rondonia-sep",
+   "class": "same_name_unknown",
+   "label": "reject"
+  },
+  {
+   "id": 97,
+   "title": "Apple growers adapt to earlier frost seasons",
+   "domain": "agriwire.example",
+   "seendate": "20260918T090000Z",
+   "language": "English",
+   "url": "https://agriwire.example/apple-frost-adaptation",
+   "class": "same_name_unknown",
+   "label": "reject"
+  },
+  {
+   "id": 98,
+   "title": "Tesla coil concert series returns to Europe",
+   "domain": "sparkhall.example",
+   "seendate": "20260918T090000Z",
+   "language": "English",
+   "url": "https://sparkhall.example/tesla-concerts-2027",
+   "class": "same_name_unknown",
+   "label": "reject"
+  },
+  {
+   "id": 99,
+   "title": "Amazon ferry schedules updated for dry season",
+   "domain": "riverlog.example",
+   "seendate": "20260918T090000Z",
+   "language": "English",
+   "url": "https://riverlog.example/amazon-ferry-sep",
+   "class": "same_name_unknown",
+   "label": "reject"
+  },
+  {
+   "id": 100,
+   "title": "Apple of discord: ancient statue reinterpreted",
+   "domain": "classicstoday.example",
+   "seendate": "20260918T090000Z",
+   "language": "English",
+   "url": "https://classicstoday.example/apple-of-discord",
+   "class": "same_name_unknown",
+   "label": "reject"
+  },
+  {
+   "id": 101,
+   "title": "Tesla museum acquires rare laboratory notebook",
+   "domain": "sparkhall.example",
+   "seendate": "20260918T090000Z",
+   "language": "English",
+   "url": "https://sparkhall.example/tesla-notebook-acquired",
+   "class": "same_name_unknown",
+   "label": "reject"
+  },
+  {
+   "id": 102,
+   "title": "Alibaba folk tale retold in new stage play",
+   "domain": "stagenotes.example",
+   "seendate": "20260918T090000Z",
+   "language": "English",
+   "url": "https://stagenotes.example/alibaba-play-review",
+   "class": "same_name_unknown",
+   "label": "reject"
+  },
+  {
+   "id": 103,
+   "title": "Hang Seng village genealogy project completes",
+   "domain": "rootsmap.example",
+   "seendate": "20260918T090000Z",
+   "language": "English",
+   "url": "https://rootsmap.example/hang-seng-genealogy",
+   "class": "same_name_unknown",
+   "label": "reject"
+  },
+  {
+   "id": 104,
+   "title": "Amazon rainforest canopy study published in Nature",
+   "domain": "bbc.com",
+   "seendate": "20260918T090000Z",
+   "language": "English",
+   "url": "https://www.bbc.com/news/2026/amazon-rainforest-canopy-study-published",
+   "class": "same_name_tierA",
+   "label": "reject"
+  },
+  {
+   "id": 105,
+   "title": "Apple harvest festival draws record crowds in Kent",
+   "domain": "theguardian.com",
+   "seendate": "20260918T090000Z",
+   "language": "English",
+   "url": "https://www.theguardian.com/news/2026/apple-harvest-festival-draws-record-crow",
+   "class": "same_name_tierA",
+   "label": "reject"
+  },
+  {
+   "id": 106,
+   "title": "Tesla's alternating current legacy marked at conference",
+   "domain": "nytimes.com",
+   "seendate": "20260918T090000Z",
+   "language": "English",
+   "url": "https://www.nytimes.com/news/2026/tesla's-alternating-current-legacy-marke",
+   "class": "same_name_tierA",
+   "label": "reject"
+  },
+  {
+   "id": 107,
+   "title": "Amazon tributary communities face historic drought",
+   "domain": "theguardian.com",
+   "seendate": "20260918T090000Z",
+   "language": "English",
+   "url": "https://www.theguardian.com/news/2026/amazon-tributary-communities-face-histor",
+   "class": "same_name_tierA",
+   "label": "reject"
+  },
+  {
+   "id": 108,
+   "title": "Apple orchards test new drought-resistant rootstock",
+   "domain": "bbc.com",
+   "seendate": "20260918T090000Z",
+   "language": "English",
+   "url": "https://www.bbc.com/news/2026/apple-orchards-test-new-drought-resistan",
+   "class": "same_name_tierA",
+   "label": "reject"
+  },
+  {
+   "id": 109,
+   "title": "Tesla exhibit at science museum breaks attendance record",
+   "domain": "cnn.com",
+   "seendate": "20260918T090000Z",
+   "language": "English",
+   "url": "https://www.cnn.com/news/2026/tesla-exhibit-at-science-museum-breaks-a",
+   "class": "same_name_tierA",
+   "label": "reject"
+  },
+  {
+   "id": 110,
+   "title": "Hong Kong reports 700 new flu cases in weekly update",
+   "domain": "news.gov.example",
+   "seendate": "20260918T090000Z",
+   "language": "English",
+   "url": "https://news.gov.example/flu-weekly-700",
+   "class": "ticker_collision",
+   "label": "reject"
+  },
+  {
+   "id": 111,
+   "title": "Boeing 737 and Airbus A350 orders headline air show",
+   "domain": "aviationdaily.example",
+   "seendate": "20260918T090000Z",
+   "language": "English",
+   "url": "https://aviationdaily.example/airshow-orders-2026",
+   "class": "ticker_collision",
+   "label": "reject"
+  },
+  {
+   "id": 112,
+   "title": "aapl registry opens for agricultural producers",
+   "domain": "agriwire.example",
+   "seendate": "20260918T090000Z",
+   "language": "English",
+   "url": "https://agriwire.example/aapl-registry-2026",
+   "class": "ticker_collision",
+   "label": "reject"
+  },
+  {
+   "id": 113,
+   "title": "RHSI hospitality index slips as bookings soften",
+   "domain": "hotelmetrics.example",
+   "seendate": "20260918T090000Z",
+   "language": "English",
+   "url": "https://hotelmetrics.example/rhsi-september",
+   "class": "ticker_collision",
+   "label": "reject"
+  },
+  {
+   "id": 114,
+   "title": "A shares in Shanghai close mixed after policy note",
+   "domain": "marketrealist.com",
+   "seendate": "20260918T090000Z",
+   "language": "English",
+   "url": "https://www.marketrealist.com/news/2026/a-shares-in-shanghai-close-mixed-after-p",
+   "class": "ticker_collision",
+   "label": "reject"
+  },
+  {
+   "id": 115,
+   "title": "Model 700 espresso machine wins design award",
+   "domain": "coffeepress.example",
+   "seendate": "20260918T090000Z",
+   "language": "English",
+   "url": "https://coffeepress.example/model-700-award",
+   "class": "ticker_collision",
+   "label": "reject"
+  },
+  {
+   "id": 116,
+   "title": "700 million viewers expected for championship final",
+   "domain": "sportcast.example",
+   "seendate": "20260918T090000Z",
+   "language": "English",
+   "url": "https://sportcast.example/final-viewership-forecast",
+   "class": "ticker_collision",
+   "label": "reject"
+  },
+  {
+   "id": 117,
+   "title": "NVDA of Slovenia? Party wins mayoral race in coastal town",
+   "domain": "balkanwire.example",
+   "seendate": "20260918T090000Z",
+   "language": "English",
+   "url": "https://balkanwire.example/nvda-party-mayor",
+   "class": "ticker_collision",
+   "label": "reject"
+  },
+  {
+   "id": 118,
+   "title": "Highway 9988 reopens after landslide repairs",
+   "domain": "transitdesk.example",
+   "seendate": "20260918T090000Z",
+   "language": "English",
+   "url": "https://transitdesk.example/highway-9988-reopens",
+   "class": "ticker_collision",
+   "label": "reject"
+  },
+  {
+   "id": 119,
+   "title": "Legacy mainframe archives contain MSFT source listings",
+   "domain": "retrocomputing.example",
+   "seendate": "20260918T090000Z",
+   "language": "English",
+   "url": "https://retrocomputing.example/msft-mainframe-trace",
+   "class": "ticker_collision",
+   "label": "keep"
+  },
+  {
+   "id": 120,
+   "title": "Federal Reserve holds rates steady, signals patience",
+   "domain": "reuters.com",
+   "seendate": "20260918T090000Z",
+   "language": "English",
+   "url": "https://www.reuters.com/news/2026/federal-reserve-holds-rates-steady,-sign",
+   "class": "macro_true",
+   "label": "keep"
+  },
+  {
+   "id": 121,
+   "title": "Fed rate path hinges on labour data, minutes show",
+   "domain": "bloomberg.com",
+   "seendate": "20260918T090000Z",
+   "language": "English",
+   "url": "https://www.bloomberg.com/news/2026/fed-rate-path-hinges-on-labour-data,-min",
+   "class": "macro_true",
+   "label": "keep"
+  },
+  {
+   "id": 122,
+   "title": "FOMC members split on timing of next move",
+   "domain": "wsj.com",
+   "seendate": "20260918T090000Z",
+   "language": "English",
+   "url": "https://www.wsj.com/news/2026/fomc-members-split-on-timing-of-next-mov",
+   "class": "macro_true",
+   "label": "keep"
+  },
+  {
+   "id": 123,
+   "title": "CPI rises 2.4 pct year over year in August",
+   "domain": "reuters.com",
+   "seendate": "20260918T090000Z",
+   "language": "English",
+   "url": "https://www.reuters.com/news/2026/cpi-rises-2.4-pct-year-over-year-in-augu",
+   "class": "macro_true",
+   "label": "keep"
+  },
+  {
+   "id": 124,
+   "title": "PCE inflation gauge cools to 2.1 pct",
+   "domain": "cnbc.com",
+   "seendate": "20260918T090000Z",
+   "language": "English",
+   "url": "https://www.cnbc.com/news/2026/pce-inflation-gauge-cools-to-2.1-pct",
+   "class": "macro_true",
+   "label": "keep"
+  },
+  {
+   "id": 125,
+   "title": "China GDP growth steadies at 4.9 pct in second quarter",
+   "domain": "scmp.com",
+   "seendate": "20260918T090000Z",
+   "language": "English",
+   "url": "https://www.scmp.com/news/2026/china-gdp-growth-steadies-at-4.9-pct-in-",
+   "class": "macro_true",
+   "label": "keep"
+  },
+  {
+   "id": 126,
+   "title": "China PMI returns to expansion territory",
+   "domain": "bloomberg.com",
+   "seendate": "20260918T090000Z",
+   "language": "English",
+   "url": "https://www.bloomberg.com/news/2026/china-pmi-returns-to-expansion-territory",
+   "class": "macro_true",
+   "label": "keep"
+  },
+  {
+   "id": 127,
+   "title": "Caixin manufacturing reading beats expectations",
+   "domain": "reuters.com",
+   "seendate": "20260918T090000Z",
+   "language": "English",
+   "url": "https://www.reuters.com/news/2026/caixin-manufacturing-reading-beats-expec",
+   "class": "macro_true",
+   "label": "keep"
+  },
+  {
+   "id": 128,
+   "title": "HKMA leaves base rate unchanged after Fed decision",
+   "domain": "scmp.com",
+   "seendate": "20260918T090000Z",
+   "language": "English",
+   "url": "https://www.scmp.com/news/2026/hkma-leaves-base-rate-unchanged-after-fe",
+   "class": "macro_true",
+   "label": "keep"
+  },
+  {
+   "id": 129,
+   "title": "HIBOR fixings ease as liquidity improves",
+   "domain": "hkexnews.hk",
+   "seendate": "20260918T090000Z",
+   "language": "English",
+   "url": "https://www.hkexnews.hk/market/hibor-20260918.pdf",
+   "class": "macro_true",
+   "label": "keep"
+  },
+  {
+   "id": 130,
+   "title": "USDCNY midpoint set firmer for third session",
+   "domain": "marketwatch.com",
+   "seendate": "20260918T090000Z",
+   "language": "English",
+   "url": "https://www.marketwatch.com/news/2026/usdcny-midpoint-set-firmer-for-third-ses",
+   "class": "macro_true",
+   "label": "keep"
+  },
+  {
+   "id": 131,
+   "title": "Yuan reserves debate resurfaces among analysts",
+   "domain": "ft.com",
+   "seendate": "20260918T090000Z",
+   "language": "English",
+   "url": "https://www.ft.com/news/2026/yuan-reserves-debate-resurfaces-among-an",
+   "class": "macro_true",
+   "label": "keep"
+  },
+  {
+   "id": 132,
+   "title": "New tariff list covers 38 product categories",
+   "domain": "wsj.com",
+   "seendate": "20260918T090000Z",
+   "language": "English",
+   "url": "https://www.wsj.com/news/2026/new-tariff-list-covers-38-product-catego",
+   "class": "macro_true",
+   "label": "keep"
+  },
+  {
+   "id": 133,
+   "title": "Tariffs on steel extended for two years",
+   "domain": "reuters.com",
+   "seendate": "20260918T090000Z",
+   "language": "English",
+   "url": "https://www.reuters.com/news/2026/tariffs-on-steel-extended-for-two-years",
+   "class": "macro_true",
+   "label": "keep"
+  },
+  {
+   "id": 134,
+   "title": "The Fed's balance-sheet debate, explained",
+   "domain": "ft.com",
+   "seendate": "20260918T090000Z",
+   "language": "English",
+   "url": "https://www.ft.com/news/2026/the-fed's-balance-sheet-debate,-explaine",
+   "class": "macro_true",
+   "label": "keep"
+  },
+  {
+   "id": 135,
+   "title": "Inflation expectations survey ticks down",
+   "domain": "apnews.com",
+   "seendate": "20260918T090000Z",
+   "language": "English",
+   "url": "https://www.apnews.com/news/2026/inflation-expectations-survey-ticks-down",
+   "class": "macro_true",
+   "label": "keep"
+  },
+  {
+   "id": 136,
+   "title": "FedEx expands European fleet with 300 vans",
+   "domain": "logisticsworld.example",
+   "seendate": "20260918T090000Z",
+   "language": "English",
+   "url": "https://logisticsworld.example/fedex-eu-fleet",
+   "class": "macro_adversarial",
+   "label": "reject"
+  },
+  {
+   "id": 137,
+   "title": "FOMO grips retail traders as momentum builds",
+   "domain": "marketrealist.com",
+   "seendate": "20260918T090000Z",
+   "language": "English",
+   "url": "https://www.marketrealist.com/news/2026/fomo-grips-retail-traders-as-momentum-bu",
+   "class": "macro_adversarial",
+   "label": "reject"
+  },
+  {
+   "id": 138,
+   "title": "Tariffville bridge added to heritage register",
+   "domain": "heritage.example",
+   "seendate": "20260918T090000Z",
+   "language": "English",
+   "url": "https://heritage.example/tariffville-bridge",
+   "class": "macro_adversarial",
+   "label": "reject"
+  },
+  {
+   "id": 139,
+   "title": "Morrill Tariff of 1861 explained for history students",
+   "domain": "historydesk.example",
+   "seendate": "20260918T090000Z",
+   "language": "English",
+   "url": "https://historydesk.example/morrill-tariff-1861",
+   "class": "macro_adversarial",
+   "label": "reject"
+  },
+  {
+   "id": 140,
+   "title": "CPI Corp bankruptcy a decade on: retail lessons",
+   "domain": "retailpast.example",
+   "seendate": "20260918T090000Z",
+   "language": "English",
+   "url": "https://retailpast.example/cpi-corp-retrospective",
+   "class": "macro_adversarial",
+   "label": "reject"
+  },
+  {
+   "id": 141,
+   "title": "Yuan dynasty ceramics exhibition opens in Paris",
+   "domain": "artswire.example",
+   "seendate": "20260918T090000Z",
+   "language": "English",
+   "url": "https://artswire.example/yuan-dynasty-paris",
+   "class": "macro_adversarial",
+   "label": "reject"
+  },
+  {
+   "id": 142,
+   "title": "Startup culture: the inflation of ego in pitch decks",
+   "domain": "founderbeat.example",
+   "seendate": "20260918T090000Z",
+   "language": "English",
+   "url": "https://founderbeat.example/ego-inflation",
+   "class": "macro_adversarial",
+   "label": "reject"
+  },
+  {
+   "id": 143,
+   "title": "Base rate for home oxygen therapy billing updated",
+   "domain": "healthdesk.example",
+   "seendate": "20260918T090000Z",
+   "language": "English",
+   "url": "https://healthdesk.example/oxygen-billing-2026",
+   "class": "macro_adversarial",
+   "label": "reject"
+  },
+  {
+   "id": 144,
+   "title": "Top stock picks for Q4: buy AAPL now before the split",
+   "domain": "pennysheet.example",
+   "seendate": "20260918T090000Z",
+   "language": "English",
+   "url": "https://pennysheet.example/top-picks-q4",
+   "class": "promo",
+   "label": "reject"
+  },
+  {
+   "id": 145,
+   "title": "Best stocks to buy this week include NVDA and TSLA",
+   "domain": "hotlist.example",
+   "seendate": "20260918T090000Z",
+   "language": "English",
+   "url": "https://hotlist.example/best-stocks-week-38",
+   "class": "promo",
+   "label": "reject"
+  },
+  {
+   "id": 146,
+   "title": "Penny stock alert: the next 10-bagger in logistics",
+   "domain": "pennysheet.example",
+   "seendate": "20260918T090000Z",
+   "language": "English",
+   "url": "https://pennysheet.example/penny-logistics-alert",
+   "class": "promo",
+   "label": "reject"
+  },
+  {
+   "id": 147,
+   "title": "Guaranteed return strategy using covered calls on MSFT",
+   "domain": "optionking.example",
+   "seendate": "20260918T090000Z",
+   "language": "English",
+   "url": "https://optionking.example/msft-covered-calls",
+   "class": "promo",
+   "label": "reject"
+  },
+  {
+   "id": 148,
+   "title": "Get in early: 0700 proxy play nobody is talking about",
+   "domain": "hkhotstock.example",
+   "seendate": "20260918T090000Z",
+   "language": "English",
+   "url": "https://hkhotstock.example/0700-proxy-play",
+   "class": "promo",
+   "label": "reject"
+  },
+  {
+   "id": 149,
+   "title": "Insider tip sheet: AMZN breakout imminent",
+   "domain": "hotlist.example",
+   "seendate": "20260918T090000Z",
+   "language": "English",
+   "url": "https://hotlist.example/amzn-breakout",
+   "class": "promo",
+   "label": "reject"
+  },
+  {
+   "id": 150,
+   "title": "Stock picks from the pros: five names for September",
+   "domain": "pennysheet.example",
+   "seendate": "20260918T090000Z",
+   "language": "English",
+   "url": "https://pennysheet.example/september-picks",
+   "class": "promo",
+   "label": "reject"
+  },
+  {
+   "id": 151,
+   "title": "Pump and dump warning issued over small-cap chatter",
+   "domain": "regwatch.example",
+   "seendate": "20260918T090000Z",
+   "language": "English",
+   "url": "https://regwatch.example/pump-dump-warning",
+   "class": "promo",
+   "label": "reject"
+  },
+  {
+   "id": 152,
+   "title": "Best stocks to buy when rates fall, per our model",
+   "domain": "modelgainz.example",
+   "seendate": "20260918T090000Z",
+   "language": "English",
+   "url": "https://modelgainz.example/rate-cut-basket",
+   "class": "promo",
+   "label": "reject"
+  },
+  {
+   "id": 153,
+   "title": "Guaranteed return of 12 pct with this dividend ladder",
+   "domain": "incomeleaf.example",
+   "seendate": "20260918T090000Z",
+   "language": "English",
+   "url": "https://incomeleaf.example/dividend-ladder-12",
+   "class": "promo",
+   "label": "reject"
+  },
+  {
+   "id": 154,
+   "title": "Top stock picks telegram channel now free to join",
+   "domain": "pennysheet.example",
+   "seendate": "20260918T090000Z",
+   "language": "English",
+   "url": "https://pennysheet.example/telegram-free",
+   "class": "promo",
+   "label": "reject"
+  },
+  {
+   "id": 155,
+   "title": "Insider tip: TSLA catalyst lands next week, sources say",
+   "domain": "hotlist.example",
+   "seendate": "20260918T090000Z",
+   "language": "English",
+   "url": "https://hotlist.example/tsla-catalyst-week",
+   "class": "promo",
+   "label": "reject"
+  },
+  {
+   "id": 156,
+   "title": "Tencent (0700) and partners launch fintech sandbox",
+   "domain": "scmp.com",
+   "seendate": "20260918T090000Z",
+   "language": "English",
+   "url": "https://www.scmp.com/news/2026/tencent-(0700)-and-partners-launch-finte",
+   "class": "ticker_alias_combo",
+   "label": "keep"
+  },
+  {
+   "id": 157,
+   "title": "Apple Inc iPhone unit: AAPL suppliers trimmed",
+   "domain": "wsj.com",
+   "seendate": "20260918T090000Z",
+   "language": "English",
+   "url": "https://www.wsj.com/news/2026/apple-inc-iphone-unit:-aapl-suppliers-tr",
+   "class": "ticker_alias_combo",
+   "label": "keep"
+  },
+  {
+   "id": 158,
+   "title": "Microsoft Corporation earnings: MSFT cloud beats",
+   "domain": "cnbc.com",
+   "seendate": "20260918T090000Z",
+   "language": "English",
+   "url": "https://www.cnbc.com/news/2026/microsoft-corporation-earnings:-msft-clo",
+   "class": "ticker_alias_combo",
+   "label": "keep"
+  },
+  {
+   "id": 159,
+   "title": "Tesla Inc robotaxi unit: TSLA trial widens",
+   "domain": "bloomberg.com",
+   "seendate": "20260918T090000Z",
+   "language": "English",
+   "url": "https://www.bloomberg.com/news/2026/tesla-inc-robotaxi-unit:-tsla-trial-wide",
+   "class": "ticker_alias_combo",
+   "label": "keep"
+  },
+  {
+   "id": 160,
+   "title": "Alibaba Group Holding cloud arm: 9988 wins deal",
+   "domain": "ft.com",
+   "seendate": "20260918T090000Z",
+   "language": "English",
+   "url": "https://www.ft.com/news/2026/alibaba-group-holding-cloud-arm:-9988-wi",
+   "class": "ticker_alias_combo",
+   "label": "keep"
+  },
+  {
+   "id": 161,
+   "title": "\u817e\u8baf\u63a7\u80a1\u7b2c\u4e09\u5b63\u5ea6\u4e1a\u7ee9\u8d85\u51fa\u5e02\u573a\u9884\u671f",
+   "domain": "scmp.com",
+   "seendate": "20260918T090000Z",
+   "language": "Chinese",
+   "url": "https://www.scmp.com/news/2026/\u817e\u8baf\u63a7\u80a1\u7b2c\u4e09\u5b63\u5ea6\u4e1a\u7ee9\u8d85\u51fa\u5e02\u573a\u9884\u671f",
+   "class": "quarantine_lang",
+   "label": "reject"
+  },
+  {
+   "id": 162,
+   "title": "\u82f9\u679c\u516c\u53f8\u53d1\u5e03\u65b0\u6b3e\u624b\u673a\uff0c\u80a1\u4ef7\u4e0a\u6da8",
+   "domain": " sina.example",
+   "seendate": "20260918T090000Z",
+   "language": "Chinese",
+   "url": "https://www.sina.example/apple-launch-2026",
+   "class": "quarantine_lang",
+   "label": "reject"
+  },
+  {
+   "id": 163,
+   "title": "Tesla presenta su nuevo modelo en Berln",
+   "domain": " elmundo.example",
+   "seendate": "20260918T090000Z",
+   "language": "Spanish",
+   "url": "https://www.elmundo.example/tesla-berlin-2026",
+   "class": "quarantine_lang",
+   "label": "reject"
+  },
+  {
+   "id": 164,
+   "title": "Amazon annonce un nouveau centre logistique Lyon",
+   "domain": " lefigaro.example",
+   "seendate": "20260918T090000Z",
+   "language": "French",
+   "url": "https://www.lefigaro.example/amazon-lyon",
+   "class": "quarantine_lang",
+   "label": "reject"
+  },
+  {
+   "id": 165,
+   "title": "Microsoft erffnet neues Rechenzentrum in Frankfurt",
+   "domain": " handelsblatt.example",
+   "seendate": "20260918T090000Z",
+   "language": "German",
+   "url": "https://www.handelsblatt.example/msft-frankfurt",
+   "class": "quarantine_lang",
+   "label": "reject"
+  },
+  {
+   "id": 166,
+   "title": "\u963f\u91cc\u5df4\u5df4\u5c06\u6269\u5927\u6b27\u6d32\u7269\u6d41\u7f51\u7edc",
+   "domain": " caixin.example",
+   "seendate": "20260918T090000Z",
+   "language": "Chinese",
+   "url": "https://www.caixin.example/alibaba-logistics-eu",
+   "class": "quarantine_lang",
+   "label": "reject"
+  },
+  {
+   "id": 167,
+   "title": "Apple Inc announces fall event date",
+   "domain": "reuters.com",
+   "seendate": "2026-09-18T09:00:00Z",
+   "language": "English",
+   "url": "https://www.reuters.com/news/2026/apple-inc-announces-fall-event-date",
+   "class": "quarantine_date",
+   "label": "reject"
+  },
+  {
+   "id": 168,
+   "title": "Tencent Holdings posts results",
+   "domain": "scmp.com",
+   "seendate": "20260918",
+   "language": "English",
+   "url": "https://www.scmp.com/news/2026/tencent-holdings-posts-results",
+   "class": "quarantine_date",
+   "label": "reject"
+  },
+  {
+   "id": 169,
+   "title": "Microsoft lifts guidance",
+   "domain": "cnbc.com",
+   "seendate": "",
+   "language": "English",
+   "url": "https://www.cnbc.com/news/2026/microsoft-lifts-guidance",
+   "class": "quarantine_date",
+   "label": "reject"
+  },
+  {
+   "id": 170,
+   "title": "NVIDIA ships new accelerators",
+   "domain": "wsj.com",
+   "seendate": "not-a-date",
+   "language": "English",
+   "url": "https://www.wsj.com/news/2026/nvidia-ships-new-accelerators",
+   "class": "quarantine_date",
+   "label": "reject"
+  },
+  {
+   "id": 171,
+   "title": "Apple Inc WWDC highlights recap",
+   "domain": "reuters.com",
+   "seendate": "20260601T120000Z",
+   "language": "English",
+   "url": "https://www.reuters.com/news/2026/apple-inc-wwdc-highlights-recap",
+   "class": "quarantine_window",
+   "label": "reject"
+  },
+  {
+   "id": 172,
+   "title": "Tencent annual gaming summit wraps",
+   "domain": "scmp.com",
+   "seendate": "20260615T090000Z",
+   "language": "English",
+   "url": "https://www.scmp.com/news/2026/tencent-annual-gaming-summit-wraps",
+   "class": "quarantine_window",
+   "label": "reject"
+  },
+  {
+   "id": 173,
+   "title": "Fed testimony recap from spring hearing",
+   "domain": "bloomberg.com",
+   "seendate": "20260520T140000Z",
+   "language": "English",
+   "url": "https://www.bloomberg.com/news/2026/fed-testimony-recap-from-spring-hearing",
+   "class": "quarantine_window",
+   "label": "reject"
+  },
+  {
+   "id": 174,
+   "title": "CPI print from April revised",
+   "domain": "reuters.com",
+   "seendate": "20260512T083000Z",
+   "language": "English",
+   "url": "https://www.reuters.com/news/2026/cpi-print-from-april-revised",
+   "class": "quarantine_window",
+   "label": "reject"
+  },
+  {
+   "id": 175,
+   "title": "HSI rebalance effective notice",
+   "domain": "scmp.com",
+   "seendate": "20260609T020000Z",
+   "language": "English",
+   "url": "https://www.scmp.com/news/2026/hsi-rebalance-effective-notice",
+   "class": "quarantine_window",
+   "label": "reject"
+  },
+  {
+   "id": 176,
+   "title": "Apple Inc adds health features to watch line",
+   "domain": "reuters.com",
+   "seendate": "20260918T090000Z",
+   "language": "English",
+   "url": "ftp://files.reuters.example/apple-health.pdf",
+   "class": "quarantine_url",
+   "label": "reject"
+  },
+  {
+   "id": 177,
+   "title": "Tencent Holdings results PDF",
+   "domain": "scmp.com",
+   "seendate": "20260918T090000Z",
+   "language": "English",
+   "url": "file:///shared/results/0700.pdf",
+   "class": "quarantine_url",
+   "label": "reject"
+  },
+  {
+   "id": 178,
+   "title": "Microsoft security patch notes",
+   "domain": "cnbc.com",
+   "seendate": "20260918T090000Z",
+   "language": "English",
+   "url": "www.cnbc.com/2026/09/18/msft-patch.html",
+   "class": "quarantine_url",
+   "label": "reject"
+  },
+  {
+   "id": 179,
+   "title": "NVIDIA driver release notes",
+   "domain": "wsj.com",
+   "seendate": "20260918T090000Z",
+   "language": "English",
+   "url": "https://www.wsj.com/news/2026/nvidia-driver-release-notes",
+   "class": "quarantine_url",
+   "label": "reject"
+  },
+  {
+   "id": 180,
+   "title": "AAPL to the moon: what they do not tell you",
+   "domain": "beforeitsnews.com",
+   "seendate": "20260918T090000Z",
+   "language": "English",
+   "url": "https://www.beforeitsnews.com/news/2026/aapl-to-the-moon:-what-they-do-not-tell-",
+   "class": "quarantine_blocklist",
+   "label": "reject"
+  },
+  {
+   "id": 181,
+   "title": "TSLA truth bomb drops tonight",
+   "domain": "beforeitsnews.com",
+   "seendate": "20260918T090000Z",
+   "language": "English",
+   "url": "https://www.beforeitsnews.com/news/2026/tsla-truth-bomb-drops-tonight",
+   "class": "quarantine_blocklist",
+   "label": "reject"
+  },
+  {
+   "id": 182,
+   "title": "NVDA sentiment tracker flips bullish",
+   "domain": "stocktwits.com",
+   "seendate": "20260918T090000Z",
+   "language": "English",
+   "url": "https://www.stocktwits.com/news/2026/nvda-sentiment-tracker-flips-bullish",
+   "class": "quarantine_blocklist",
+   "label": "reject"
+  },
+  {
+   "id": 183,
+   "title": "0700 chatter spikes on the feed",
+   "domain": "stocktwits.com",
+   "seendate": "20260918T090000Z",
+   "language": "English",
+   "url": "https://www.stocktwits.com/news/2026/0700-chatter-spikes-on-the-feed",
+   "class": "quarantine_blocklist",
+   "label": "reject"
+  },
+  {
+   "id": 184,
+   "title": "",
+   "domain": "reuters.com",
+   "seendate": "20260918T090000Z",
+   "language": "English",
+   "url": "https://www.reuters.com/news/2026/",
+   "class": "missing_title",
+   "label": "reject"
+  },
+  {
+   "id": 185,
+   "title": null,
+   "domain": "scmp.com",
+   "seendate": "20260918T090000Z",
+   "language": "English",
+   "url": "https://www.scmp.com/news/2026/item",
+   "class": "missing_title",
+   "label": "reject"
+  },
+  {
+   "id": 186,
+   "title": "Hang Seng Index extends winning run as lenders rally",
+   "domain": "scmp.com",
+   "seendate": "20260918T090000Z",
+   "language": "English",
+   "url": "https://www.scmp.com/news/2026/hang-seng-index-extends-winning-run-as-l",
+   "class": "hsi_tierA",
+   "label": "keep"
+  },
+  {
+   "id": 187,
+   "title": "Hang Seng families of gauges rebalanced for liquidity",
+   "domain": "scmp.com",
+   "seendate": "20260918T090000Z",
+   "language": "English",
+   "url": "https://www.scmp.com/news/2026/hang-seng-families-of-gauges-rebalanced-",
+   "class": "alias_insufficient",
+   "label": "reject"
+  },
+  {
+   "id": 188,
+   "title": "Hang Seng-listed banks pass stress test round",
+   "domain": "hkexnews.hk",
+   "seendate": "20260918T090000Z",
+   "language": "English",
+   "url": "https://www.hkexnews.hk/indexes/stress-2026.pdf",
+   "class": "alias_insufficient",
+   "label": "reject"
+  },
+  {
+   "id": 189,
+   "title": "Hang Seng tech gauge outperforms region in September",
+   "domain": "scmp.com",
+   "seendate": "20260918T090000Z",
+   "language": "English",
+   "url": "https://www.scmp.com/news/2026/hang-seng-tech-gauge-outperforms-region-",
+   "class": "alias_insufficient",
+   "label": "reject"
+  },
+  {
+   "id": 190,
+   "title": "Hang Seng heavyweight weightings adjusted in review",
+   "domain": "bloomberg.com",
+   "seendate": "20260918T090000Z",
+   "language": "English",
+   "url": "https://www.bloomberg.com/news/2026/hang-seng-heavyweight-weightings-adjuste",
+   "class": "alias_insufficient",
+   "label": "reject"
+  },
+  {
+   "id": 191,
+   "title": "Tencent Holdings chairman addresses sustainability forum",
+   "domain": "hkexnews.hk",
+   "seendate": "20260918T090000Z",
+   "language": "English",
+   "url": "https://www.hkexnews.hk/listedco/listconews/sehk/2026/0916/0700forum.pdf",
+   "class": "tencent_hkexnews",
+   "label": "keep"
+  },
+  {
+   "id": 192,
+   "title": "Tencent Holdings annual general meeting minutes posted",
+   "domain": "hkexnews.hk",
+   "seendate": "20260918T090000Z",
+   "language": "English",
+   "url": "https://www.hkexnews.hk/listedco/listconews/sehk/2026/0912/0700agm.pdf",
+   "class": "tencent_hkexnews",
+   "label": "keep"
+  },
+  {
+   "id": 193,
+   "title": "Tencent Holdings weights in Hang Seng confirmed",
+   "domain": "hkexnews.hk",
+   "seendate": "20260918T090000Z",
+   "language": "English",
+   "url": "https://www.hkexnews.hk/indexes/weights-2026.pdf",
+   "class": "tencent_hkexnews",
+   "label": "keep"
+  },
+  {
+   "id": 194,
+   "title": "Tencent Holdings insiders raise stake, filings show",
+   "domain": "hkexnews.hk",
+   "seendate": "20260918T090000Z",
+   "language": "English",
+   "url": "https://www.hkexnews.hk/di/0700increase2026.pdf",
+   "class": "tencent_hkexnews",
+   "label": "keep"
+  },
+  {
+   "id": 195,
+   "title": "Tencent Holdings option pool renewed at general meeting",
+   "domain": "hkexnews.hk",
+   "seendate": "20260918T090000Z",
+   "language": "English",
+   "url": "https://www.hkexnews.hk/listedco/listconews/sehk/2026/0908/0700options.pdf",
+   "class": "tencent_hkexnews",
+   "label": "keep"
+  },
+  {
+   "id": 196,
+   "title": "AAPL shares climb as event invitations go out",
+   "domain": "tipranks.com",
+   "seendate": "20260918T090000Z",
+   "language": "English",
+   "url": "https://www.tipranks.com/news/2026/aapl-shares-climb-as-event-invitations-g",
+   "class": "aggregator_ticker",
+   "label": "reject"
+  },
+  {
+   "id": 197,
+   "title": "TSLA momentum building into quarter end, screens show",
+   "domain": "streetinsider.com",
+   "seendate": "20260918T090000Z",
+   "language": "English",
+   "url": "https://www.streetinsider.com/news/2026/tsla-momentum-building-into-quarter-end,",
+   "class": "aggregator_ticker",
+   "label": "reject"
+  },
+  {
+   "id": 198,
+   "title": "NVDA consensus target lifted by three brokers",
+   "domain": "marketscreener.com",
+   "seendate": "20260918T090000Z",
+   "language": "English",
+   "url": "https://www.marketscreener.com/news/2026/nvda-consensus-target-lifted-by-three-br",
+   "class": "aggregator_ticker",
+   "label": "reject"
+  },
+  {
+   "id": 199,
+   "title": "MSFT fair value snapshot updated",
+   "domain": "simplywall.st",
+   "seendate": "20260918T090000Z",
+   "language": "English",
+   "url": "https://www.simplywall.st/news/2026/msft-fair-value-snapshot-updated",
+   "class": "aggregator_ticker",
+   "label": "reject"
+  },
+  {
+   "id": 200,
+   "title": "0700 headlines digest for the week",
+   "domain": "bignewsnetwork.com",
+   "seendate": "20260918T090000Z",
+   "language": "English",
+   "url": "https://www.bignewsnetwork.com/news/2026/0700-headlines-digest-for-the-week",
+   "class": "aggregator_ticker",
+   "label": "reject"
+  }
+ ]
+}
