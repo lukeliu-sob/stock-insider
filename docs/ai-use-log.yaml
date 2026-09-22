@@ -1428,3 +1428,40 @@ sessions:
       and the bounded-allowance proposal, then instructed
       implementation.
     status: applied
+
+  - id: AILOG-0037
+    date: "2026-09-21"
+    tool: "pi coding agent (LLM session)"
+    role: ai
+    task: >-
+      TP-011a implementation (approved plan PR #24; approval flip commit
+      precedes this one): deterministic news filter core — S1 structural
+      gates with explicit quarantine records, S2 relevance scoring as
+      pure functions (token evidence: +1 case-sensitive word-boundary
+      ticker, +1 official-name phrase, +0.5 capped alias containment,
+      alias alone never meets the mandatory floor of 1; source tier per
+      D2 config-of-record; promo/aggregator negatives), S3 dedup keys
+      (normalized URL; title token-set Jaccard) with the deterministic
+      survivor order. Hand-labeled fixture corpus v1: 200 headlines
+      across 23 documented classes including same-name-different-entity,
+      ticker collisions, macro adversarials, and all quarantine gates;
+      live precision 0.927 (7 documented false positives, all keyword/
+      collision semantics), recall 1.000 — QA-002 calibration evidence.
+      Authoring note: initial labels assumed alias-only items on tier-A
+      domains would keep; the accepted design's mandatory evidence floor
+      rejects them, so labels were corrected to match the design (the
+      code was right; the fixture was wrong) — recorded here because
+      label-authoring is exactly where silent spec drift would enter.
+      18 new tests including the precision gate. Generator script kept
+      as uncommitted proposal scratch; the committed artifact is the
+      corpus JSON (append-only going forward).
+    artifacts:
+      - src/stockinsider/data/ingest/newsfilter.py
+      - test/offline/test_ingest_news.py
+      - test/offline/fixtures/news_corpus_v1.json
+      - docs/ai-use-log.yaml
+    human_decision: >-
+      Owner approved TP-011 plan via PR #24 review (D1-D4 unchanged);
+      corpus receives a dedicated owner review on this PR per the
+      acceptance criteria.
+    status: applied
