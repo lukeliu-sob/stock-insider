@@ -26,6 +26,7 @@ from stockinsider.data.ingest.fundamentals import (
     EodhdFundamentalsAdapter,
     FundamentalsNotInPlan,
 )
+from stockinsider.data.ingest.news import GdeltNewsAdapter, news_status, run_news_sync
 from stockinsider.data.ingest.market import (
     EodhdMarketAdapter,
     InvalidMarketData,
@@ -69,6 +70,7 @@ class SyncReport:
     calls_used: int = 0
     calls_remaining: int = 0
     calls_cap: int = 0
+    news: dict[str, Any] | None = None
 
     def as_dict(self) -> dict[str, Any]:
         """Render for tool/CLI surfaces.
@@ -114,11 +116,14 @@ class SyncService:
         adapter: EodhdMarketAdapter | None = None,
         budget: CallBudget | None = None,
         transport: Transport | None = None,
+        news_enabled: bool = True,
     ) -> None:
         self._conn = conn
         self._budget = budget if budget is not None else CallBudget(conn)
         self._adapter = adapter if adapter is not None else EodhdMarketAdapter(transport=transport)
         self._fund_adapter = EodhdFundamentalsAdapter(transport=transport)
+        self._news_enabled = news_enabled
+        self._transport = transport
 
     # -- helpers ----------------------------------------------------------
 
@@ -357,6 +362,15 @@ class SyncService:
         report.calls_used = self._budget.used_today() - used_before
         report.calls_remaining = self._budget.remaining()
         report.calls_cap = self._budget.remaining() + self._budget.used_today()
+        # News track (TP-011b): after the market track, isolated — a news
+        # failure never fails the market report (design §8).
+        if self._news_enabled:
+            try:
+                report.news = run_news_sync(
+                    self._conn, adapter=GdeltNewsAdapter(transport=self._transport)
+                )
+            except Exception as exc:  # explicit isolation boundary
+                report.news = {"failed": f"news track aborted: {exc}"}
         return report
 
 
@@ -381,4 +395,5 @@ def sync_status(conn: sqlite3.Connection) -> dict[str, Any]:
         "last_run": conn.execute(
             "SELECT last_run_at FROM sync_state WHERE track LIKE 'market:%' ORDER BY last_run_at DESC LIMIT 1"
         ).fetchone(),
+        "news": news_status(conn),
     }

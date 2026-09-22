@@ -147,12 +147,12 @@ def test_sync_spends_10_units_and_denial_caches(store, monkeypatch) -> None:
         json.dumps([{"date": "2026-09-21", "open": 1, "high": 1, "low": 1, "close": 1, "volume": 1}]), "0700.HK"
     )
     store_bars(store.conn, "0700.HK", rows)
-    service = SyncService(store.conn, transport=DeniedTransport())
+    service = SyncService(store.conn, transport=DeniedTransport(), news_enabled=False)
     report = service.run()
     fund_items = [i for i in report.results if i.action == "fundamentals"]
     assert fund_items and fund_items[0].status == "failed" and "Fundamentals Data Feed" in fund_items[0].detail
     assert report.calls_used >= CALL_COST
     # denial cached: second run plans no fundamentals items (no budget burn)
-    second = SyncService(store.conn, transport=DeniedTransport()).run()
+    second = SyncService(store.conn, transport=DeniedTransport(), news_enabled=False).run()
     assert not [i for i in second.results if i.action == "fundamentals"]
     assert CALL_COST == 10

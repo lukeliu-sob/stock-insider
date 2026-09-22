@@ -1465,3 +1465,53 @@ sessions:
       corpus receives a dedicated owner review on this PR per the
       acceptance criteria.
     status: applied
+
+  - id: AILOG-0038
+    date: "2026-09-21"
+    tool: "pi coding agent (LLM session)"
+    role: ai
+    task: >-
+      TP-011b implementation: GDELT transport + storage + sync
+      integration. Schema v4 extends the v1 news tables with
+      append-only ALTERs (the draft's separate news_articles table was
+      abandoned when fresh-DB smoke revealed v1 already ships news and
+      news_quarantine with an event_scores foreign key; the v1 global
+      url_norm unique index became a bucket-scoped one because design
+      S3 Key A is per-bucket). GdeltNewsAdapter: classified failures
+      (throttle/http/malformed/transport), missing-articles-key and
+      empty-list treated identically. run_news_sync: one query per
+      active watchlist symbol (ticker tokens now flow from the
+      watchlist join — an early draft dropped them, caught by the
+      dedup test's evidence expectations) plus six macro groups,
+      5 s pacing, first-429 aborts remaining queries and holds the
+      cursor so the next run re-covers the window (probe evidence:
+      bursts earn >4-minute cooldowns). Storage applies S1 gates ->
+      evidence-floor scoring -> Key A/Key B dedup with rank
+      comparison (newsfilter gained the public survivor_rank; a pure
+      tie keeps the stored row — exact re-crawls are no-ops, not
+      ambiguities). Two-year retention runs each sync. SyncService
+      composes the news track after the market track with failure
+      isolation and passes its injected transport through (offline
+      tests never touch the network); market-side tests disable the
+      news track explicitly. sync_status surfaces the news cursor,
+      article and quarantine counts. Engineering note: the worktree
+      reverter (BD-006) wiped applied patches repeatedly this session;
+      work moved entirely to git staging (patch copies under .git,
+      hash-object + update-index, checkout-index export for
+      verification) — the immune-export discipline became the primary
+      build path. 12 new tests (247 total).
+    artifacts:
+      - src/stockinsider/data/store/schema.py
+      - src/stockinsider/data/ingest/news.py
+      - src/stockinsider/data/ingest/newsfilter.py
+      - src/stockinsider/data/ingest/sync.py
+      - test/offline/test_ingest_news_sync.py
+      - test/offline/test_ingest_market.py
+      - test/offline/test_sync_budget.py
+      - test/offline/test_ingest_fundamentals.py
+      - docs/ai-use-log.yaml
+    human_decision: >-
+      Owner approved TP-011 plan (PR #24) covering this split; egress
+      whitelist already contained api.gdeltproject.org since the
+      TP-004 baseline, so no safety-critical change was needed.
+    status: applied

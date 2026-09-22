@@ -127,7 +127,7 @@ def _seed_full_environment(store, monkeypatch, cap: int | None = None, symbol_ba
             "INSERT INTO watchlist (canonical_symbol, added_at, added_via) VALUES ('0700.HK', '2026-09-18', 'cli')"
         )
         ds_conn.execute("INSERT OR IGNORE INTO sync_state (track, cursor) VALUES ('market:0700.HK', '2026-09-11')")
-    service = SyncService(ds_conn, transport=transport)
+    service = SyncService(ds_conn, transport=transport, news_enabled=False)
     service.run()
     return transport
 
@@ -137,7 +137,7 @@ def test_deleted_bar_refetched_next_sync(store, monkeypatch) -> None:
     conn = store._conn  # noqa: SLF001
     with conn:
         conn.execute("DELETE FROM market_bars WHERE canonical_symbol='0700.HK' AND date='2026-09-09'")
-    report = SyncService(conn, transport=FakeTransport({"0700.HK": _bars(["2026-09-09"])})).run()
+    report = SyncService(conn, transport=FakeTransport({"0700.HK": _bars(["2026-09-09"])}), news_enabled=False).run()
     repair = next(i for i in report.results if i.symbol == "0700.HK" and i.action == "gap-repair")
     assert repair.status == "ok"
     assert (

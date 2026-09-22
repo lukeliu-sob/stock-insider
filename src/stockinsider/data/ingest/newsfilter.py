@@ -423,6 +423,24 @@ def jaccard(a: frozenset[str], b: frozenset[str]) -> float:
     return len(a & b) / len(union)
 
 
+def survivor_rank(item: Mapping[str, object]) -> tuple[float, str]:
+    """The total-order key: higher tier wins, then earlier seendate.
+
+    GDELT seendates sort lexicographically as chronologically
+    (yyyyMMddTHHMMSSZ). Non-numeric tiers and non-string seendates are
+    rejected explicitly (fail-closed).
+
+    Implements: REQ-SI-FR-003 (ADR-002)
+    """
+    tier = item["source_tier"]
+    seen = item["seendate"]
+    if not isinstance(tier, (int, float)) or isinstance(tier, bool):
+        raise ValueError("survivor_rank: source_tier must be numeric")
+    if not isinstance(seen, str):
+        raise ValueError("survivor_rank: seendate must be a string")
+    return (-float(tier), seen)
+
+
 def pick_survivor(items: Sequence[Mapping[str, object]]) -> Mapping[str, object]:
     """Deterministic survivor: highest tier, then earliest seendate.
 
@@ -434,16 +452,7 @@ def pick_survivor(items: Sequence[Mapping[str, object]]) -> Mapping[str, object]
     """
     if not items:
         raise ValueError("pick_survivor: empty candidate set")
-    def _rank(item: Mapping[str, object]) -> tuple[float, str]:
-        tier = item["source_tier"]
-        seen = item["seendate"]
-        if not isinstance(tier, (int, float)) or isinstance(tier, bool):
-            raise ValueError("pick_survivor: source_tier must be numeric")
-        if not isinstance(seen, str):
-            raise ValueError("pick_survivor: seendate must be a string")
-        return (-float(tier), seen)
-
-    ordered = sorted(items, key=_rank)
-    if len(ordered) > 1 and _rank(ordered[0]) == _rank(ordered[1]):
+    ordered = sorted(items, key=survivor_rank)
+    if len(ordered) > 1 and survivor_rank(ordered[0]) == survivor_rank(ordered[1]):
         raise ValueError("pick_survivor: ambiguous survivor (tier and seendate tie)")
     return ordered[0]
