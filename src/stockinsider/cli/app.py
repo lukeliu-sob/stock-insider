@@ -66,6 +66,18 @@ def sync() -> None:
     )
     for item in report["results"]:
         typer.echo(f"{item['status']:8} {item['symbol']:12} {item['action']:11} {item['detail']}")
+    news = report.get("news")
+    if isinstance(news, dict) and "queries" in news:
+        typer.echo(
+            f"news {news['ran_at']}: timespan {news['timespan']}, "
+            f"cursor {'advanced' if news['cursor_advanced'] else 'held'}"
+        )
+        for query in news["queries"]:
+            detail = query.get("error") or (
+                f"new={query.get('kept_new', 0)} dup={query.get('dups', 0)} "
+                f"quarantined={query.get('quarantined', 0)}"
+            )
+            typer.echo(f"{query['status']:8} {query['bucket']:16} {detail}")
     if counts["failed"]:
         raise typer.Exit(code=1)
 

@@ -1515,3 +1515,36 @@ sessions:
       whitelist already contained api.gdeltproject.org since the
       TP-004 baseline, so no safety-critical change was needed.
     status: applied
+
+  - id: AILOG-0039
+    date: "2026-09-23"
+    tool: "pi coding agent (LLM session)"
+    role: ai
+    task: >-
+      BD-013 fix (owner live test of the first news sync): the stdlib
+      transport seam raises TransportError instead of returning
+      non-200 FetchResults, so the adapter's 429 branch was
+      unreachable and a fully throttled run classified every failure
+      as transport, attempted all queries, and advanced the cursor
+      past unsynced data. GDELT also soft-throttles with HTTP 200 +
+      empty body (live evidence: one query served exactly that),
+      which the JSON parser reported as malformed. Fix: the
+      exception path recovers the status from the message (429 ->
+      throttle); an empty-or-whitespace 200 body raises throttle
+      explicitly; the CLI sync rendering now shows the news track
+      (the report carried it, the surface dropped it). Four seam-shape
+      tests added (stub raising TransportError, empty body, no-status
+      exception, seam throttle aborting and holding the cursor);
+      live re-run verified abort + cursor-held. Lesson recorded:
+      throttle semantics must be tested at the seam level, not only
+      against returned status codes.
+    artifacts:
+      - src/stockinsider/data/ingest/news.py
+      - src/stockinsider/cli/app.py
+      - test/offline/test_ingest_news_sync.py
+      - docs/bug-diary.md
+      - docs/ai-use-log.yaml
+    human_decision: >-
+      Owner instructed live testing after merging TP-011b; the
+      findings and fix were reported back in-session.
+    status: applied

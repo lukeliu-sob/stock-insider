@@ -128,6 +128,58 @@ def test_fetch_failure_taxonomy() -> None:
         assert exc.value.kind == kind, (status, body)
 
 
+def test_throttle_at_the_transport_seam() -> None:
+    """The stdlib seam raises TransportError instead of returning 429."""
+    from stockinsider.data.ingest.http import TransportError
+
+    def raising(url, params):
+        raise TransportError("rate-limited", "HTTP 429 from https://api.gdeltproject.org/api/v2/doc/doc")
+
+    adapter = GdeltNewsAdapter(transport=raising)
+    with pytest.raises(NewsFetchError) as exc:
+        adapter.fetch("x", "1d")
+    assert exc.value.kind == "throttle"
+
+
+def test_soft_throttle_empty_body_is_throttle() -> None:
+    """GDELT soft-throttles with HTTP 200 + empty body (BD-013)."""
+    for body in ("", "   "):
+        adapter = GdeltNewsAdapter(transport=lambda url, params, _b=body: FetchResult(200, _b))
+        with pytest.raises(NewsFetchError) as exc:
+            adapter.fetch("x", "1d")
+        assert exc.value.kind == "throttle", body
+
+
+def test_transport_exception_without_status_is_transport() -> None:
+    from stockinsider.data.ingest.http import TransportError
+
+    def raising(url, params):
+        raise TransportError("network", "connection reset by peer")
+
+    adapter = GdeltNewsAdapter(transport=raising)
+    with pytest.raises(NewsFetchError) as exc:
+        adapter.fetch("x", "1d")
+    assert exc.value.kind == "transport"
+
+
+def test_seam_throttle_aborts_and_holds_cursor(tmp_path) -> None:
+    conn = _news_store(tmp_path)
+    _seed_symbol(conn)
+    from stockinsider.data.ingest.http import TransportError
+
+    calls: list[dict] = []
+
+    def throttling(url, params):
+        calls.append(dict(params))
+        raise TransportError("rate-limited", "HTTP 429 from https://api.gdeltproject.org/api/v2/doc/doc")
+
+    report = run_news_sync(conn, GdeltNewsAdapter(transport=throttling), sleep_fn=lambda s: None)
+    assert report["queries"][0]["status"] == "throttle"
+    assert all(q["status"] == "aborted-throttle" for q in report["queries"][1:])
+    assert len(calls) == 1
+    assert report["cursor_advanced"] is False
+
+
 def test_empty_result_missing_key_and_list_identical() -> None:
     adapter = GdeltNewsAdapter(transport=lambda url, params: FetchResult(200, "{}"))
     assert adapter.fetch("x", "1d") == []
