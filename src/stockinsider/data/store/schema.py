@@ -137,8 +137,29 @@ CREATE TABLE symbol_profiles (
 );
 """
 
+#: Migration v4 (TP-011b): extend the v1 news tables to the TP-011
+#: corpus shape (append-only ALTERs). The v1 global url_norm unique
+#: index is replaced by a per-bucket one: the same article may
+#: legitimately land in two buckets via two queries (design S3 Key A
+#: is bucket-scoped). failing_gate/detail supersede v1's free-text
+#: reason for quarantine visibility (INV-003).
+MIGRATION_V4 = """
+ALTER TABLE news ADD COLUMN url_raw TEXT;
+ALTER TABLE news ADD COLUMN language TEXT NOT NULL DEFAULT '';
+ALTER TABLE news ADD COLUMN sourcecountry TEXT;
+ALTER TABLE news ADD COLUMN score_breakdown TEXT NOT NULL DEFAULT '{}';
+ALTER TABLE news ADD COLUMN token_sources TEXT NOT NULL DEFAULT '[]';
+ALTER TABLE news ADD COLUMN source_tier REAL NOT NULL DEFAULT 0.0;
+DROP INDEX idx_news_url;
+CREATE UNIQUE INDEX idx_news_bucket_url ON news(symbol, url_norm);
+CREATE INDEX idx_news_bucket_seen ON news(symbol, published_at);
+ALTER TABLE news_quarantine ADD COLUMN bucket TEXT NOT NULL DEFAULT '';
+ALTER TABLE news_quarantine ADD COLUMN failing_gate TEXT NOT NULL DEFAULT '';
+ALTER TABLE news_quarantine ADD COLUMN detail TEXT NOT NULL DEFAULT '';
+"""
+
 #: Append-only migration list: index i holds migration to version i+1.
-MIGRATIONS: tuple[str, ...] = (MIGRATION_V1, MIGRATION_V2, MIGRATION_V3)
+MIGRATIONS: tuple[str, ...] = (MIGRATION_V1, MIGRATION_V2, MIGRATION_V3, MIGRATION_V4)
 
 #: Latest schema version this code understands.
 SCHEMA_VERSION = len(MIGRATIONS)

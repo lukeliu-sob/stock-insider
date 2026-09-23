@@ -58,7 +58,7 @@ def test_lazy_reset_on_date_change(store) -> None:
 def test_exhaustion_reports_deferred_items(store, monkeypatch) -> None:
     monkeypatch.setenv("EODHD_DAILY_CALLS", "1")
     conn = store._conn  # noqa: SLF001
-    service = SyncService(conn, transport=RateLimitedTransport())
+    service = SyncService(conn, transport=RateLimitedTransport(), news_enabled=False)
     report = service.run()
     assert report.calls_used == 1
     deferred = [i for i in report.results if i.status == "deferred"]
@@ -69,7 +69,7 @@ def test_exhaustion_reports_deferred_items(store, monkeypatch) -> None:
 def test_402_capacity_is_bought_no_retry(store) -> None:
     conn = store._conn  # noqa: SLF001
     transport = RateLimitedTransport()
-    report = SyncService(conn, transport=transport).run()
+    report = SyncService(conn, transport=transport, news_enabled=False).run()
     attempted = [i for i in report.results if i.action == "backfill"]
     assert attempted and all(i.status == "failed" for i in attempted)
     assert all("limit" in i.detail for i in attempted)
