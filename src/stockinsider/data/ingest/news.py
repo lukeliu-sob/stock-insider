@@ -119,11 +119,22 @@ class GdeltNewsAdapter:
         except NewsFetchError:
             raise
         except (OSError, RuntimeError) as exc:
+            # The stdlib seam raises TransportError instead of returning
+            # non-200 statuses (BD-013): recover the code from the message
+            # so throttle semantics survive the seam.
+            if "429" in str(exc):
+                raise NewsFetchError("throttle", f"HTTP 429 for timespan={timespan}") from exc
             raise NewsFetchError("transport", f"{type(exc).__name__}: {exc}") from exc
         if result.status == 429:
             raise NewsFetchError("throttle", f"HTTP 429 for timespan={timespan}")
         if result.status != 200:
             raise NewsFetchError("http", f"HTTP {result.status} for timespan={timespan}")
+        if not result.body.strip():
+            # GDELT soft-throttles some clients with HTTP 200 + empty body
+            # (BD-013, live evidence 2026-09-23): an empty artlist is never
+            # valid JSON, and treating it as malformed would advance the
+            # cursor past unsynced data.
+            raise NewsFetchError("throttle", f"empty body (soft throttle) for timespan={timespan}")
         try:
             payload = json.loads(result.body)
         except json.JSONDecodeError as exc:
