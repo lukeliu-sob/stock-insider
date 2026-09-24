@@ -1746,3 +1746,37 @@ sessions:
       are presented on this PR for approval (safety-critical
       path).
     status: applied
+
+  - id: AILOG-0045
+    date: "2026-09-24"
+    tool: "pi coding agent (LLM session)"
+    role: ai
+    task: >-
+      TP-013b implementation: the report gate closes the analysis
+      loop. REPL /report <symbol> composes the analysis turn
+      (gather market.quote, market.indicators, fundamentals.summary
+      and news.search-when-available first; cite numerics exactly
+      with data dates; label interpretations as hypotheses) and runs
+      it through the standard engine — the INV-001 post-check is the
+      gate. A passing response persists as a never-overwritten
+      artifact (report-<symbol>-NNN.md) carrying the session's
+      model/prompt provenance stamp and an explicit
+      passed-before-persistence note; a failing response degrades
+      and NOTHING is stored (echoed explicitly). Provider
+      unconfigured is explicit; nothing generated. Report-gate
+      suite (FR-008 regression scope): fabricated-number report
+      quarantined twice (regeneration included) and stores nothing;
+      fully-cited report stores exactly one artifact containing the
+      cited value and the stamp; the provider-down contract pinned.
+      _run_conversational_turn now returns the TurnOutcome the
+      command layer needs. Three new tests (290 total). Build via
+      git staging + checkout-index export (reverter active all
+      session; the heredoc backslash-collapse bit twice more).
+    artifacts:
+      - src/stockinsider/agent/repl.py
+      - test/offline/test_report_gate.py
+      - docs/ai-use-log.yaml
+    human_decision: >-
+      Owner approved TP-013 plan via PR #32; live BD-015 fix merged
+      as PR #34 earlier this round.
+    status: applied
