@@ -83,3 +83,16 @@ def test_env_override_changes_cap(store, monkeypatch) -> None:
     for _ in range(5):
         assert budget.try_spend(1)
     assert not budget.try_spend(1)
+
+
+
+def test_sync_report_as_dict_carries_news(tmp_path) -> None:
+    """BD-014: the news track must reach CLI/tool surfaces (INV-003)."""
+    from stockinsider.data.ingest.sync import SyncService
+    from stockinsider.data.store.db import open_db
+
+    conn = open_db(tmp_path / "bd014.sqlite")
+    report = SyncService(conn, news_enabled=False).run()
+    rendered = report.as_dict()
+    assert "news" in rendered  # explicit None when disabled, dict when run
+    assert rendered["news"] is None
