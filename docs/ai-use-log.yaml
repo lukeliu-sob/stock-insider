@@ -1643,3 +1643,34 @@ sessions:
       merged as PR #29 with the sanitizer and ADR-004 amendment
       owner-reviewed.
     status: applied
+
+  - id: AILOG-0042
+    date: "2026-09-24"
+    tool: "pi coding agent (LLM session)"
+    role: ai
+    task: >-
+      BD-014 fix (owner live test round): SyncReport.as_dict — the
+      sole rendering surface for the CLI sync command and the
+      sync.run tool — never included the news field added in
+      TP-011b, so both surfaces silently dropped the news track
+      while the report carried it (the CLI printed only the market
+      line during the owner's test). One-line fix plus a regression
+      test asserting the key exists and is explicitly None when the
+      track is disabled. Related finding from the same round,
+      reported to the owner for decision: api.deepseek.com/embeddings
+      returns 404 with the configured key — DeepSeek offers no
+      embeddings endpoint, so the embedding provider for retrieval
+      (TP-012b news.search / the embed command) needs an owner
+      config decision (separate OpenAI-compatible endpoint or a
+      local embedding server); the unconfigured state correctly
+      leaves the tool unregistered. GDELT remained throttled across
+      the test window (first 429 aborts the track, cursor held —
+      correct behavior, retry later).
+    artifacts:
+      - src/stockinsider/data/ingest/sync.py
+      - test/offline/test_sync_budget.py
+      - docs/ai-use-log.yaml
+    human_decision: >-
+      Owner instructed the live test round; fix applied and reported
+      back in-session.
+    status: applied
