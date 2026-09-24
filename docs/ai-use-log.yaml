@@ -1674,3 +1674,41 @@ sessions:
       Owner instructed the live test round; fix applied and reported
       back in-session.
     status: applied
+
+  - id: AILOG-0043
+    date: "2026-09-24"
+    tool: "pi coding agent (LLM session)"
+    role: ai
+    task: >-
+      TP-013a implementation (approved plan PR #32; approval flip
+      commit precedes this one): the deterministic indicator suite.
+      data/compute/indicators.py — valuation (PE/PB/PS with
+      undefined-for-non-positive-earnings/equity semantics),
+      profitability (ROE/net margin/gross margin), growth (YoY over
+      the quarterly series pairing periods four quarters apart),
+      risk (annualized volatility, sqrt-252, minimum 20 returns;
+      max drawdown with peak/trough dates). Every output carries
+      its data window; every gap is an explicit unavailable entry
+      (INV-003). Golden fixtures at 1e-6 including a hand-computed
+      volatility anchor (0.2444837 on the constructed +1 percent x
+      12 / -2 percent x 12 path). Registry market.indicators (READ,
+      COMPUTED source): one structured snapshot per symbol;
+      valuation honestly reports "share count not captured by the
+      fundamentals adapter" rather than fabricating per-share
+      ratios (share capture recorded as a 013b candidate). Tests:
+      nine new (282 total) across the FR-006 regression scope
+      (test_indicators.py) and the tool surface. Engineering: the
+      worktree reverter now wipes agent/registry.py and test files
+      within seconds; the whole build ran through git staging with
+      checkout-index export verification (BD-006).
+    artifacts:
+      - src/stockinsider/data/compute/indicators.py
+      - src/stockinsider/agent/registry.py
+      - test/offline/test_indicators.py
+      - test/offline/test_registry_indicators.py
+      - docs/ai-use-log.yaml
+    human_decision: >-
+      Owner approved TP-013 plan via PR #32 (embedding provider
+      deferred; valuation honestly unavailable rather than
+      approximated).
+    status: applied
