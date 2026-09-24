@@ -80,6 +80,7 @@ class SyncReport:
         return {
             "ran_at": self.ran_at,
             "results": [vars(item) | {} for item in self.results],
+            "news": self.news,
             "calls": {
                 "used": self.calls_used,
                 "remaining": self.calls_remaining,
