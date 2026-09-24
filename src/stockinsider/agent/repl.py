@@ -445,6 +445,20 @@ def _session_loop(
                     render_session(store, target, echo)
                 except SessionError as exc:
                     echo(f"error: {exc}")
+            elif name == "report":
+                if not args:
+                    echo("usage: /report <canonical-symbol>")
+                    continue
+                if engine is None:
+                    echo(
+                        "report requires a configured provider "
+                        f"(set {API_KEY_ENV} and the chat base_url); nothing generated"
+                    )
+                    continue
+                try:
+                    _run_report_turn(engine, store, record, args[0], echo)
+                except SessionError as exc:
+                    echo(f"error: {exc}")
             elif name == "watch":
                 _cmd_watch(
                     registry,
@@ -533,8 +547,65 @@ def _build_engine(store: SessionStore, registry: Registry, config: ProviderConfi
     return TurnEngine(store, registry, provider)
 
 
-def _run_conversational_turn(engine: TurnEngine, record: dict, line: str, echo: Callable[[str], None]) -> None:
+def _run_report_turn(
+    engine: TurnEngine,
+    store: SessionStore,
+    record: dict,
+    symbol: str,
+    echo: Callable[[str], None],
+) -> "Any | None":
+    """Compose and run the analysis-report turn; persist on pass (FR-008).
+
+    The report instruction gathers deterministic facts first; the
+    engine's post-check runs as always. A passing response is stored
+    as a never-overwritten artifact with the session's provenance
+    stamp; a failing response degrades and NOTHING is stored.
+
+    Implements: REQ-SI-FR-008, REQ-SI-INV-001 (ADR-001)
+    """
+    instruction = (
+        f"Produce an analysis report for {symbol}. Gather the deterministic facts "
+        "first via tools: market.quote, market.indicators, and fundamentals.summary "
+        "(plus news.search when it is available). Cite every numeric exactly as "
+        "returned by the tools, with its data date or window; keep interpretations "
+        "explicitly labeled as hypotheses (INV-002)."
+    )
+    outcome = _run_conversational_turn(engine, record, instruction, echo)
+    if outcome is None:
+        return None
+    if getattr(outcome, "quarantined", False) or getattr(outcome, "aborted", None):
+        echo("report not stored: the response failed the post-check (FR-008)")
+        return outcome
+    displayed = getattr(outcome, "displayed", "")
+    if not displayed.strip():
+        echo("report not stored: empty response")
+        return outcome
+    safe_symbol = symbol.replace(".", "_").replace(":", "_")
+    artifacts = store._require(record["session_id"]) / "artifacts"  # noqa: SLF001
+    existing = len(list(artifacts.glob(f"report-{safe_symbol}-*.md"))) if artifacts.exists() else 0
+    stamp = record.get("provenance", {})
+    header = (
+        f"# Analysis report — {symbol}\n\n"
+        f"- session: {record['session_id']}\n"
+        f"- model: {stamp.get('model_id', 'unknown')}\n"
+        f"- prompt: {stamp.get('prompt_version', 'unknown')}\n"
+        f"- stored: passed the INV-001 post-check before persistence (FR-008)\n\n---\n\n"
+    )
+    path = store.artifact(
+        record["session_id"],
+        f"report-{safe_symbol}-{existing + 1:03d}.md",
+        header + displayed + "\n",
+    )
+    echo(f"report stored: {path.name}")
+    return outcome
+
+
+def _run_conversational_turn(
+    engine: TurnEngine, record: dict, line: str, echo: Callable[[str], None]
+) -> "Any | None":
     """Run one free-text turn with streaming render and explicit failures.
+
+    Returns the engine's TurnOutcome (or None when interrupted).
 
     Implements: REQ-SI-FR-008, REQ-SI-FR-019 (ADR-001)
     """
@@ -544,7 +615,7 @@ def _run_conversational_turn(engine: TurnEngine, record: dict, line: str, echo: 
         sys.stdout.flush()
 
     try:
-        engine.run_turn(
+        return engine.run_turn(
             record["session_id"],
             line,
             profile=record["profile"],
@@ -554,8 +625,10 @@ def _run_conversational_turn(engine: TurnEngine, record: dict, line: str, echo: 
         )
     except KeyboardInterrupt:
         echo("\nturn interrupted")
+        return None
     except ProviderError as exc:
         echo(f"error: {exc}")
+    return None
 
 
 def render_session(store: SessionStore, session_id: str, echo: Callable[[str], None]) -> None:
