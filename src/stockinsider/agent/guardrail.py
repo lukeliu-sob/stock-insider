@@ -28,6 +28,21 @@ from stockinsider.shared.language import is_english_only
 
 _NUMBER_TOKEN = re.compile(r"-?\d[\d,]*(?:\.\d+)?")
 
+#: Line-leading enumeration markers ("1. ", "12) ") are document
+#: structure, not cited numerics (BD-016). A marker is at most three
+#: digits followed by a period/paren and whitespace; genuine values
+#: keep their decimals ("24879.2402" does not match) and four-digit
+#: years at line start are untouched.
+_ENUM_MARKER = re.compile(r"(?m)^\s{0,8}\d{1,3}[.)]\s")
+
+
+def _strip_enumeration(text: str) -> str:
+    """Remove line-leading enumeration markers (layout, not data).
+
+    Implements: REQ-SI-INV-001 (ADR-006, BD-016 amendment)
+    """
+    return _ENUM_MARKER.sub("", text)
+
 
 def _canon_number(value: float | int) -> str:
     if isinstance(value, float) and value.is_integer():
@@ -195,7 +210,7 @@ def postcheck_numbers(candidate: str, snapshot_values: object) -> NumberCheck:
     matched: list[str] = []
     failed: list[str] = []
     rounded: list[str] = []
-    for token in extract_numbers(candidate):
+    for token in extract_numbers(_strip_enumeration(candidate)):
         canon = _canon_token(token)
         if canon in pool:
             matched.append(token)
