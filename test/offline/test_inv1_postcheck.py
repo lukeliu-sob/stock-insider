@@ -228,3 +228,50 @@ def test_integer_adversarial_unchanged_with_markers() -> None:
     snapshot = {"tool": {"value": 100}}
     check = postcheck_numbers("value grew 101 percent", snapshot)
     assert not check.passed
+
+
+
+# -- BD-016: enumeration markers are layout, not data -----------------------
+
+
+def test_enumeration_ordinals_do_not_fail_the_check() -> None:
+    from stockinsider.agent.guardrail import postcheck_numbers
+
+    snapshot = {"tool": {"close": 24879.2402, "volume": 0}}
+    candidate = (
+        "## Report\n\nClose: 24879.2402.\n\nKnown gaps:\n\n"
+        "1. no news layer\n2. no fundamentals\n3. volume is 0\n"
+        "4. single-bar history\n5. ordinal six below\n6. done"
+    )
+    check = postcheck_numbers(candidate, snapshot)
+    assert check.passed, check.failed
+    assert "24879.2402" in check.matched
+
+
+def test_parenthetical_markers_stripped() -> None:
+    from stockinsider.agent.guardrail import postcheck_numbers
+
+    snapshot = {"tool": {"margin": 0.05}}
+    check = postcheck_numbers("Findings:\n1) margin 0.05\n2) done", snapshot)
+    assert check.passed
+
+
+def test_line_start_cited_values_survive() -> None:
+    from stockinsider.agent.guardrail import postcheck_numbers
+
+    snapshot = {"tool": {"value": 100}}
+    # a bare integer line-start value with a sentence period is a marker;
+    # the adversarial classes pin that such tokens never match anyway
+    check = postcheck_numbers("100. units were reported", snapshot)
+    assert check.passed  # 100 is in the pool; marker stripping is irrelevant
+    # decimals are never markers
+    check2 = postcheck_numbers("24879.2402 was the close", {"tool": {"close": 24879.2402}})
+    assert check2.passed
+
+
+def test_years_at_line_start_untouched() -> None:
+    from stockinsider.agent.guardrail import postcheck_numbers
+
+    snapshot = {"tool": {"year": 2026}}
+    check = postcheck_numbers("2026. What a year it was.", snapshot)
+    assert check.passed  # 2026 in pool regardless; four digits never strip

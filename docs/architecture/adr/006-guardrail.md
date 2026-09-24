@@ -74,3 +74,17 @@ admitted. Percent-display matches are tracked in the same
 `rounded` audit list. The identity prompt (v4) instructs citing
 the fraction as returned; the allowance is for the reading, not
 the citation.
+
+## Amendment 3 (2026-09-24) — BD-016: enumeration markers are layout
+
+The first live /report run numbered its "Known gaps" section; the
+ordinals ("1." .. "6.") were extracted as numeric tokens, matched
+nothing in the pool, and quarantined an otherwise fully-cited
+report through both the original and the regenerated response.
+Enumeration markers are document structure, not cited values:
+before extraction, a line-leading marker of one to three digits
+followed by a period or paren and whitespace is stripped. Genuine
+line-start values are safe by construction — a cited number keeps
+its decimals ("24879.2402" cannot match) and four-digit years
+exceed the marker width. Inline parenthetical references in prose
+are untouched (conservative: only line-leading markers strip).

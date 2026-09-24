@@ -1780,3 +1780,39 @@ sessions:
       Owner approved TP-013 plan via PR #32; live BD-015 fix merged
       as PR #34 earlier this round.
     status: applied
+
+  - id: AILOG-0046
+    date: "2026-09-24"
+    tool: "pi coding agent (LLM session)"
+    role: ai
+    task: >-
+      BD-016 fix (owner live /report test): the first live report run
+      numbered its Known-gaps section; the ordinals were extracted as
+      numeric tokens and quarantined an otherwise fully-cited report
+      through the original and the regenerated response. Fix:
+      line-leading enumeration markers (one to three digits plus
+      period/paren and whitespace) are stripped before extraction —
+      genuine line-start values are safe by construction (cited
+      numbers keep decimals; four-digit years exceed marker width);
+      inline prose is untouched (conservative). ADR-006 Amendment 3;
+      four new tests (294 total). Residual classes observed in the
+      same live round and deliberately NOT patched silently,
+      recorded for owner decision: inline enumerations in prose
+      ("items 1, 2, 3, 4") and token fragments from identifiers or
+      timestamps ("-002") still fail the exact-match pool; candidate
+      directions include quantity-shaped extraction (decimal or
+      unit-adjacent tokens only) at the cost of weakening the bare-
+      integer adversarial class, or an ordinal/fragment context
+      model. One transient TypeError (sqlite3 Row through
+      json.dumps) appeared exactly once during a turn whose
+      worktree files were being reverted mid-flight; not reproduced
+      in two subsequent runs; recorded for observation.
+    artifacts:
+      - src/stockinsider/agent/guardrail.py
+      - docs/architecture/adr/006-guardrail.md
+      - test/offline/test_inv1_postcheck.py
+      - docs/ai-use-log.yaml
+    human_decision: >-
+      Owner instructed the live test round; the marker-strip fix and
+      the recorded residual classes are presented on this PR.
+    status: applied
