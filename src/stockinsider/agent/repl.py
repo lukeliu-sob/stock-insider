@@ -36,6 +36,7 @@ from stockinsider.agent.registry import (
     Registry,
     register_data_tools,
     register_market_tools,
+    register_news_tools,
     register_sync_tools,
 )
 from stockinsider.agent.session import SessionError, SessionStore
@@ -79,7 +80,11 @@ def _cmd_sessions(store: SessionStore, args: list[str], echo: Callable[[str], No
         echo(f"{row['session_id']}  {row['created']}  {row['status']}  {symbols}  {row['profile']}")
 
 
-def build_registry(store: SessionStore, data_store: Any = None) -> Registry:
+def build_registry(
+    store: SessionStore,
+    data_store: Any = None,
+    embed_provider: "tuple[Any, str] | None" = None,
+) -> Registry:
     """Register the default deterministic tool set (ADR-005).
 
     Handlers are closures over existing agent modules; the registry
@@ -95,6 +100,7 @@ def build_registry(store: SessionStore, data_store: Any = None) -> Registry:
         register_data_tools(registry, data_store)
         register_sync_tools(registry, data_store)
         register_market_tools(registry, data_store)
+        register_news_tools(registry, data_store, embed_provider)
     registry.register(
         ToolSpec(
             name="budget.query",
@@ -413,7 +419,8 @@ def _session_loop(
     """
     config = resolve_config(data_root)
     apply_budget_overrides(config.budgets)
-    registry = build_registry(store, data_store)
+    embed_provider = _build_embed_provider(config)
+    registry = build_registry(store, data_store, embed_provider)
     engine = _build_engine(store, registry, config)
     while True:
         try:
@@ -498,6 +505,20 @@ def _session_loop(
             else:
                 _run_conversational_turn(engine, record, line, echo)
     return record
+
+
+def _build_embed_provider(config: ProviderConfig) -> "tuple[Any, str] | None":
+    """The (provider, model_id) pair for news.search, when configured.
+
+    Implements: REQ-SI-FR-007 (ADR-001)
+    """
+    if not config.embedding_base_url:
+        return None
+    key, _source = resolve_api_key()
+    if key is None:
+        return None
+    provider = OpenAICompatibleProvider(config, api_key=key)
+    return provider, config.embedding_model
 
 
 def _build_engine(store: SessionStore, registry: Registry, config: ProviderConfig) -> TurnEngine | None:

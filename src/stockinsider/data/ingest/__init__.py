@@ -21,6 +21,7 @@ from stockinsider.data.ingest.market import (
     MarketKeyMissing,
     store_bars,
 )
+from stockinsider.data.ingest.embed import run_embed
 from stockinsider.data.ingest.sync import SyncService, sync_status
 
 __all__ = [
@@ -34,6 +35,7 @@ __all__ = [
     "TransportError",
     "daily_cap",
     "missing_ranges",
+    "run_embed",
     "store_bars",
     "stdlib_fetch",
     "sync_status",

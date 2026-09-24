@@ -211,6 +211,74 @@ def register_market_tools(registry: Registry, data_store: Any) -> None:
     )
 
 
+def register_news_tools(
+    registry: Registry,
+    data_store: Any,
+    embed_provider: "tuple[Any, str] | None" = None,
+) -> None:
+    """Register the retrieval tool (FR-007: the only citable news source).
+
+    news.search embeds the query through the injected provider, runs
+    KNN over the vector store, and sanitizes every headline on the
+    egress into model context (SEC-002 layer one). Raw storage is
+    never altered. When the embedding provider is not configured the
+    tool is not registered (explicit absence, not a broken tool).
+
+    Implements: REQ-SI-FR-007, REQ-SI-SEC-002 (ADR-005, ADR-004)
+    """
+    if embed_provider is None:
+        return
+    provider, model_id = embed_provider
+
+    def _search(args: dict[str, Any]) -> dict[str, Any]:
+        from stockinsider.shared.sanitize import sanitize_text
+
+        query = str(args["query"])
+        k = int(args.get("k") or 5)
+        bucket = args.get("symbol") or None
+        vectors = provider.embed([query])
+        if not vectors:
+            raise KeyError("embedding provider returned no vector (INV-003)")
+        rows = data_store.news_knn(vectors[0], model_id, k=k, bucket=bucket)
+        results = [
+            {
+                "news_id": row["news_id"],
+                "title": sanitize_text(row["title_raw"]),
+                "url": row["url"],
+                "domain": row["domain"],
+                "seendate": row["seendate"],
+                "bucket": row["bucket"],
+                "distance": round(row["distance"], 4),
+            }
+            for row in rows
+        ]
+        return {
+            "query": sanitize_text(query),
+            "model_id": model_id,
+            "results": results,
+            "note": "titles sanitized at egress (SEC-002 layer one); cite only these items (FR-007)",
+        }
+
+    registry.register(
+        ToolSpec(
+            name="news.search",
+            description=(
+                "Semantic search over the stored news corpus (top-k by "
+                "embedding distance). Returns sanitized titles with source "
+                "URL, domain, publication timestamp and bucket; optional "
+                "symbol scopes the search to that bucket. The only citable "
+                "news source (FR-007)."
+            ),
+            arguments_spec={"query": "str"},
+            optional_spec={"k": "int", "symbol": "str"},
+            result_spec="dict",
+            effect_class=EffectClass.READ,
+            source_kind=SourceKind.API,
+        ),
+        _search,
+    )
+
+
 def wire_name(name: str) -> str:
     """Dot-free wire-safe form of a tool name (OpenAI function-name rule).
 
