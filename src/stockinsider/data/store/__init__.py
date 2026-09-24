@@ -54,6 +54,34 @@ class DataStore:
 
         record_resolution(self._conn, resolution)
 
+    def news_knn(
+        self,
+        query_vector: list[float],
+        model_id: str,
+        *,
+        k: int = 5,
+        bucket: str | None = None,
+    ) -> list[dict[str, Any]]:
+        """Top-k nearest news rows via sqlite-vec (fail-closed; ADR-003).
+
+        Implements: REQ-SI-FR-007 (ADR-003)
+        """
+        from stockinsider.data.store.vector import knn
+
+        hits = knn(self._conn, model_id, query_vector, k=k, bucket=bucket)
+        return [
+            {
+                "news_id": hit.news_id,
+                "title_raw": hit.title,
+                "url": hit.url,
+                "domain": hit.domain,
+                "seendate": hit.seendate,
+                "bucket": hit.bucket,
+                "distance": hit.distance,
+            }
+            for hit in hits
+        ]
+
     def run_sync(self) -> dict[str, Any]:
         """Execute one sync run (plan, budget, gaps, completeness) and report.
 

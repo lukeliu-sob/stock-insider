@@ -1596,3 +1596,50 @@ sessions:
       proposals protocol and is owner-reviewed on this PR (safety-
       critical gate).
     status: applied
+
+  - id: AILOG-0041
+    date: "2026-09-24"
+    tool: "pi coding agent (LLM session)"
+    role: ai
+    task: >-
+      TP-012b implementation: the retrieval loop closes. Registry
+      news.search (READ): query embedded through the injected
+      provider, KNN over the vec0 store via DataStore.news_knn,
+      every headline and the query echo sanitized at egress (SEC-002
+      layer one), structured results with news_id/title/url/domain/
+      seendate/bucket/distance and the FR-007 citation note. The tool
+      is registered only when the embedding provider is configured
+      (explicit absence beats a broken tool). Optional k and symbol
+      parameters ride optional_spec (the first draft used "int?"
+      suffixes the validator does not understand — the argument-
+      schema test caught it). REPL wiring: _build_embed_provider
+      reuses the resolved session config; CLI gains an explicit
+      "embed" backfill command with per-batch failure rendering.
+      Injection suite on the full path: eight payload classes
+      (override, role spoof, fake tool result, fullwidth
+      obfuscation, jailbreak family) seeded, embedded, and retrieved
+      — every egress surface inert, raw storage preserved,
+      watchlist state untouched after payload queries. Live gates:
+      retrieval quality (20 known-target questions, top-5 >= 0.80,
+      EVAL_SET=1) and embedding smoke (EMBED_SMOKE=1), both never
+      blocking. Engineering note: the worktree reverter now targets
+      src/stockinsider/agent/registry.py within seconds of any copy
+      — the entire build lives in git staging with checkout-index
+      export verification (BD-006 continues). 8 new offline tests
+      (272 total).
+    artifacts:
+      - src/stockinsider/data/store/__init__.py
+      - src/stockinsider/data/ingest/__init__.py
+      - src/stockinsider/agent/registry.py
+      - src/stockinsider/agent/repl.py
+      - src/stockinsider/cli/app.py
+      - test/offline/test_registry_news_tools.py
+      - test/offline/test_injection_suite.py
+      - test/live/test_retrieval_quality.py
+      - test/live/test_embedding_smoke.py
+      - docs/ai-use-log.yaml
+    human_decision: >-
+      Owner approved TP-012 plan via PR #28; 012a (foundations)
+      merged as PR #29 with the sanitizer and ADR-004 amendment
+      owner-reviewed.
+    status: applied

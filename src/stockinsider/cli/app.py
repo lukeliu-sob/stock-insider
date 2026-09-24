@@ -15,6 +15,7 @@ import typer
 
 from stockinsider import __version__
 from stockinsider.agent.providers import (
+    OpenAICompatibleProvider,
     config_path,
     mask_key,
     resolve_api_key,
@@ -79,6 +80,39 @@ def sync() -> None:
             )
             typer.echo(f"{query['status']:8} {query['bucket']:16} {detail}")
     if counts["failed"]:
+        raise typer.Exit(code=1)
+
+
+@app.command()
+def embed() -> None:
+    """Embed pending news rows into the retrieval index (idempotent).
+
+    Implements: REQ-SI-FR-007
+    """
+    from stockinsider.data.ingest.embed import run_embed
+
+    config = resolve_config()
+    key, _source = resolve_api_key()
+    if not config.embedding_base_url or key is None:
+        typer.echo(
+            "embedding provider not configured (embedding base_url + api key required); nothing done"
+        )
+        raise typer.Exit(code=1)
+    provider = OpenAICompatibleProvider(config, api_key=key)
+    data_store = open_data_store()
+    try:
+        report = run_embed(data_store.conn, provider.embed, config.embedding_model)
+    finally:
+        data_store.close()
+    typer.echo(
+        f"embed {report['ran_at']}: model {report['model_id']}, "
+        f"{report['embedded']} embedded ({report['pending_before']} pending before)"
+    )
+    for batch in report["failed_batches"]:
+        shown = batch["news_ids"][:3]
+        more = f"... +{len(batch['news_ids']) - 3}" if len(batch["news_ids"]) > 3 else ""
+        typer.echo(f"failed  {batch['error']} (news_ids {shown}{more})")
+    if report["failed_batches"]:
         raise typer.Exit(code=1)
 
 
