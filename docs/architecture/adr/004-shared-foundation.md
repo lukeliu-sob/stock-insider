@@ -42,3 +42,21 @@
 - pydantic adoption if hand-written validation surface grows past the threshold above.
 - Chinese-alias symbol-map exception (FR-014's carve-out) lands with the symbol layer; `language.py` is not modified for it — the exception is enforced at the symbol layer.
 - Egress whitelist growth (new vendors) rides with the data-side TPs that consume them; whitelist edits are `shared/` changes and follow this protocol.
+
+## Amendment 1 (2026-09-23) — TP-012: the sanitizer enters shared/
+
+`shared/sanitize.py` is the SEC-002 layer-one component
+(news-filtering-design §6): the one legal common dependency of
+`agent/context` and `data/ingest` for neutralizing instruction-like
+content in untrusted headlines before they enter model context.
+Semantics: total and deterministic (same input, same output; no
+configuration surface); NFKC normalization collapses obfuscation
+forms before pattern matching; control, zero-width and bidi
+characters are stripped; a closed set of directive patterns and
+role markers is replaced with the visible `[neutralized]` marker —
+sanitization never silently rephrases. Storage keeps raw text
+(evidence); only the egress path sanitizes. `has_active_directives`
+provides the post-check used by the injection suite: any active
+directive surviving the sanitizer is a sanitizer defect, not a
+content judgment. Pattern-list changes are adversarial-suite-gated
+(QA-002 discipline).

@@ -1548,3 +1548,51 @@ sessions:
       Owner instructed live testing after merging TP-011b; the
       findings and fix were reported back in-session.
     status: applied
+
+  - id: AILOG-0040
+    date: "2026-09-23"
+    tool: "pi coding agent (LLM session)"
+    role: ai
+    task: >-
+      TP-012a implementation (approved plan PR #28; approval flip
+      commit precedes this one): the retrieval loop's foundations.
+      shared/sanitize.py (safety-critical path, proposals protocol):
+      SEC-002 layer one — NFKC normalization collapses obfuscation
+      forms, control/zero-width/bidi characters stripped, a closed
+      directive set (overrides, role markers, fake tool output,
+      pretend/act-as variants) replaced with the visible
+      [neutralized] marker; deterministic and total; storage keeps
+      raw, egress sanitizes. ADR-004 Amendment 1 records the
+      semantics. data/store/vector.py: vec0 table in the same SQLite
+      file with the model-ID rule (registered model and dims;
+      mismatched insert/query/ensure fail closed with the explicit
+      rebuild-required error); pending/prune bookkeeping tolerant of
+      the uninitialized table; sqlite-vec unavailability is an
+      explicit VectorUnavailable (no keyword fallback). data/ingest/
+      embed.py: batched idempotent embedding with per-batch failure
+      isolation (generic provider exceptions are batch-scoped and
+      reported; VectorModelMismatch stops the run), injected embed
+      function (data side imports no provider). Engineering notes:
+      Python 3.13 rejects inline global flags not at pattern start,
+      so the directive alternation compiles once with IGNORECASE;
+      vec0 requires fixed float[N] dims at DDL time; the first KNN
+      bucket filter had k/bucket bind-order inverted (caught by the
+      bucket test returning empty); test pseudo-embeddings use
+      ord-sum hashing because str hash is process-randomized, and
+      ordering assertions use constructed orthogonal vectors rather
+      than token luck. 13 new tests (260 total).
+    artifacts:
+      - src/stockinsider/shared/sanitize.py
+      - src/stockinsider/data/store/vector.py
+      - src/stockinsider/data/ingest/embed.py
+      - docs/architecture/adr/004-shared-foundation.md
+      - test/offline/test_sanitize.py
+      - test/offline/test_store_vector.py
+      - test/offline/test_ingest_embed.py
+      - docs/ai-use-log.yaml
+    human_decision: >-
+      Owner approved the TP-012 plan via PR #28 including the
+      sanitizer-in-shared design; the shared/ landing follows the
+      proposals protocol and is owner-reviewed on this PR (safety-
+      critical gate).
+    status: applied
