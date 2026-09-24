@@ -57,3 +57,20 @@ bound tightens with d (a truncation like ...241 against ...2402
 exceeds the d=3 bound). The identity prompt (v3) instructs exact
 rendering as belt-and-braces. The adversarial suite grows four
 cases pinning the allowance's edges.
+
+## Amendment 2 (2026-09-24) — BD-015: percent-display allowance
+
+Live analysis over the indicator snapshot: the model cited
+0.18573119 (exact) and added "about 18.57%" as a reading — a
+fraction-to-percent conversion with rounding, mechanically
+untraceable, semantically faithful. Refined: a token equal to a
+pool value x 100 within half an ulp of its 2-4 decimal rendering
+matches when (and only when) a percent marker (%, percent, pct)
+is adjacent to the token in the response text. Bare numbers never
+qualify for the conversion match, so the integer-scale
+adversarial classes (the +/-1 family) fail exactly as before;
+percent readings of non-fractional pool values are harmless but
+admitted. Percent-display matches are tracked in the same
+`rounded` audit list. The identity prompt (v4) instructs citing
+the fraction as returned; the allowance is for the reading, not
+the citation.

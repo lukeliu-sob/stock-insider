@@ -108,6 +108,45 @@ def _pool_floats(snapshot_values: object) -> list[float]:
 _DISPLAY_DECIMALS = (2, 3, 4)
 
 
+#: Percent-display conversion: a token that equals a pool value
+#: multiplied by 100 (2-4 decimals) matches only when a percent
+#: marker is adjacent in the response text (BD-015). Bare numbers
+#: never qualify; the marker requirement keeps integer-scale
+#: adversarial classes failing exactly as before.
+_PERCENT_MARKER = re.compile(r"%(?!\d)|\bpercent\b|\bpct\b", re.IGNORECASE)
+
+
+def _percent_marker_adjacent(candidate: str, token: str) -> bool:
+    """True when some occurrence of ``token`` sits next to a percent marker."""
+    search_from = 0
+    while True:
+        index = candidate.find(token, search_from)
+        if index < 0:
+            return False
+        window = candidate[max(0, index - 12): index + len(token) + 12]
+        if _PERCENT_MARKER.search(window):
+            # exclude the token itself being part of a longer number
+            return True
+        search_from = index + len(token)
+
+
+def _display_percent_of(value: float, token: str, candidate: str) -> bool:
+    """True when token is the percent rendering of a fractional value.
+
+    Implements: REQ-SI-INV-001 (ADR-006, BD-015 amendment)
+    """
+    decimals = _token_decimals(token)
+    if decimals not in (1, 2, 3, 4):
+        return False
+    try:
+        rendered = float(token)
+    except ValueError:
+        return False
+    if abs(value * 100.0 - rendered) > 0.5 * 10**-decimals + 1e-9:
+        return False
+    return _percent_marker_adjacent(candidate, token)
+
+
 def _token_decimals(token: str) -> int | None:
     if "." not in token:
         return 0
@@ -163,6 +202,11 @@ def postcheck_numbers(candidate: str, snapshot_values: object) -> NumberCheck:
             continue
         if any(_display_rounds_to(value, token) for value in floats):
             rounded.append(token)
+            continue
+        if any(
+            _display_percent_of(value, token, candidate) for value in floats
+        ):
+            rounded.append(token)  # percent-display conversion (BD-015)
             continue
         failed.append(token)
     return NumberCheck(passed=not failed, matched=matched, failed=failed, rounded=rounded)

@@ -180,3 +180,51 @@ def test_plus_minus_one_adversarial_unchanged() -> None:
     for token in ("101", "99", "100.5", "100.99"):
         check = postcheck_numbers(f"value is {token}", snapshot)
         assert not check.passed, token
+
+
+
+# -- BD-015: percent-display conversion (marker-gated) ---------------------
+
+
+def test_percent_display_with_marker_passes() -> None:
+    from stockinsider.agent.guardrail import postcheck_numbers
+
+    snapshot = {"market.indicators": {"volatility": 0.18573119602909305}}
+    check = postcheck_numbers("volatility is 0.18573119602909305 (about 18.57% annualized)", snapshot)
+    assert check.passed
+    assert "18.57" in check.rounded
+
+
+def test_percent_word_marker_passes() -> None:
+    from stockinsider.agent.guardrail import postcheck_numbers
+
+    snapshot = {"tool": {"margin": 0.05}}
+    check = postcheck_numbers("net margin 0.05, i.e. 5.0 percent of revenue", snapshot)
+    assert check.passed
+
+
+def test_bare_converted_number_without_marker_fails() -> None:
+    from stockinsider.agent.guardrail import postcheck_numbers
+
+    snapshot = {"tool": {"volatility": 0.18573119602909305}}
+    check = postcheck_numbers("volatility is 18.57 on an annualized basis", snapshot)
+    assert not check.passed  # no percent marker: not a display conversion
+
+
+def test_wrong_percent_value_fails() -> None:
+    from stockinsider.agent.guardrail import postcheck_numbers
+
+    snapshot = {"tool": {"volatility": 0.18573119602909305}}
+    for token in ("18.58%", "9.26%", "1857%"):
+        check = postcheck_numbers(f"volatility about {token}", snapshot)
+        assert not check.passed, token
+
+
+def test_integer_adversarial_unchanged_with_markers() -> None:
+    from stockinsider.agent.guardrail import postcheck_numbers
+
+    # a percent marker next to a wrong integer-scale number must not
+    # rescue it: 101 is not 100 x anything in the pool as a 2-4dp token
+    snapshot = {"tool": {"value": 100}}
+    check = postcheck_numbers("value grew 101 percent", snapshot)
+    assert not check.passed

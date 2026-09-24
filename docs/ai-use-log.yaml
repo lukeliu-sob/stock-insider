@@ -1712,3 +1712,37 @@ sessions:
       deferred; valuation honestly unavailable rather than
       approximated).
     status: applied
+
+  - id: AILOG-0044
+    date: "2026-09-24"
+    tool: "pi coding agent (LLM session)"
+    role: ai
+    task: >-
+      BD-015 fix (owner live test of market.indicators): the model
+      cited the volatility exactly (0.18573119602909305, window and
+      dates carried) and added a percent reading (about 18.57%) —
+      a fraction-to-percent conversion, mechanically untraceable,
+      semantically faithful; the post-check quarantined on the
+      reading while every citation was exact. Refined per the
+      BD-012 pattern: a token equal to a pool value x 100 within
+      half an ulp of its 1-4 decimal rendering matches when (and
+      only when) a percent marker (%, percent, pct) is adjacent in
+      the response text — bare numbers never qualify, so the +/-
+      1 adversarial classes fail exactly as before; matches are
+      tracked in the rounded audit list. identity.md v3 -> v4:
+      cite the fraction as returned; the reading belongs to
+      interpretation prose. ADR-006 Amendment 2; five new tests
+      (287 total) including the no-marker and wrong-value
+      negatives.
+    artifacts:
+      - src/stockinsider/agent/guardrail.py
+      - prompts/identity.md
+      - docs/architecture/adr/006-guardrail.md
+      - test/offline/test_inv1_postcheck.py
+      - docs/ai-use-log.yaml
+    human_decision: >-
+      Owner instructed the live test round; the finding, the
+      marker-gated allowance design, and the identity v4 change
+      are presented on this PR for approval (safety-critical
+      path).
+    status: applied
