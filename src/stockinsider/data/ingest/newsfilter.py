@@ -290,18 +290,29 @@ def _result(
     )
 
 
-def score_against_symbol(title: str, domain: object, entry: SymbolEntry) -> ScoreResult:
+def score_against_symbol(
+    title: str,
+    domain: object,
+    entry: SymbolEntry,
+    *,
+    entities: "Sequence[str] | None" = None,
+) -> ScoreResult:
     """Score one headline against one symbol bucket.
 
     token_evidence: +1 ticker token (case-sensitive, word-boundary),
-    +1 official-name phrase, +0.5 for any alias containment (capped once).
-    Aliases containing the official name do not double-count.
+    +1 official-name phrase, +0.5 for any alias containment (capped
+    once), +1 vendor-entity hit — the item's symbols list naming the
+    canonical symbol exactly (TP-014: the vendor did the entity
+    resolution; stronger than token heuristics, capped once).
 
-    Implements: REQ-SI-FR-003 (ADR-002)
+    Implements: REQ-SI-FR-003 (ADR-002, TP-014)
     """
     norm = normalize_title(title)
     evidence = 0.0
     sources: list[str] = []
+    if entities and entry.canonical_symbol in entities:
+        evidence += 1.0
+        sources.append(f"entity:{entry.canonical_symbol}")
     ticker = _ticker_hit(title, entry.ticker_tokens)
     if ticker is not None:
         evidence += 1.0

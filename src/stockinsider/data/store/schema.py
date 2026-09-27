@@ -158,8 +158,24 @@ ALTER TABLE news_quarantine ADD COLUMN failing_gate TEXT NOT NULL DEFAULT '';
 ALTER TABLE news_quarantine ADD COLUMN detail TEXT NOT NULL DEFAULT '';
 """
 
+#: Migration v5 (TP-014): the EODHD news source stores body text and
+#: vendor sentiment verbatim (evidence, never a scoring input), plus a
+#: source discriminator for per-source status counts.
+MIGRATION_V5 = """
+ALTER TABLE news ADD COLUMN content TEXT;
+ALTER TABLE news ADD COLUMN sentiment TEXT;
+ALTER TABLE news ADD COLUMN source TEXT NOT NULL DEFAULT 'gdelt';
+ALTER TABLE news_quarantine ADD COLUMN source TEXT NOT NULL DEFAULT 'gdelt';
+"""
+
 #: Append-only migration list: index i holds migration to version i+1.
-MIGRATIONS: tuple[str, ...] = (MIGRATION_V1, MIGRATION_V2, MIGRATION_V3, MIGRATION_V4)
+MIGRATIONS: tuple[str, ...] = (
+    MIGRATION_V1,
+    MIGRATION_V2,
+    MIGRATION_V3,
+    MIGRATION_V4,
+    MIGRATION_V5,
+)
 
 #: Latest schema version this code understands.
 SCHEMA_VERSION = len(MIGRATIONS)

@@ -1816,3 +1816,44 @@ sessions:
       Owner instructed the live test round; the marker-strip fix and
       the recorded residual classes are presented on this PR.
     status: applied
+
+  - id: AILOG-0047
+    date: "2026-09-27"
+    tool: "pi coding agent (LLM session)"
+    role: ai
+    task: >-
+      TP-014 implementation (approved plan PR #37; approval flip
+      commit precedes this one): EODHD news as the primary
+      symbol-scoped source. EodhdNewsAdapter on the shared transport
+      seam (same key env, same classified failure taxonomy with 402
+      keeping capacity-is-bought semantics); item mapping converts
+      vendor ISO dates to the sortable seendate form, derives the
+      domain from the link, and records the vendor-stated English
+      language per the plan. Scoring refinement: an exact
+      canonical-symbol hit in the item's symbols list is +1 token
+      evidence capped once (vendor entity resolution); name/alias/
+      ticker logic unchanged as fallback. Schema v5 stores content
+      and sentiment verbatim as vendor evidence (never a scoring
+      input) plus a source discriminator; cross-source dedup rides
+      the existing Key A/Key B with the survivor order. run_eodhd_
+      news_sync spends the shared EODHD budget per request with
+      deferred semantics; SyncService composes gdelt + eodhd tracks
+      under per-source isolation (one failing never fails the
+      other, and neither fails the market track); CLI sync renders
+      both source sections; news_status gains per-source counts.
+      Eight new tests (302 total) including cross-source dedup and
+      budget deferral. Live probes from 2026-09-27 recorded in the
+      plan are the fixture ground truth.
+    artifacts:
+      - src/stockinsider/data/ingest/eodnews.py
+      - src/stockinsider/data/ingest/newsfilter.py
+      - src/stockinsider/data/ingest/news.py
+      - src/stockinsider/data/ingest/sync.py
+      - src/stockinsider/data/store/schema.py
+      - src/stockinsider/cli/app.py
+      - test/offline/test_ingest_eodnews.py
+      - test/offline/test_ingest_news_sync.py
+      - docs/ai-use-log.yaml
+    human_decision: >-
+      Owner approved the live-evidence plan via PR #37 review.
+    status: applied
