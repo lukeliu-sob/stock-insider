@@ -44,6 +44,22 @@ def _strip_enumeration(text: str) -> str:
     return _ENUM_MARKER.sub("", text)
 
 
+#: ISO calendar dates in responses (2026-09-23) normalize to the
+#: compact form the pool already carries (20260923, from GDELT-style
+#: seendates). Without this, the extractor reads the hyphenated form
+#: as a year plus orphaned month/day fragments (-09, -23) that match
+#: nothing (BD-018).
+_ISO_DATE = re.compile(r"(?<!\d)(\d{4})-(\d{2})-(\d{2})(?!\d)")
+
+
+def _normalize_dates(text: str) -> str:
+    """Fold ISO calendar dates into the pool's compact form.
+
+    Implements: REQ-SI-INV-001 (ADR-006, BD-018 amendment)
+    """
+    return _ISO_DATE.sub(r"\1\2\3", text)
+
+
 def _canon_number(value: float | int) -> str:
     if isinstance(value, float) and value.is_integer():
         return str(int(value))
@@ -85,7 +101,7 @@ def _values_pool(snapshot_values: object) -> set[str]:
         if isinstance(value, (int, float)):
             pool.add(_canon_number(value))
         elif isinstance(value, str):
-            for token in extract_numbers(value):
+            for token in extract_numbers(_normalize_dates(value)):
                 pool.add(_canon_token(token))
 
     _walk(snapshot_values, _sink)
@@ -105,7 +121,7 @@ def _pool_floats(snapshot_values: object) -> list[float]:
         if isinstance(value, (int, float)):
             floats.append(float(value))
         elif isinstance(value, str):
-            for token in extract_numbers(value):
+            for token in extract_numbers(_normalize_dates(value)):
                 try:
                     floats.append(float(token))
                 except ValueError:
@@ -210,7 +226,7 @@ def postcheck_numbers(candidate: str, snapshot_values: object) -> NumberCheck:
     matched: list[str] = []
     failed: list[str] = []
     rounded: list[str] = []
-    for token in extract_numbers(_strip_enumeration(candidate)):
+    for token in extract_numbers(_normalize_dates(_strip_enumeration(candidate))):
         canon = _canon_token(token)
         if canon in pool:
             matched.append(token)

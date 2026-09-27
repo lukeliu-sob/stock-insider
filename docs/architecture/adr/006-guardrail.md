@@ -88,3 +88,18 @@ line-start values are safe by construction — a cited number keeps
 its decimals ("24879.2402" cannot match) and four-digit years
 exceed the marker width. Inline parenthetical references in prose
 are untouched (conservative: only line-leading markers strip).
+
+## Amendment 4 (2026-09-27) — BD-018: ISO dates fold to the pool's form
+
+The first live news-analysis turn cited headlines with ISO dates
+(2026-09-23) while the pool carries GDELT-style compact seendates;
+the extractor read the hyphenated form as a year plus orphaned
+month/day fragments (-09, -23) that matched nothing, quarantining
+an otherwise fully-cited analysis. Fix: before extraction, an ISO
+calendar date (exactly 4-2-2 digit groups, not embedded in longer
+numbers) folds to the compact YYYYMMDD form — which is precisely
+the token the pool already yields from seendate strings. This is a
+rendering-convention alignment (same family as BD-012/015/016),
+not a tolerance: no numeric comparison changes, and the adversar-
+ial classes are unaffected (a fabricated compact date still must
+match the pool exactly).
