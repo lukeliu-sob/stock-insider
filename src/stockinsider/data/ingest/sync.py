@@ -366,12 +366,19 @@ class SyncService:
         # News track (TP-011b): after the market track, isolated — a news
         # failure never fails the market report (design §8).
         if self._news_enabled:
-            try:
-                report.news = run_news_sync(
+            report.news = {}
+            try:  # GDELT: macro groups (and symbols while throttled)
+                report.news["gdelt"] = run_news_sync(
                     self._conn, adapter=GdeltNewsAdapter(transport=self._transport)
                 )
             except Exception as exc:  # explicit isolation boundary
-                report.news = {"failed": f"news track aborted: {exc}"}
+                report.news["gdelt"] = {"failed": f"gdelt track aborted: {exc}"}
+            try:  # EODHD: primary symbol-scoped source (TP-014)
+                from stockinsider.data.ingest.eodnews import run_eodhd_news_sync
+
+                report.news["eodhd"] = run_eodhd_news_sync(self._conn)
+            except Exception as exc:  # explicit isolation boundary
+                report.news["eodhd"] = {"failed": f"eodhd track aborted: {exc}"}
         return report
 
 

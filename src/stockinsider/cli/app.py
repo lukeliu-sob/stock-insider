@@ -68,17 +68,34 @@ def sync() -> None:
     for item in report["results"]:
         typer.echo(f"{item['status']:8} {item['symbol']:12} {item['action']:11} {item['detail']}")
     news = report.get("news")
-    if isinstance(news, dict) and "queries" in news:
-        typer.echo(
-            f"news {news['ran_at']}: timespan {news['timespan']}, "
-            f"cursor {'advanced' if news['cursor_advanced'] else 'held'}"
-        )
-        for query in news["queries"]:
-            detail = query.get("error") or (
-                f"new={query.get('kept_new', 0)} dup={query.get('dups', 0)} "
-                f"quarantined={query.get('quarantined', 0)}"
+    if isinstance(news, dict) and "gdelt" in news:
+        gdelt = news["gdelt"]
+        if isinstance(gdelt, dict) and "queries" in gdelt:
+            typer.echo(
+                f"news/gdelt {gdelt['ran_at']}: timespan {gdelt['timespan']}, "
+                f"cursor {'advanced' if gdelt['cursor_advanced'] else 'held'}"
             )
-            typer.echo(f"{query['status']:8} {query['bucket']:16} {detail}")
+            for query in gdelt["queries"]:
+                detail = query.get("error") or (
+                    f"new={query.get('kept_new', 0)} dup={query.get('dups', 0)} "
+                    f"quarantined={query.get('quarantined', 0)}"
+                )
+                typer.echo(f"{query['status']:8} {query['bucket']:16} {detail}")
+        else:
+            typer.echo(f"news/gdelt failed: {gdelt}")
+    if isinstance(news, dict) and "eodhd" in news:
+        eodhd = news["eodhd"]
+        if isinstance(eodhd, dict) and "queries" in eodhd:
+            typer.echo(f"news/eodhd {eodhd['ran_at']}: calls {eodhd['calls_spent']}")
+            for query in eodhd["queries"]:
+                detail = query.get("error") or (
+                    f"new={query.get('kept_new', 0)} dup={query.get('dups', 0)} "
+                    f"quarantined={query.get('quarantined', 0)} "
+                    f"rejected={query.get('rejected', 0)}"
+                )
+                typer.echo(f"{query['status']:8} {query['bucket']:16} {detail}")
+        else:
+            typer.echo(f"news/eodhd failed: {eodhd}")
     if counts["failed"]:
         raise typer.Exit(code=1)
 

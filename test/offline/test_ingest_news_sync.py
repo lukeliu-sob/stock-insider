@@ -327,7 +327,8 @@ def test_track_isolation_inside_market_sync(tmp_path) -> None:
     service = SyncService(conn, transport=lambda url, params: FetchResult(429, "{}"))
     report = service.run()
     assert report.news is not None
-    assert report.news["queries"][0]["status"] == "throttle"
+    assert report.news["gdelt"]["queries"][0]["status"] == "throttle"
+    assert "eodhd" in report.news  # both tracks present (TP-014 composition)
     assert isinstance(report.results, list)  # market report intact
 
 

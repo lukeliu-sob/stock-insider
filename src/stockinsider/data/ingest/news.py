@@ -491,11 +491,15 @@ def news_status(conn: sqlite3.Connection) -> dict[str, Any]:
     buckets = conn.execute(
         "SELECT symbol, COUNT(*) AS n FROM news GROUP BY symbol ORDER BY symbol"
     ).fetchall()
+    by_source = conn.execute(
+        "SELECT source, COUNT(*) AS n FROM news GROUP BY source ORDER BY source"
+    ).fetchall()
     return {
         "cursor": cursor,
         "articles": articles,
         "quarantined": quarantined,
         "buckets": [{"bucket": row["symbol"], "articles": row["n"]} for row in buckets],
+        "by_source": {row["source"] or "gdelt": row["n"] for row in by_source},
     }
 
 
