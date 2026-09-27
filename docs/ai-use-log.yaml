@@ -1890,3 +1890,38 @@ sessions:
       deferred) and instructed the live test rerun after adding
       EODHD_DAILY_CALLS to the environment file.
     status: applied
+
+  - id: AILOG-0049
+    date: "2026-09-27"
+    tool: "pi coding agent (LLM session)"
+    role: ai
+    task: >-
+      BD-018 fix (owner live news-analysis test): the agent cited
+      headlines with ISO dates (2026-09-23) while the pool carries
+      GDELT-style compact seendates; the extractor read the
+      hyphenated form as a year plus orphaned month/day fragments
+      (-09, -23), quarantining an otherwise fully-cited analysis
+      through dozens of spurious tokens. Fix (both sides): an ISO
+      calendar date (exactly 4-2-2 digit groups, not embedded in
+      longer numbers) folds to the compact YYYYMMDD form in the
+      candidate AND in pool string extraction — which is precisely
+      the token seendate strings already yield. ADR-006 Amendment
+      4; four new tests (308 total) including fabricated-date
+      negatives. Live re-run on the export build (reverter-proof
+      driver): the same question now fails on exactly two bare
+      small integers — the previously recorded inline-ordinal
+      residual class, still awaiting the owner extraction-semantics
+      decision; every date and headline citation traces. The same
+      round: news corpus 148 items across three HK symbols
+      (0700/9988/1211), vendor sentiment stored verbatim, and the
+      agent's thematic analysis (cloud/AI clusters, sentiment-distribution
+      caveat as a sampling observation) demonstrated end to end.
+    artifacts:
+      - src/stockinsider/agent/guardrail.py
+      - docs/architecture/adr/006-guardrail.md
+      - test/offline/test_inv1_postcheck.py
+      - docs/ai-use-log.yaml
+    human_decision: >-
+      Owner instructed the live verification round (option A
+      news.recent, env budget line added).
+    status: applied
