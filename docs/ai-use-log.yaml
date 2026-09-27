@@ -1857,3 +1857,36 @@ sessions:
     human_decision: >-
       Owner approved the live-evidence plan via PR #37 review.
     status: applied
+
+  - id: AILOG-0048
+    date: "2026-09-27"
+    tool: "pi coding agent (LLM session)"
+    role: ai
+    task: >-
+      news.recent (TP-012 retrieval surface amendment; owner chose
+      option A while the embedding provider stays deferred): a
+      deterministic, embedding-independent READ tool — the latest
+      stored headlines for a symbol bucket, newest first, titles
+      sanitized at egress (SEC-002 layer one), with source URL,
+      domain, publication timestamp, source discriminator, and the
+      vendor sentiment reading verbatim. Registered whenever a data
+      store is present (no provider requirement); empty buckets
+      raise the explicit no-stored-news error (INV-003). Registered
+      in the same news family as news.search, which stays
+      provider-gated. Two new tests (304 total) including a payload
+      headline through the sanitizer and the empty-bucket contract.
+      Context recorded from the same live round: EODHD search does
+      not index HK listings (BD-017) — three HK symbols were
+      verified via direct EOD fetches and added under the owner's
+      explicit instruction; the worktree reverter left a
+      conflict-marked eodnews.py mid-test (restored from HEAD; the
+      build discipline remains git staging + export).
+    artifacts:
+      - src/stockinsider/agent/registry.py
+      - test/offline/test_registry_news_tools.py
+      - docs/ai-use-log.yaml
+    human_decision: >-
+      Owner chose option A (news.recent now, embedding decision
+      deferred) and instructed the live test rerun after adding
+      EODHD_DAILY_CALLS to the environment file.
+    status: applied
