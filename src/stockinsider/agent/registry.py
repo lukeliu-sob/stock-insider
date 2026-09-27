@@ -314,16 +314,76 @@ def register_news_tools(
     data_store: Any,
     embed_provider: "tuple[Any, str] | None" = None,
 ) -> None:
-    """Register the retrieval tool (FR-007: the only citable news source).
+    """Register the news retrieval tools (FR-007: citable news sources).
 
-    news.search embeds the query through the injected provider, runs
-    KNN over the vector store, and sanitizes every headline on the
-    egress into model context (SEC-002 layer one). Raw storage is
-    never altered. When the embedding provider is not configured the
-    tool is not registered (explicit absence, not a broken tool).
+    news.recent is deterministic and embedding-independent: the
+    latest stored headlines for a symbol bucket, sanitized at
+    egress. news.search embeds the query through the injected
+    provider and runs KNN over the vector store (registered only
+    when the embedding provider is configured — explicit absence,
+    not a broken tool). Raw storage is never altered.
 
     Implements: REQ-SI-FR-007, REQ-SI-SEC-002 (ADR-005, ADR-004)
     """
+
+    def _recent(args: dict[str, Any]) -> dict[str, Any]:
+        from stockinsider.shared.sanitize import sanitize_text
+
+        symbol = str(args["symbol"])
+        k = int(args.get("k") or 5)
+        rows = data_store.conn.execute(
+            "SELECT title, url_raw, domain, published_at, source, sentiment"
+            " FROM news WHERE symbol = ? ORDER BY published_at DESC LIMIT ?",
+            (symbol, k),
+        ).fetchall()
+        if not rows:
+            raise KeyError(
+                f"{symbol}: no stored news for this bucket (sync first; INV-003)"
+            )
+        items = []
+        for row in rows:
+            sentiment = None
+            if row["sentiment"]:
+                try:
+                    import json as _json
+
+                    sentiment = _json.loads(row["sentiment"])
+                except ValueError:
+                    sentiment = None
+            items.append(
+                {
+                    "title": sanitize_text(str(row["title"])),
+                    "url": str(row["url_raw"]),
+                    "domain": str(row["domain"]),
+                    "seendate": str(row["published_at"]),
+                    "source": str(row["source"] or "gdelt"),
+                    "sentiment": sentiment,  # vendor evidence, verbatim
+                }
+            )
+        return {
+            "symbol": symbol,
+            "count": len(items),
+            "items": items,
+            "note": "titles sanitized at egress (SEC-002 layer one); cite only these items (FR-007)",
+        }
+
+    registry.register(
+        ToolSpec(
+            name="news.recent",
+            description=(
+                "Latest stored news headlines for a watchlist symbol (most recent "
+                "first): sanitized title, source URL, domain, publication timestamp, "
+                "source (gdelt/eodhd), and the vendor sentiment reading. Deterministic; "
+                "no embedding. A citable news source (FR-007)."
+            ),
+            arguments_spec={"symbol": "str"},
+            optional_spec={"k": "int"},
+            result_spec="dict",
+            effect_class=EffectClass.READ,
+            source_kind=SourceKind.API,
+        ),
+        _recent,
+    )
     if embed_provider is None:
         return
     provider, model_id = embed_provider
