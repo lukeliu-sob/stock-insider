@@ -123,6 +123,128 @@ class DataStore:
 
         return render_info(self._conn, symbol)
 
+    def market_quote(self, symbol: str) -> "dict[str, Any] | None":
+        """Latest stored EOD bar for a symbol (None if absent).
+
+        Implements: REQ-SI-FR-005 (ADR-005, ADR-002; gamma restoration)
+        """
+        row = self._conn.execute(
+            "SELECT date, open, high, low, close, adjusted_close, volume, currency "
+            "FROM market_bars WHERE canonical_symbol = ? ORDER BY date DESC LIMIT 1",
+            (symbol,),
+        ).fetchone()
+        return dict(row) if row is not None else None
+
+    def fundamentals_coverage(self, symbol: str) -> dict[str, Any]:
+        """Latest fundamentals quarter plus the FR-002 coverage ratio.
+
+        Implements: REQ-SI-FR-002 (ADR-005, ADR-002; gamma restoration)
+        """
+        from stockinsider.data.ingest.fundamentals import coverage
+
+        return coverage(self._conn, symbol)
+
+    def news_recent_rows(self, symbol: str, k: int) -> list[dict[str, Any]]:
+        """Latest k stored news rows for a symbol bucket, newest first.
+
+        Raw storage read; sanitization is the caller's egress duty
+        (SEC-002 layer one stays on the agent side).
+
+        Implements: REQ-SI-FR-007 (ADR-005; gamma restoration)
+        """
+        rows = self._conn.execute(
+            "SELECT title, url_raw, domain, published_at, source, sentiment"
+            " FROM news WHERE symbol = ? ORDER BY published_at DESC LIMIT ?",
+            (symbol, k),
+        ).fetchall()
+        return [dict(row) for row in rows]
+
+    def market_indicators_snapshot(self, symbol: str) -> dict[str, Any]:
+        """Deterministic indicator snapshot (profitability/growth/risk).
+
+        All market-data arithmetic lives on the data side (FR-006);
+        the registry surface only relays the result.
+
+        Implements: REQ-SI-FR-006 (ADR-005, ADR-002; gamma restoration)
+        """
+        import json as _json
+
+        from stockinsider.data.compute.indicators import (
+            annualized_volatility,
+            gross_margin,
+            max_drawdown,
+            net_margin,
+            roe,
+            yoy_growth,
+        )
+
+        price_row = self._conn.execute(
+            "SELECT date, close FROM market_bars WHERE canonical_symbol = ?"
+            " ORDER BY date DESC LIMIT 1",
+            (symbol,),
+        ).fetchone()
+        if price_row is None:
+            raise KeyError(f"{symbol}: no stored market data (sync first; INV-003)")
+        bars = self._conn.execute(
+            "SELECT date, close FROM market_bars WHERE canonical_symbol = ?"
+            " ORDER BY date DESC LIMIT 260",
+            (symbol,),
+        ).fetchall()
+        income_rows = self._conn.execute(
+            "SELECT period_end, data FROM fundamentals WHERE canonical_symbol = ?"
+            " AND statement_type = 'income' ORDER BY period_end",
+            (symbol,),
+        ).fetchall()
+        balance_rows = self._conn.execute(
+            "SELECT period_end, data FROM fundamentals WHERE canonical_symbol = ?"
+            " AND statement_type = 'balance' ORDER BY period_end DESC LIMIT 1",
+            (symbol,),
+        ).fetchall()
+
+        def _field(row: Any, key: str) -> float | None:
+            try:
+                value = _json.loads(row["data"]).get(key)
+            except (ValueError, TypeError):
+                return None
+            return float(value) if isinstance(value, (int, float)) else None
+
+        revenue_series = [
+            (str(row["period_end"]), _field(row, "totalRevenue") or 0.0)
+            for row in income_rows
+            if _field(row, "totalRevenue") is not None
+        ]
+        latest_income = income_rows[-1] if income_rows else None
+        latest_revenue = _field(latest_income, "totalRevenue") if latest_income else None
+        latest_net_income = _field(latest_income, "netIncome") if latest_income else None
+        latest_equity = (
+            _field(balance_rows[0], "totalStockholdersEquity") if balance_rows else None
+        )
+        return {
+            "symbol": symbol,
+            "as_of": price_row["date"],
+            "valuation": {
+                "note": (
+                    "share count is not captured by the fundamentals adapter; "
+                    "per-share ratios unavailable until it is (INV-003)"
+                )
+            },
+            "profitability": {
+                "roe": roe(latest_net_income, latest_equity),
+                "net_margin": net_margin(latest_net_income, latest_revenue),
+                "gross_margin": gross_margin(None, latest_revenue),
+            },
+            "growth": {
+                "revenue_yoy": yoy_growth(revenue_series),
+                "earnings_yoy": {
+                    "unavailable": "quarterly net-income series not assembled in this snapshot"
+                },
+            },
+            "risk": {
+                "volatility": annualized_volatility([dict(bar) for bar in bars]),
+                "max_drawdown": max_drawdown([dict(bar) for bar in bars]),
+            },
+        }
+
     def verify_symbol(self, canonical: str, adapter: "Any | None" = None) -> "Resolution | None":
         """Direct-symbol verification via one budgeted EOD fetch (BD-017).
 

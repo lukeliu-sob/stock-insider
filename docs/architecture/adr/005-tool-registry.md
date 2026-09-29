@@ -42,3 +42,32 @@
 - Watchlist write flow (FR-004/INV-004): the confirmation protocol replaces the trusted flag.
 - Agent-loop integration (TP-007): model tool-calling maps onto ToolCall envelopes; timing/parallelism decisions recorded there.
 - A new source kind becomes necessary → ADR amendment (the four-class set is closed by design).
+
+
+## Amendment 1 (2026-09-29) — Registry/facade boundary restored (review finding 2)
+
+Ruling 1 above says the registry imports only `shared`, with tool
+handlers injected by the composition layer. Eight merged PRs (#8 #9
+#14 #19 #22 #30 #33 #39) drifted from that: handlers grew inline SQL
+against the store connection and direct imports of data internals
+(`data.ingest.fundamentals`, `data.compute.indicators`). The boundary
+gate codified the drift instead of blocking it (registry -> any data
+module was allowed). A third-party review caught both.
+
+Restoration (PR-gamma, TP-016):
+
+1. All storage SQL and data-internal imports moved behind the data
+   facade: `market_quote`, `fundamentals_coverage`, `news_recent_rows`,
+   `market_indicators_snapshot` are facade methods; registry handlers
+   delegate. `market.indicators` computation lives entirely on the
+   data side (which is also FR-006's arithmetic boundary).
+2. `import_boundaries.py` tightened to the letter of this ADR:
+   `agent/registry` may import exactly `stockinsider.data` (the facade
+   package) — any deeper data module is a violation. Plain `agent`
+   modules may import no data at all (unchanged).
+3. A source-invariant test pins the restoration: registry.py contains
+   no `stockinsider.data.` import and no `.conn` access (structural,
+   so the drift cannot silently recur).
+
+The capability story is unchanged: injection remains the mechanism;
+the facade simply names the injection surface on the data side.

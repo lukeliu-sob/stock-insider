@@ -2162,3 +2162,39 @@ sessions:
       Owner instructed full sequential implementation of the
       remediation program.
     status: applied
+
+  - id: AILOG-0056
+    date: "2026-09-29"
+    tool: "pi coding agent (LLM session)"
+    role: ai
+    task: >-
+      Remediation PR-gamma (third-party review finding 2; TP-016):
+      the registry/facade boundary is restored to ADR-005 ruling 1.
+      Eight merged PRs had drifted handlers into inline SQL and
+      direct imports of data internals, and the boundary gate had
+      codified the drift (registry -> any data module allowed).
+      All storage SQL and data-internal imports now live behind
+      four facade methods (market_quote, fundamentals_coverage,
+      news_recent_rows, market_indicators_snapshot - the last one
+      also carries the FR-006 arithmetic boundary to the data
+      side); registry handlers delegate. import_boundaries.py
+      tightened to the letter of the ADR: agent/registry may
+      import exactly stockinsider.data (the facade package), any
+      deeper module is a violation; plain agent modules import no
+      data at all. ADR-005 Amendment 1 records the drift chain,
+      the restoration, and the tightened gate. Source-invariant
+      tests pin the restoration structurally (no data-internal
+      imports, no .conn access, no inline SQL in registry.py) so
+      the drift cannot silently recur.
+    artifacts:
+      - src/stockinsider/agent/registry.py
+      - src/stockinsider/data/store/__init__.py
+      - tools/checks/import_boundaries.py
+      - docs/architecture/adr/005-tool-registry.md
+      - test/offline/test_registry_boundary.py
+      - docs/test-plans/TP-016.md
+      - docs/ai-use-log.yaml
+    human_decision: >-
+      Owner instructed full sequential implementation of the
+      remediation program.
+    status: applied
