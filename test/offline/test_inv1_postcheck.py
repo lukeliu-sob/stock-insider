@@ -316,3 +316,36 @@ def test_hyphenated_non_dates_untouched() -> None:
     check = postcheck_numbers("range 3-7 around value 5", snapshot)
     assert "3" not in check.failed or True  # extractor behavior for ranges unchanged
     assert check.passed or "7" in check.failed or True  # smoke: no crash, semantics as before
+
+
+
+# -- BD-019: same-tool repeat calls keep separate pool entries --------------
+
+
+def test_same_tool_twice_both_citable() -> None:
+    """Two market.quote calls: citations of BOTH survive the post-check."""
+    from stockinsider.agent.guardrail import postcheck_numbers
+
+    snapshot = {
+        "market.quote#1": {"close": 439.8, "symbol": "0700.HK"},
+        "market.quote#2": {"close": 77.7, "symbol": "1211.HK"},
+    }
+    candidate = "0700.HK closed at 439.8 while 1211.HK closed at 77.7"
+    check = postcheck_numbers(candidate, snapshot)
+    assert check.passed, check.failed
+
+
+def test_same_tool_last_wins_regression_pinned() -> None:
+    """Under the old last-wins keying the FIRST call vanished; pin the fix
+    by citing only the first call's value."""
+    from stockinsider.agent.guardrail import postcheck_numbers
+
+    snapshot = {
+        "market.quote#1": {"close": 439.8, "symbol": "0700.HK"},
+        "market.quote#2": {"close": 77.7, "symbol": "1211.HK"},
+    }
+    check = postcheck_numbers("0700.HK closed at 439.8", snapshot)
+    assert check.passed, check.failed
+    # a value that appeared in NO call still fails
+    check2 = postcheck_numbers("0700.HK closed at 400.0", snapshot)
+    assert not check2.passed
