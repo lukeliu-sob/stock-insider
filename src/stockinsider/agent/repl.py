@@ -95,7 +95,7 @@ def chrome(text: str) -> str:
 
 
 _COMMAND_GROUPS: tuple[tuple[str, tuple[str, ...]], ...] = (
-    ("session", ("/sessions [symbol]", "/show [id]", "/resume [id]")),
+    ("session", ("/sessions [symbol] [page]", "/show [id]", "/resume [id]")),
     ("data", ("/watch [list|add|remove ...]", "/sync [run|status]")),
     ("tools", ("/tools [name [k=v ...]]",)),
     ("", ("/exit",)),
@@ -112,13 +112,30 @@ def _cmd_help(echo: Callable[[str], None]) -> None:
         echo(chrome(prefix + "  ".join(commands)))
 
 
+PAGE_SIZE = 10
+
+
 def _cmd_sessions(store: SessionStore, args: list[str], echo: Callable[[str], None]) -> None:
-    symbol = args[0] if args else None
+    """List sessions; /sessions [symbol] [page] (TP-015 P1-9).
+
+    Implements: REQ-SI-FR-012 (ADR-001)
+    """
+    symbol = args[0] if args and not args[0].isdigit() else None
+    page = 1
+    for arg in args:
+        if arg.isdigit():
+            page = int(arg)
+            break
     rows = store.list_sessions(symbol=symbol)
     if not rows:
         echo("no sessions match the filter")
         return
-    for row in rows:
+    total_pages = max(1, -(-len(rows) // PAGE_SIZE))
+    page = max(1, min(page, total_pages))
+    window = rows[(page - 1) * PAGE_SIZE : page * PAGE_SIZE]
+    if total_pages > 1:
+        echo(f"(page {page}/{total_pages}; /sessions [symbol] [page] for more)")
+    for row in window:
         symbols = ",".join(row["subject_symbols"]) or "-"
         echo(f"{row['session_id']}  {row['created']}  {row['status']}  {symbols}  {row['profile']}")
 
