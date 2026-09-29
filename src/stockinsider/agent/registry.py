@@ -48,11 +48,15 @@ def register_data_tools(registry: Registry, data_store: Any) -> None:
         return out
 
     def _watchlist_add(args: dict[str, Any]) -> dict[str, Any]:
+        # H3 (TP-017 PR-2): the boolean the model used to fill is gone.
+        # Execution requires allow_write=True, which only the harness\'s
+        # consumed-token replay path provides — the human confirmed.
         return data_store.watchlist.add_verified(
-            args["canonical_symbol"], user_confirmed=args["user_confirmed"], via="agent-tool"
+            args["canonical_symbol"], user_confirmed=True, via="agent-tool"
         )
 
     def _watchlist_remove(args: dict[str, Any]) -> dict[str, Any]:
+        # Gate is allow_write (harness token), not a model-filled boolean (H3).
         return data_store.watchlist.remove(args["canonical_symbol"])
 
     registry.register(
@@ -87,9 +91,10 @@ def register_data_tools(registry: Registry, data_store: Any) -> None:
             description=(
                 "Add a verified symbol to the watchlist. Requires a prior "
                 "symbol.search whose candidate the user explicitly confirmed; "
-                "pass user_confirmed=true only after that confirmation."
+                "propose the addition; the harness collects the human\'s "
+                "one-time confirmation token — you never confirm on their behalf."
             ),
-            arguments_spec={"canonical_symbol": "str", "user_confirmed": "bool"},
+            arguments_spec={"canonical_symbol": "str"},
             result_spec="dict",
             effect_class=EffectClass.WRITE,
             source_kind=SourceKind.API,
@@ -100,10 +105,11 @@ def register_data_tools(registry: Registry, data_store: Any) -> None:
         ToolSpec(
             name="watchlist.remove",
             description=(
-                "Remove a symbol from the watchlist; requires user_confirmed=true "
-                "after showing the user what will be removed."
+                "Remove a symbol from the watchlist; propose it and show the "
+                "user what will be removed — the harness collects their "
+                "one-time confirmation token."
             ),
-            arguments_spec={"canonical_symbol": "str", "user_confirmed": "bool"},
+            arguments_spec={"canonical_symbol": "str"},
             result_spec="dict",
             effect_class=EffectClass.WRITE,
             source_kind=SourceKind.API,
@@ -135,7 +141,7 @@ def register_sync_tools(registry: Registry, data_store: Any) -> None:
                 "incrementals) under the daily call budget. The report "
                 "lists per-symbol outcomes and deferred items."
             ),
-            arguments_spec={"user_confirmed": "bool"},
+            arguments_spec={},
             result_spec="dict",
             effect_class=EffectClass.WRITE,
             source_kind=SourceKind.API,
@@ -430,6 +436,14 @@ class Registry:
             if wire_name(spec.name) == wire:
                 return spec.name
         return None
+
+    def effect_class(self, name: str) -> "EffectClass | None":
+        """The registered effect class of a tool (None when unknown).
+
+        Implements: REQ-SI-INV-004 (ADR-005; TP-017 PR-2)
+        """
+        spec = self._specs.get(name)
+        return spec.effect_class if spec is not None else None
 
     def execute(self, call: ToolCall, *, allow_write: bool = False) -> ToolResult:
         """Execute one validated tool call; every failure is explicit.

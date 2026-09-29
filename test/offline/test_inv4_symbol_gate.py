@@ -30,9 +30,10 @@ def _registry(tmp_path) -> tuple[Registry, "object"]:
 
 
 def _add(registry: Registry, symbol: str, confirmed: bool | None = True, allow_write: bool = True):
+    # TP-017 PR-2: the model-filled boolean is gone; the gate is
+    # allow_write (the harness's consumed-token path) plus the
+    # verified-resolution record on the data side.
     arguments: dict = {"canonical_symbol": symbol}
-    if confirmed is not None:
-        arguments["user_confirmed"] = confirmed
     return registry.execute(ToolCall(tool="watchlist.add", arguments=arguments, call_id="t"), allow_write=allow_write)
 
 
@@ -48,11 +49,13 @@ def test_tool_refuses_without_confirmation_flag(tmp_path) -> None:
     registry, ds = _registry(tmp_path)
     search = registry.execute(ToolCall(tool="symbol.search", arguments={"query": "Tencent Holdings"}, call_id="t"))
     assert search.ok and search.result[0]["canonical_symbol"] == "0700.HK"
-    missing = _add(registry, "0700.HK", confirmed=None)  # arg absent -> schema rejection
-    assert missing.ok is False and "user_confirmed" in missing.error
-    refused = _add(registry, "0700.HK", confirmed=False)
-    assert refused.ok is False and "confirmation" in refused.error
+    # TP-017 PR-2: the refusal is the write gate itself — only the
+    # harness's consumed-token path passes allow_write=True.
+    refused = _add(registry, "0700.HK", allow_write=False)
+    assert refused.ok is False and "write" in (refused.error or "").lower()
     assert ds.watchlist.active_count() == 0
+    confirmed = _add(registry, "0700.HK", allow_write=True)
+    assert confirmed.ok and ds.watchlist.active_count() == 1
     ds.close()
 
 
@@ -77,9 +80,9 @@ def test_wrong_exchange_collision_presented_not_picked(tmp_path) -> None:
     symbols = [cand["canonical_symbol"] for cand in search.result]
     assert symbols == ["0700.HK", "0700.US"]  # both presented, never auto-picked
     assert ds.watchlist.active_count() == 0  # nothing entered without the gate
-    unconfirmed = _add(registry, "0700.US", confirmed=False)
-    assert unconfirmed.ok is False  # no confirmation -> refused, even with a verified record
-    right = _add(registry, "0700.HK", confirmed=True)  # the confirmed, verified path passes
+    unconfirmed = _add(registry, "0700.US", allow_write=False)
+    assert unconfirmed.ok is False  # write gate: no token, no write, even with a verified record
+    right = _add(registry, "0700.HK", allow_write=True)  # the harness-confirmed path passes
     assert right.ok and ds.watchlist.active_count() == 1
     ds.close()
 

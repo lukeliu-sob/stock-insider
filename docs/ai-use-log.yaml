@@ -2303,3 +2303,35 @@ sessions:
       Owner approved the second-audit remediation plan and
       instructed execution.
     status: applied
+
+  - id: AILOG-0060
+    date: "2026-09-29"
+    tool: "pi coding agent (LLM session)"
+    role: ai
+    task: >-
+      TP-017 PR-2 (H3, second audit): the user_confirmed boolean a
+      model could fill is gone from every write tool. New
+      ConfirmationBroker (agent/confirm.py): the conversational
+      loop NEVER sets allow_write - a write-class tool call is
+      intercepted, a single-use token bound to (session, tool,
+      arguments) is issued, and the model is told the human must
+      reply 'confirm <token>' in the harness; the REPL intercepts
+      that reply, consumes the token, and executes the write with
+      allow_write=True, recording user-confirmation and tool
+      events for replay. Tokens expire after three turns;
+      watchlist.add now records via=agent-confirmed. Identity
+      bumped to v5 with the write-confirmation protocol section.
+      The model can propose; only the human can confirm.
+    artifacts:
+      - src/stockinsider/agent/confirm.py
+      - src/stockinsider/agent/loop.py
+      - src/stockinsider/agent/repl.py
+      - src/stockinsider/agent/registry.py
+      - prompts/identity.md
+      - test/offline/test_confirm_tokens.py
+      - docs/test-plans/TP-017.md
+      - docs/ai-use-log.yaml
+    human_decision: >-
+      Owner approved the second-audit remediation plan including
+      the confirmation-token direction.
+    status: applied
