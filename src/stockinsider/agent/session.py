@@ -148,6 +148,25 @@ class SessionStore:
             stream.write(json.dumps(event) + "\n")
         self._index_update(session_id, last_active=_now())
 
+    def load_snapshots(self, session_id: str) -> list[tuple[str, dict[str, Any]]]:
+        """Read every stored turn snapshot (turn id, values) in order.
+
+        The cross-turn INV-001 ledger rebuilds from these on resume
+        (TP-017 PR-3a).
+
+        Implements: REQ-SI-INV-001, REQ-SI-FR-011 (ADR-001)
+        """
+        ctx = self._require(session_id) / "context"
+        out: list[tuple[str, dict[str, Any]]] = []
+        if not ctx.is_dir():
+            return out
+        import json as _json
+
+        for path in sorted(ctx.glob("turn-*.json")):
+            data = _json.loads(path.read_text(encoding="utf-8"))
+            out.append((path.stem, data.get("values", {})))
+        return out
+
     def snapshot(self, session_id: str, turn_id: str, values: dict[str, Any]) -> Path:
         """Write a values-as-seen context snapshot; refuses turn reuse.
 

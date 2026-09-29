@@ -36,12 +36,48 @@ _NUMBER_TOKEN = re.compile(r"-?\d[\d,]*(?:\.\d+)?")
 _ENUM_MARKER = re.compile(r"(?m)^\s{0,8}\d{1,3}[.)]\s")
 
 
-def _strip_enumeration(text: str) -> str:
-    """Remove line-leading enumeration markers (layout, not data).
+_HEADING_ORDINAL = re.compile(r"(?m)^#{1,6}\s+\d{1,3}[.)]?\s+")
 
-    Implements: REQ-SI-INV-001 (ADR-006, BD-016 amendment)
+_SYMBOLISH = re.compile(r"\b(\d{1,5})\.[A-Za-z]{2,5}\b")
+
+
+def _strip_enumeration(text: str) -> str:
+    """Remove layout numbering: line-leading markers and heading ordinals.
+
+    Implements: REQ-SI-INV-001 (ADR-006, BD-016 amendment; TP-017 PR-3a)
     """
-    return _ENUM_MARKER.sub("", text)
+    return _HEADING_ORDINAL.sub("", _ENUM_MARKER.sub("", text))
+
+
+def _structural_tokens(snapshot_values: object) -> set[str]:
+    """Digit fragments of symbol-shaped strings present in the pool.
+
+    A pool string like 0700.HK (symbol fields, bucket names) makes the
+    token 0700 a STRUCTURAL reference, not a numeric claim: citing a
+    stock code is identification, not data. Only fragments of symbols
+    actually present in this session's evidence pass - a random 0700
+    with no such symbol in the pool still fails. Counts and prose
+    numbers are deliberately NOT covered (owner-approved direction,
+    TP-017 PR-3a; the standing extraction-semantics decision).
+
+    Implements: REQ-SI-INV-001 (ADR-006; TP-017 PR-3a)
+    """
+    out: set[str] = set()
+    _collect_symbol_fragments(snapshot_values, out)
+    return out
+
+
+def _collect_symbol_fragments(node: object, out: set[str]) -> None:
+    if isinstance(node, dict):
+        for key, value in node.items():
+            if isinstance(key, str):
+                out.update(m.group(1) for m in _SYMBOLISH.finditer(key))
+            _collect_symbol_fragments(value, out)
+    elif isinstance(node, (list, tuple)):
+        for item in node:
+            _collect_symbol_fragments(item, out)
+    elif isinstance(node, str):
+        out.update(m.group(1) for m in _SYMBOLISH.finditer(node))
 
 
 #: ISO calendar dates in responses (2026-09-23) normalize to the
@@ -210,6 +246,7 @@ class NumberCheck:
     matched: list[str]
     failed: list[str]
     rounded: list[str] = field(default_factory=list)
+    structural: list[str] = field(default_factory=list)
 
 
 def postcheck_numbers(candidate: str, snapshot_values: object) -> NumberCheck:
@@ -223,11 +260,16 @@ def postcheck_numbers(candidate: str, snapshot_values: object) -> NumberCheck:
     """
     pool = _values_pool(snapshot_values)
     floats = _pool_floats(snapshot_values)
+    structural = _structural_tokens(snapshot_values)
     matched: list[str] = []
     failed: list[str] = []
     rounded: list[str] = []
+    structural_hits: list[str] = []
     for token in extract_numbers(_normalize_dates(_strip_enumeration(candidate))):
         canon = _canon_token(token)
+        if canon in structural:
+            structural_hits.append(token)
+            continue
         if canon in pool:
             matched.append(token)
             continue
@@ -240,7 +282,13 @@ def postcheck_numbers(candidate: str, snapshot_values: object) -> NumberCheck:
             rounded.append(token)  # percent-display conversion (BD-015)
             continue
         failed.append(token)
-    return NumberCheck(passed=not failed, matched=matched, failed=failed, rounded=rounded)
+    return NumberCheck(
+        passed=not failed,
+        matched=matched,
+        failed=failed,
+        rounded=rounded,
+        structural=structural_hits,
+    )
 
 
 # ---- INV-002: epistemic filter -----------------------------------------------

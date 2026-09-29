@@ -136,7 +136,12 @@ class DataStore:
         return dict(row) if row is not None else None
 
     def fundamentals_coverage(self, symbol: str) -> dict[str, Any]:
-        """Latest fundamentals quarter plus the FR-002 coverage ratio.
+        """FR-002 coverage snapshot ONLY (M8 honesty record, TP-017).
+
+        The current vendor plan lacks the fundamentals feed, so this
+        returns the coverage ratio, not a rich summary; per-section
+        unavailable fields are explicit inside. A fuller summary is
+        future work gated on the feed.
 
         Implements: REQ-SI-FR-002 (ADR-005, ADR-002; gamma restoration)
         """
@@ -178,16 +183,18 @@ class DataStore:
             yoy_growth,
         )
 
+        # M7 (TP-017): risk metrics price the ADJUSTED series — raw
+        # closes double-count splits/dividends as volatility.
         price_row = self._conn.execute(
-            "SELECT date, close FROM market_bars WHERE canonical_symbol = ?"
-            " ORDER BY date DESC LIMIT 1",
+            "SELECT date, COALESCE(adjusted_close, close) AS close FROM market_bars"
+            " WHERE canonical_symbol = ? ORDER BY date DESC LIMIT 1",
             (symbol,),
         ).fetchone()
         if price_row is None:
             raise KeyError(f"{symbol}: no stored market data (sync first; INV-003)")
         bars = self._conn.execute(
-            "SELECT date, close FROM market_bars WHERE canonical_symbol = ?"
-            " ORDER BY date DESC LIMIT 260",
+            "SELECT date, COALESCE(adjusted_close, close) AS close FROM market_bars"
+            " WHERE canonical_symbol = ? ORDER BY date DESC LIMIT 260",
             (symbol,),
         ).fetchall()
         income_rows = self._conn.execute(

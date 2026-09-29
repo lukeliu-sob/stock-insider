@@ -2335,3 +2335,43 @@ sessions:
       Owner approved the second-audit remediation plan including
       the confirmation-token direction.
     status: applied
+
+  - id: AILOG-0061
+    date: "2026-09-29"
+    tool: "pi coding agent (LLM session)"
+    role: ai
+    task: >-
+      TP-017 PR-3a (numbers pipeline): the INV-001 pool now spans
+      the session - a cross-turn ledger merges prior turn snapshots
+      (loaded from artifacts on resume), so restating an earlier
+      number is a citation of session evidence instead of a
+      quarantine (the audit's turn-6 class). Structural numbers:
+      heading ordinals (## 6.) strip as layout, and digit fragments
+      of symbol-shaped strings present in the pool (0700.HK -> 0700)
+      match as structural references tracked in a new NumberCheck
+      field - absent symbols and fabricated values still fail; the
+      owner-approved direction replaces per-case patching. M7:
+      risk metrics price the adjusted series (COALESCE(adjusted_close,
+      close)) - split artifacts no longer masquerade as volatility.
+      M8: the fundamentals surface is labeled honestly as the
+      coverage-only snapshot. M11: news k clamped to [1, 25] at both
+      tools (k=-1 no longer returns the whole table). N1: the
+      arithmetic gate reads subscript field names (row["close"]).
+      N4: day-change ANSI only on a TTY. N5: sessions help names
+      active|closed. Ten new tests.
+    artifacts:
+      - src/stockinsider/agent/guardrail.py
+      - src/stockinsider/agent/loop.py
+      - src/stockinsider/agent/session.py
+      - src/stockinsider/agent/registry.py
+      - src/stockinsider/data/store/__init__.py
+      - src/stockinsider/cli/render.py
+      - src/stockinsider/cli/app.py
+      - tools/checks/static_arithmetic.py
+      - test/offline/test_numbers_pipeline.py
+      - docs/test-plans/TP-017.md
+      - docs/ai-use-log.yaml
+    human_decision: >-
+      Owner approved the remediation plan including the structural-
+      number token-registry direction.
+    status: applied

@@ -253,7 +253,7 @@ def register_news_tools(
         from stockinsider.shared.sanitize import sanitize_text
 
         symbol = str(args["symbol"])
-        k = int(args.get("k") or 5)
+        k = min(max(int(args.get("k") or 5), 1), 25)  # M11: bounded [1, 25]
         rows = data_store.news_recent_rows(symbol, k)
         if not rows:
             raise KeyError(
@@ -311,7 +311,7 @@ def register_news_tools(
         from stockinsider.shared.sanitize import sanitize_text
 
         query = str(args["query"])
-        k = int(args.get("k") or 5)
+        k = min(max(int(args.get("k") or 5), 1), 25)  # M11: bounded [1, 25]
         bucket = args.get("symbol") or None
         vectors = provider.embed([query])
         if not vectors:

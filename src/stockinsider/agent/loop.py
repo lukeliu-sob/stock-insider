@@ -106,6 +106,7 @@ class TurnEngine:
         """Bind the store, registry membrane, and provider; load the identity prompt."""
         self._aborted: str | None = None  # H4: sticky session abort
         self.confirmations = ConfirmationBroker()  # H3: write-token broker
+        self._ledgers: dict[str, dict[str, Any]] = {}  # cross-turn INV-001 pools
 
         self._store = store
         self._registry = registry
@@ -121,6 +122,18 @@ class TurnEngine:
         Implements: REQ-SI-GOV-003 (ADR-001)
         """
         return self._prompt_version
+
+    def _session_ledger(self, session_id: str) -> dict[str, Any]:
+        """The session-wide provenance ledger (loaded from turn snapshots).
+
+        Implements: REQ-SI-INV-001 (ADR-001; TP-017 PR-3a)
+        """
+        if session_id not in self._ledgers:
+            merged: dict[str, Any] = {}
+            for _turn, values in self._store.load_snapshots(session_id):
+                merged.update(values)
+            self._ledgers[session_id] = merged
+        return self._ledgers[session_id]
 
     @property
     def registry(self) -> Registry:
@@ -302,9 +315,15 @@ class TurnEngine:
                 usage=dict(usage_total),
             )
 
-        # values-as-seen snapshot: the INV-001 verification pool
+        # values-as-seen snapshot: this turn's artifact stays per-turn;
+        # the INV-001 pool spans the SESSION (cross-turn ledger, TP-017
+        # PR-3a) — a restated earlier number is a legitimate citation of
+        # evidence the session already holds (with turn attribution in
+        # the artifact files).
         self._store.snapshot(session_id, turn_id, snapshot_values)
-        verdict = run_postcheck(candidate, snapshot_values)
+        ledger = self._session_ledger(session_id)
+        ledger.update(snapshot_values)
+        verdict = run_postcheck(candidate, ledger)
 
         def _replay() -> None:
             if stream_sink is not None:
