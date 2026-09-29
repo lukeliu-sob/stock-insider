@@ -37,6 +37,40 @@ class EgressViolationError(RuntimeError):
     """
 
 
+def extra_hosts_from_env(environ: "dict[str, str] | None" = None) -> tuple[str, ...]:
+    """Owner-declared extension hosts (ADR-004 Am2, TP-018).
+
+    The ``EGRESS_EXTRA_HOSTS`` entry (comma-separated domain names) in
+    the local environment extends the allowed set for provider
+    endpoints at resolution time. This is an explicit, auditable owner
+    decision for OpenRouter-class or local model endpoints - never a
+    silent default (INV-003). Malformed entries (empty tokens, URLs
+    with schemes, whitespace-only) are skipped, not guessed.
+
+    Implements: REQ-SI-SEC-003 (ADR-004 Am2)
+    """
+    import os
+
+    if environ is not None:
+        raw = environ.get("EGRESS_EXTRA_HOSTS", "")
+    else:
+        raw = os.getenv("EGRESS_EXTRA_HOSTS", "")
+    hosts: list[str] = []
+    for token in raw.split(","):
+        name = token.strip().lower().rstrip(".")
+        if name and "/" not in name and ":" not in name:
+            hosts.append(name)
+    return tuple(hosts)
+
+
+def provider_egress_allowed() -> tuple[str, ...]:
+    """The full allowed-host tuple for provider endpoint validation.
+
+    Implements: REQ-SI-SEC-003 (ADR-004 Am2)
+    """
+    return extra_hosts_from_env()
+
+
 def _domain_allowed(host: str, allowed: frozenset[str]) -> bool:
     lowered = host.lower().rstrip(".")
     return any(lowered == domain or lowered.endswith("." + domain) for domain in allowed)

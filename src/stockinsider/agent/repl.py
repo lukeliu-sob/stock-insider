@@ -15,6 +15,7 @@ REQ-SI-INV-003 (ADR-001, ADR-005)
 from __future__ import annotations
 
 import json
+import re
 import sys
 import uuid
 from collections.abc import Callable
@@ -49,6 +50,12 @@ from stockinsider.shared.tools import (
 
 PROMPT = "stockinsider> "  # non-TTY default; TTY gets the context prompt below
 
+#: Strict confirmation-command shape (H3-6, TP-018): exactly 'confirm '
+#: plus an 8-letter token. Anything else — including questions that
+#: merely start with "confirm" — is a normal conversational turn and
+#: reaches the model (the old prefix match swallowed them).
+_CONFIRM_LINE = re.compile(r"^confirm\s+([a-z]{8})$")
+
 
 def _context_prompt(data_store: Any) -> str:
     """Status prompt on a TTY; plain PROMPT otherwise (TP-015 P0-6).
@@ -66,6 +73,7 @@ def _context_prompt(data_store: Any) -> str:
     except Exception:  # noqa: BLE001 — prompt must never crash the loop
         return PROMPT
 
+
 #: Commands whose real behavior lands in later test plans; each fails
 #: explicitly, naming its target requirement or design section.
 _NOT_IMPLEMENTED: dict[str, str] = {
@@ -78,9 +86,7 @@ def _explicit_not_implemented(command: str, target: str, echo: Callable[[str], N
     echo(f"error: /{command} is not implemented yet (target: {target}); refusing to pretend success (INV-003).")
 
 
-_ASCII = str.maketrans(
-    {chr(0x2014): "-", chr(0x2013): "-", chr(0xB7): "|", chr(0x2192): "->"}
-)
+_ASCII = str.maketrans({chr(0x2014): "-", chr(0x2013): "-", chr(0xB7): "|", chr(0x2192): "->"})
 
 
 def chrome(text: str) -> str:
@@ -245,8 +251,23 @@ def _cmd_watch(
         if not candidates:
             echo("not found: no verified resolution; watchlist unchanged")
             return
-        for i, cand in enumerate(candidates, start=1):
+        # ADR-005 Am2 (TP-018): secondary-venue listings fold to a summary
+        # line — a numbered row is a selectable candidate, and only
+        # primary-exchange listings verify (HK/US scope).
+        primary = [c for c in candidates if c["exchange"].upper() in ("HK", "US", "INDX")]
+        folded = [c for c in candidates if c not in primary]
+        if not primary:
+            echo(
+                "not found: no primary-exchange (HK/US) listing among "
+                f"{len(candidates)} candidates; out-of-scope venues are not addable (INV-004)"
+            )
+            return
+        for i, cand in enumerate(primary, start=1):
             echo(f"{i}) {cand['canonical_symbol']}  {cand['official_name']}  exchange {cand['exchange']}")
+        if folded:
+            venues = " ".join(sorted({c["exchange"] for c in folded}))
+            echo(f"   (+{len(folded)} secondary-exchange listings folded: {venues})")
+        candidates = primary
         if len(candidates) == 1:
             picked = candidates[0]
         else:
@@ -442,9 +463,9 @@ def resume_session(
     """Resume a closed session (default: the most recent) and continue the loop.
 
     Prior turns are never rewritten: new turns append to the same
-    session.jsonl (FR-023). Guardrail counters are per-process — a
-    resumed session starts with fresh counters (documented v1
-    limitation). The profile lock is validated on resume.
+    session.jsonl (FR-023). Aborted sessions are terminal (H4 residual,
+    TP-018): resume() refuses them — the abort verdict survives
+    process restarts. The profile lock is validated on resume.
 
     Implements: REQ-SI-FR-023 (ADR-001)
     """
@@ -491,13 +512,14 @@ def _session_loop(
             continue
         if line == "/exit":
             break
-        if line.split(" ", 1)[0] == "confirm" and engine is not None:
-            # H3: human confirmation for a proposed write (one-time token).
-            parts = line.split()
-            if len(parts) != 2:
-                echo("usage: confirm <token>  (tokens are single-use)")
-                continue
-            pending = engine.confirmations.consume(parts[1])
+        confirm_match = _CONFIRM_LINE.match(line)
+        if confirm_match and engine is not None:
+            # H3 (TP-018): human confirmation for a proposed write. The
+            # pending write and its token were rendered by the harness when
+            # the model proposed the call (non-relay principle, ADR-005
+            # Am3) — this path only ever consumes what the user read.
+            token = confirm_match.group(1)
+            pending = engine.confirmations.consume(token)
             if pending is None:
                 echo("unknown or already-used token; nothing executed (INV-004)")
                 continue
@@ -505,20 +527,17 @@ def _session_loop(
                 ToolCall(
                     tool=pending.tool,
                     arguments=pending.arguments,
-                    call_id=f"confirm-{parts[1]}",
+                    call_id=f"confirm-{token}",
                 ),
                 allow_write=True,  # the consumed token IS the human's consent
             )
-            store.append_event(
-                record["session_id"],
-                {
-                    "event": "user-confirmation",
-                    "token": parts[1],
-                    "tool": pending.tool,
-                    "arguments": pending.arguments,
-                    "turn": None,
-                },
-            )
+            bound = f"{pending.tool} {json.dumps(pending.arguments, sort_keys=True)}"
+            outcome_note = "ok" if confirmed_result.ok else f"failed: {confirmed_result.error}"
+            # H3-4 (TP-018): the confirmation outcome enters the model's
+            # history — user/assistant events are exactly what
+            # _history_messages reads — so a later /report can no longer
+            # truthfully claim a confirmed add never happened. The
+            # tool-call/tool-result pair keeps the authoritative record.
             store.append_event(
                 record["session_id"],
                 {
@@ -539,10 +558,18 @@ def _session_loop(
                     "turn": None,
                 },
             )
+            store.append_event(
+                record["session_id"],
+                {
+                    "event": "user-message",
+                    "text": f"[harness] confirmed write executed: {bound} -> {outcome_note}",
+                    "turn": None,
+                },
+            )
             if confirmed_result.ok:
-                echo(f"confirmed: {pending.tool} executed (single-use token consumed)")
+                echo(f"confirmed: {bound} executed (single-use token consumed)")
             else:
-                echo(f"confirmed but failed: {confirmed_result.error}")
+                echo(f"confirmed but failed: {bound} -> {confirmed_result.error}")
             continue
         if line.startswith("/"):
             parts = line[1:].split()
@@ -618,7 +645,7 @@ def _session_loop(
                     engine = _build_engine(store, registry, config)
                     echo(
                         f"session {record['session_id']} resumed "
-                        f"(profile: {record['profile']}; guardrail counters reset)"
+                        f"(profile: {record['profile']}; aborted sessions are refused)"
                     )
                 except SessionError as exc:
                     echo(f"error: {exc}")
@@ -722,9 +749,7 @@ def _run_report_turn(
     return outcome
 
 
-def _run_conversational_turn(
-    engine: TurnEngine, record: dict, line: str, echo: Callable[[str], None]
-) -> "Any | None":
+def _run_conversational_turn(engine: TurnEngine, record: dict, line: str, echo: Callable[[str], None]) -> "Any | None":
     """Run one free-text turn with streaming render and explicit failures.
 
     Returns the engine's TurnOutcome (or None when interrupted).
@@ -750,6 +775,12 @@ def _run_conversational_turn(
         return None
     except ProviderError as exc:
         echo(f"error: {exc}")
+    except RuntimeError as exc:
+        # Defense in depth (ADR-004 Am2, TP-018): an egress policy
+        # rejection (or any guard-adjacent RuntimeError) degrades to an
+        # explicit error line — a policy rejection must never crash the
+        # REPL into a stuck "active" session.
+        echo(f"error: {type(exc).__name__}: {exc}")
     return None
 
 

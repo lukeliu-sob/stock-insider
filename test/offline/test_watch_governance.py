@@ -21,15 +21,11 @@ from stockinsider.data.store.resolver import (
 
 
 def _resolution(symbol: str, exchange: str, kind: str = "stock") -> Resolution:
-    return Resolution(
-        canonical_symbol=symbol, exchange=exchange, official_name=f"name {symbol}", asset_type=kind
-    )
+    return Resolution(canonical_symbol=symbol, exchange=exchange, official_name=f"name {symbol}", asset_type=kind)
 
 
 def _adapter(body: str) -> EodhdMarketAdapter:
-    return EodhdMarketAdapter(
-        transport=lambda url, params: FetchResult(200, body), api_key="test-key"
-    )
+    return EodhdMarketAdapter(transport=lambda url, params: FetchResult(200, body), api_key="test-key")
 
 
 EOD_BODY = json.dumps(
@@ -77,9 +73,7 @@ def test_order_candidates_ranks_exact_primary_then_adr() -> None:
 
 def test_order_candidates_stable_within_group() -> None:
     rows = [_resolution(f"S{i}.US", "US") for i in range(5)]
-    assert [c.canonical_symbol for c in order_candidates(rows, "q")] == [
-        f"S{i}.US" for i in range(5)
-    ]
+    assert [c.canonical_symbol for c in order_candidates(rows, "q")] == [f"S{i}.US" for i in range(5)]
 
 
 def test_fold_secondaries_collapses_non_primary_venues() -> None:
@@ -134,7 +128,11 @@ def test_verify_symbol_no_data_returns_none_still_spends(tmp_path) -> None:
     ds.close()
 
 
-def test_verify_symbol_dead_adapter_refused(tmp_path) -> None:
+def test_verify_symbol_dead_adapter_refused(tmp_path, monkeypatch) -> None:
+    # Hermetic (TP-018): a developer machine with a real EODHD key in the
+    # local environment made this "dead adapter" case silently live —
+    # offline tests must never depend on ambient secrets.
+    monkeypatch.setattr("stockinsider.data.ingest.market.env_value", lambda _name: None)
     ds = open_data_store(tmp_path / "d3")
     with pytest.raises(Exception, match="not configured"):
         ds.verify_symbol("0700.HK", adapter=EodhdMarketAdapter())

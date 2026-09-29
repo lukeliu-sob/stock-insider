@@ -293,25 +293,33 @@ def stdlib_transport(url: str, params: dict[str, str]) -> str:
 
 
 def record_resolution(conn: Any, resolution: Resolution) -> None:
-    """Persist a verified resolution into the symbol map.
+    """Persist a resolution into the symbol map (INV-004 gate input).
 
-    Implements: REQ-SI-FR-004, REQ-SI-INV-004 (ADR-002)
+    Verified status is scope-honest (ADR-005 Am2, TP-018): only a
+    PRIMARY_EXCHANGES listing (HK/US/INDX) writes verified=1 — a
+    secondary-venue listing (XETRA, MX, ...) persists with verified=0,
+    so the watchlist gate refuses it explicitly instead of opening a
+    verified path to an out-of-scope market. The symbols table keeps
+    the resolution data either way (honest record, no silent drop).
+
+    Implements: REQ-SI-FR-004, REQ-SI-INV-004 (ADR-002, ADR-005 Am2)
     """
     # The symbols table constrains asset_type to stock/index; rich
     # display classes (adr/etf/fund/unverified) live on the in-memory
     # Resolution only (TP-015 PR-b).
     storable_type = "index" if resolution.asset_type == "index" else "stock"
+    verified = 1 if resolution.exchange.upper() in PRIMARY_EXCHANGES else 0
     resolved_at = datetime.now(timezone.utc).isoformat(timespec="seconds")
     with conn:
         conn.execute(
             """
             INSERT INTO symbols (canonical_symbol, exchange, official_name,
                                  asset_type, aliases, verified, source, resolved_at)
-            VALUES (?, ?, ?, ?, ?, 1, 'eodhd-search', ?)
+            VALUES (?, ?, ?, ?, ?, ?, 'eodhd-search', ?)
             ON CONFLICT(canonical_symbol) DO UPDATE SET
                 official_name = excluded.official_name,
                 aliases = excluded.aliases,
-                verified = 1,
+                verified = excluded.verified,
                 resolved_at = excluded.resolved_at
             """,
             (
@@ -320,6 +328,7 @@ def record_resolution(conn: Any, resolution: Resolution) -> None:
                 resolution.official_name,
                 storable_type,
                 json.dumps(list(resolution.aliases)),
+                verified,
                 resolved_at,
             ),
         )

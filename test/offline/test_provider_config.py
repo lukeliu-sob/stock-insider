@@ -230,11 +230,11 @@ def test_config_show_masks_key(env_root, monkeypatch) -> None:
 def test_config_set_persists_non_secret_values(env_root) -> None:
     result = runner.invoke(
         app,
-        ["config", "set", "--chat-base-url", "https://api.example.com/v1", "--budget-quick", "5000"],
+        ["config", "set", "--chat-base-url", "https://api.deepseek.com/v1", "--budget-quick", "5000"],
     )
     assert result.exit_code == 0
     raw = load_config(env_root)
-    assert raw["providers"]["chat"]["base_url"] == "https://api.example.com/v1"
+    assert raw["providers"]["chat"]["base_url"] == "https://api.deepseek.com/v1"
     assert raw["budgets"]["quick"] == 5000
     assert "api_key" not in raw.get("providers", {}).get("chat", {})
 

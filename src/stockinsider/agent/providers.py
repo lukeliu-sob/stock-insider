@@ -293,9 +293,20 @@ class OpenAICompatibleProvider:
     def _client(self, base_url: str) -> Any:
         # M9 (TP-017): the model runtime is the last hop out - every
         # provider URL passes the same egress whitelist as data fetching.
-        from stockinsider.shared.egress import validate_egress_url
+        # ADR-004 Am2 (TP-018): a policy rejection is an explicit
+        # ProviderError, never a bare EgressViolationError escaping the
+        # REPL's handler (the old path crashed the session into a stuck
+        # "active" state on first question).
+        from stockinsider.shared.egress import (
+            EgressViolationError,
+            provider_egress_allowed,
+            validate_egress_url,
+        )
 
-        validate_egress_url(base_url)
+        try:
+            validate_egress_url(base_url, extra_allowed=provider_egress_allowed())
+        except EgressViolationError as exc:
+            raise ProviderError(f"egress whitelist rejected the model endpoint ({exc})") from exc
         if self._client_factory is not None:
             return self._client_factory(base_url=base_url, api_key=self._api_key)
         from openai import OpenAI
