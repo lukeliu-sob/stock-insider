@@ -136,6 +136,13 @@ Invariant/process gap exposed → what changed:
 - **Fix**: the transport-exception path recovers the status from the message (`429` -> throttle); an empty 200 body raises `throttle` explicitly (an empty artlist is never valid JSON, and misclassifying it would advance the cursor past unsynced data). The CLI `sync` rendering now shows the news track (the report carried it; the surface dropped it — INV-003 visibility).
 - **Gap exposed -> change**: throttle semantics must be tested at the seam level, not only against status codes — a stub returning FetchResult(429) exercises a path the live stdlib transport never takes. The failure taxonomy tests now cover both seam shapes.
 
+## BD-006 — Worktree "reverter" root cause identified (correction)
+
+- **Date / corrected**: 2026-09-29 (original entry 2026-09-14; root cause was recorded then as "unknown external process" — that was wrong).
+- **Root cause (identified by the second external audit, confirmed locally)**: the local pi harness extension `~/.pi/agent/extensions/git-safety.ts` stashes and restores the worktree every turn ("pi-turn" stashes; 30 accumulated), and `.git/AUTO_MERGE` artifacts from merges over a dirty worktree replayed pre-merge content into tracked files (mtime-identical to the merge moment). Every "file reverted mid-build" event in AILOG-0040..0053 traces to this mechanism — not to any external actor.
+- **Disposition (2026-09-29)**: extension disabled (renamed `.disabled`), the 30 stashes archived by SHA to `.git/stash-archive-20260929.txt` and cleared, worktree verified byte-identical to origin/main. The git-staging build discipline (`.git/tpXXX/` + `checkout-index` export) that all subsequent work used remains the correct defense-in-depth even with the harness fixed.
+- **Lesson**: an agent fighting "sabotage" for a week should have hunted the sabotage INSIDE its own harness first; the harness is part of the system under test.
+
 ## BD-014 — SyncReport.as_dict dropped the news field
 - **Date / discovered by**: 2026-09-24 / agent during live news verification.
 - **Symptom**: `stockinsider sync` and the `sync.run` tool output carried no news track although the news sync ran and stored rows.

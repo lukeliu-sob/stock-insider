@@ -7,12 +7,13 @@ guardrail post-check with quarantine/regeneration fallbacks, usage
 accounting, and rendering. Everything injectable — offline tests run
 the full pipeline with scripted providers.
 
-Rendering contract: text deltas stream through stream_sink as they
-arrive (FR-019); render() is called exactly once per turn with the
-final authoritative text, and only when the verdict changed it
-(quarantine, degradation, regeneration refusal, or iteration-cap
-stop). When streamed text is displayed unchanged, the engine closes
-the line with a single newline through stream_sink instead.
+Rendering contract (H1, 2026-09-29 audit): deltas buffer during the
+turn and replay through stream_sink only after the numeric post-
+check passes (verify-then-display; a quarantined turn never shows
+its original text). render() is called exactly once per turn with
+the final authoritative text; unchanged passing text is delivered
+via the stream replay, changed text (quarantine, regeneration,
+degradation, iteration-cap) via render().
 
 Implements: REQ-SI-FR-008, REQ-SI-FR-019, REQ-SI-COST-002,
 REQ-SI-INV-001, REQ-SI-INV-002, REQ-SI-GOV-003 (ADR-001)
@@ -102,6 +103,8 @@ class TurnEngine:
         prompts_dir: Path | str | None = None,
     ) -> None:
         """Bind the store, registry membrane, and provider; load the identity prompt."""
+        self._aborted: str | None = None  # H4: sticky session abort
+
         self._store = store
         self._registry = registry
         self._provider = provider
@@ -154,12 +157,30 @@ class TurnEngine:
         Implements: REQ-SI-FR-008, REQ-SI-FR-019, REQ-SI-COST-002,
         REQ-SI-INV-001, REQ-SI-INV-002 (ADR-001)
         """
+        if getattr(self, "_aborted", None):
+            refusal = (
+                f"session aborted ({self._aborted} threshold): this session no longer "
+                "calls the model; start a new session (INV-003 — explicit, not silent)"
+            )
+            render(refusal)
+            progress(_footer(0, None, {}))
+            return TurnOutcome(
+                displayed=refusal,
+                quarantined=False,
+                aborted=self._aborted,
+                tools_used=0,
+                usage={},
+            )
         turn_id = self._next_turn_id(session_id)
+        # M6 (2026-09-29 audit): read history BEFORE appending this turn's
+        # user event — the old order duplicated the current message into
+        # the model context (the model literally saw it twice).
+        history = self._history_messages(session_id)
         self._store.append_event(session_id, {"event": "user-message", "text": user_text, "turn": turn_id})
         usage_total: dict[str, int] = {}
         messages: list[dict[str, Any]] = [
             {"role": "system", "content": self._identity},
-            *self._history_messages(session_id),
+            *history,
             {"role": "user", "content": user_text},
         ]
         tool_specs = self._registry.openai_tool_specs()
@@ -173,9 +194,13 @@ class TurnEngine:
         tools_used = 0
         snapshot_values: dict[str, Any] = {}
         call_seq = 0
-        streamed = False
+        # H1 (2026-09-29 audit): verify-then-display. Deltas buffer in the
+        # deferred sink and replay to the user's sink ONLY after the post-
+        # check passes; a quarantined turn never shows its original text.
+        deferred = _DeferredSink()
+        provider_sink = deferred.push if stream_sink is not None else None
         for _iteration in range(limit):
-            outcome = self._provider.complete(messages, tools=tool_specs, stream_sink=stream_sink)
+            outcome = self._provider.complete(messages, tools=tool_specs, stream_sink=provider_sink)
             _accumulate(usage_total, outcome.usage)
             if outcome.tool_calls:
                 messages.append({"role": "assistant", "tool_calls": outcome.tool_calls})
@@ -232,7 +257,6 @@ class TurnEngine:
                         snapshot_values[f"{name}#{call_seq}"] = result.result
                 continue
             candidate = outcome.text
-            streamed = True
             break
         else:
             stop = (
@@ -253,6 +277,13 @@ class TurnEngine:
         # values-as-seen snapshot: the INV-001 verification pool
         self._store.snapshot(session_id, turn_id, snapshot_values)
         verdict = run_postcheck(candidate, snapshot_values)
+
+        def _replay() -> None:
+            if stream_sink is not None:
+                for piece in deferred.buffer:
+                    stream_sink(piece)
+                stream_sink("\n")
+
         if verdict.quarantined:
             self._store.append_event(
                 session_id,
@@ -264,8 +295,7 @@ class TurnEngine:
                     "turn": turn_id,
                 },
             )
-            if streamed and stream_sink:
-                stream_sink("\n")
+            # quarantined: the buffered original is discarded, never shown
             render(verdict.display_text)
             displayed = verdict.display_text
         elif verdict.epistemic.violations:
@@ -280,13 +310,26 @@ class TurnEngine:
                 return regen.text
 
             epi = run_with_regeneration(candidate, _regenerator)
-            if streamed and stream_sink and epi.displayed != candidate:
-                stream_sink("\n")
-            render(epi.displayed)
-            displayed = epi.displayed
+            # H2 (2026-09-29 audit): regenerated text is NOT trusted — it
+            # goes through the same numeric post-check as the primary
+            # candidate. A fabricated number in a regeneration degrades
+            # exactly like the primary path (the old code archived
+            # unchecked regenerations as INV-001-passed).
+            recheck = run_postcheck(epi.displayed, snapshot_values)
+            if recheck.quarantined:
+                deferred.reset()
+                render(recheck.display_text)
+                displayed = recheck.display_text
+                verdict = recheck
+            else:
+                if epi.displayed == candidate:
+                    _replay()
+                else:
+                    deferred.reset()
+                    render(epi.displayed)
+                displayed = epi.displayed
         else:
-            if streamed and stream_sink:
-                stream_sink("\n")
+            _replay()
             displayed = candidate
         self._store.append_event(
             session_id,
@@ -300,6 +343,9 @@ class TurnEngine:
         )
         abort_reason = self._counter.record(verdict)
         if abort_reason:
+            # H4: the abort is now session-sticky — the next run_turn refuses
+            # before any model call (the old code only printed a line).
+            self._aborted = abort_reason
             render(f"session aborted: {abort_reason} threshold reached (invariant fallback)")
         progress(_footer(tools_used, verdict.quarantined, usage_total))
         return TurnOutcome(
@@ -309,6 +355,30 @@ class TurnEngine:
             tools_used=tools_used,
             usage=dict(usage_total),
         )
+
+
+class _DeferredSink:
+    """Buffers provider deltas for verify-then-display (H1).
+
+    Implements: REQ-SI-INV-001, REQ-SI-FR-019 (ADR-001; TP-017 PR-1)
+    """
+
+    def __init__(self) -> None:
+        self.buffer: list[str] = []
+
+    def push(self, piece: str) -> None:
+        """Accumulate one delta; nothing is displayed here.
+
+        Implements: REQ-SI-FR-019 (ADR-001; TP-017 PR-1)
+        """
+        self.buffer.append(piece)
+
+    def reset(self) -> None:
+        """Discard the buffered original (quarantine/regeneration paths).
+
+        Implements: REQ-SI-INV-001 (ADR-001; TP-017 PR-1)
+        """
+        self.buffer.clear()
 
 
 def _footer(tools_used: int, quarantined: bool | None, usage: dict[str, int]) -> str:

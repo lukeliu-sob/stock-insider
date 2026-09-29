@@ -401,32 +401,36 @@ class OpenAICompatibleProvider:
         text_parts: list[str] = []
         calls: dict[int, dict[str, Any]] = {}
         usage: dict[str, int] = {}
-        for chunk in chunks:
-            chunk_usage = getattr(chunk, "usage", None)
-            if chunk_usage:
-                usage = {
-                    "prompt_tokens": chunk_usage.prompt_tokens,
-                    "completion_tokens": chunk_usage.completion_tokens,
-                }
-            for choice in getattr(chunk, "choices", None) or []:
-                delta = getattr(choice, "delta", None)
-                if delta is None:
-                    continue
-                piece = getattr(delta, "content", None)
-                if piece:
-                    text_parts.append(piece)
-                    stream_sink(piece)
-                for tc in getattr(delta, "tool_calls", None) or []:
-                    index = tc.index
-                    slot = calls.setdefault(
-                        index, {"id": "", "type": "function", "function": {"name": "", "arguments": ""}}
-                    )
-                    if tc.id:
-                        slot["id"] = tc.id
-                    if tc.function and tc.function.name:
-                        slot["function"]["name"] = tc.function.name
-                    if tc.function and tc.function.arguments:
-                        slot["function"]["arguments"] += tc.function.arguments
+        try:
+            for chunk in chunks:
+                chunk_usage = getattr(chunk, "usage", None)
+                if chunk_usage:
+                    usage = {
+                        "prompt_tokens": chunk_usage.prompt_tokens,
+                        "completion_tokens": chunk_usage.completion_tokens,
+                    }
+                for choice in getattr(chunk, "choices", None) or []:
+                    delta = getattr(choice, "delta", None)
+                    if delta is None:
+                        continue
+                    piece = getattr(delta, "content", None)
+                    if piece:
+                        text_parts.append(piece)
+                        stream_sink(piece)
+                    for tc in getattr(delta, "tool_calls", None) or []:
+                        index = tc.index
+                        slot = calls.setdefault(
+                            index, {"id": "", "type": "function", "function": {"name": "", "arguments": ""}}
+                        )
+                        if tc.id:
+                            slot["id"] = tc.id
+                        if tc.function and tc.function.name:
+                            slot["function"]["name"] = tc.function.name
+                        if tc.function and tc.function.arguments:
+                            slot["function"]["arguments"] += tc.function.arguments
+        except Exception as exc:  # H5: mid-stream breaks are provider errors
+            raise ProviderError(f"chat stream failed mid-response: {exc}") from exc
+
         return ChatOutcome(
             text="".join(text_parts),
             tool_calls=[calls[i] for i in sorted(calls)],
