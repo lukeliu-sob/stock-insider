@@ -37,6 +37,7 @@ def test_gate_passes_when_tp_mentions_changed_file(tmp_path, monkeypatch) -> Non
         "changed_files",
         lambda: ["src/stockinsider/agent/registry.py", "docs/review-memo.md"],
     )
+    monkeypatch.setattr(gate, "added_memo_headings", lambda: ["### RM-900 - PR #900: test"])
     monkeypatch.setattr(gate, "ROOT", fake)
     body_900 = "Test-Plan: TP-900" + chr(10) + "Review-Memo: appended"
     monkeypatch.setattr(gate.os, "environ", {"PR_BODY": body_900, "CI_BASE_SHA": "x"})
@@ -61,9 +62,15 @@ def test_gate_still_requires_approved_status(tmp_path, monkeypatch) -> None:
     gate = _load_gate(fake)
     plans = fake / "docs" / "test-plans" / "TP-902.md"
     plans.write_text("# TP-902\n\n- Status: draft\n\n- touches `registry.py`\n", encoding="utf-8")
-    monkeypatch.setattr(gate, "changed_files", lambda: ["src/stockinsider/agent/registry.py"])
+    monkeypatch.setattr(
+        gate,
+        "changed_files",
+        lambda: ["src/stockinsider/agent/registry.py", "docs/review-memo.md"],
+    )
+    monkeypatch.setattr(gate, "added_memo_headings", lambda: ["### RM-902 - PR #902: test"])
     monkeypatch.setattr(gate, "ROOT", fake)
-    monkeypatch.setattr(gate.os, "environ", {"PR_BODY": "Test-Plan: TP-902", "CI_BASE_SHA": "x"})
+    body_902 = "Test-Plan: TP-902" + chr(10) + "Review-Memo: appended"
+    monkeypatch.setattr(gate.os, "environ", {"PR_BODY": body_902, "CI_BASE_SHA": "x"})
     try:
         gate.main()
         raise AssertionError("gate must fail")
@@ -110,3 +117,48 @@ def test_gate_requires_memo_file_in_diff_not_just_attestation(tmp_path, monkeypa
         raise AssertionError("gate must fail on attestation without diff")
     except SystemExit as exc:
         assert "NOT" in str(exc) and "review-memo.md" in str(exc)
+
+
+def test_gate_memo_check_runs_before_no_implementation_exit(tmp_path, monkeypatch) -> None:
+    """new-7 (TP-018): a prompts-only change set must not slip past the
+    memo check via the 'no implementation files' early return."""
+    fake = _scaffold(tmp_path, "TP-905.md", ["identity.md"])
+    gate = _load_gate(fake)
+    monkeypatch.setattr(gate, "changed_files", lambda: ["prompts/identity.md"])
+    monkeypatch.setattr(gate, "added_memo_headings", lambda: [])
+    monkeypatch.setattr(gate, "ROOT", fake)
+    monkeypatch.setattr(
+        gate.os, "environ", {"PR_BODY": "Review-Memo: appended", "CI_BASE_SHA": "x"}
+    )
+    try:
+        gate.main()
+        raise AssertionError("gate must fail on prompts-only without a real memo entry")
+    except SystemExit as exc:
+        # Any safety-path failure message is correct here (attestation,
+        # file-in-diff, or heading); the point is: the early return must
+        # not have waved a prompts-only change set through.
+        assert "review-memo" in str(exc)
+
+
+def test_gate_blank_line_memo_padding_fails(tmp_path, monkeypatch) -> None:
+    """new-7 (TP-018): touching docs/review-memo.md without adding an
+    entry heading (blank-line padding) fails the safety-path check."""
+    fake = _scaffold(tmp_path, "TP-906.md", ["identity.md"])
+    gate = _load_gate(fake)
+    monkeypatch.setattr(
+        gate,
+        "changed_files",
+        lambda: ["prompts/identity.md", "docs/review-memo.md"],
+    )
+    monkeypatch.setattr(gate, "added_memo_headings", lambda: [])
+    monkeypatch.setattr(gate, "ROOT", fake)
+    monkeypatch.setattr(
+        gate.os,
+        "environ",
+        {"PR_BODY": "Review-Memo: appended", "CI_BASE_SHA": "x"},
+    )
+    try:
+        gate.main()
+        raise AssertionError("gate must fail on padded memo")
+    except SystemExit as exc:
+        assert "no" in str(exc) and "RM-" in str(exc) and "heading" in str(exc)

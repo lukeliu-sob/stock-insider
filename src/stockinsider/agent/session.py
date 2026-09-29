@@ -107,18 +107,42 @@ class SessionStore:
     def close(self, session_id: str) -> None:
         """Mark a session closed in the index (tree is immutable history).
 
-        Implements: REQ-SI-FR-011 (ADR-001)
+        An aborted session keeps its "aborted" status: closing the loop
+        after the abort threshold is housekeeping, not a pardon (H4
+        residual, TP-018 — resume refuses aborted sessions).
+
+        Implements: REQ-SI-FR-011, REQ-SI-INV-001 (ADR-001; TP-018 PR-2)
         """
         self._require(session_id)
+        if self._index_find(session_id).get("status") == "aborted":
+            return
         self._index_update(session_id, status="closed")
+
+    def abort(self, session_id: str, reason: str) -> None:
+        """Persist the guardrail abort in the index and the event log.
+
+        Implements: REQ-SI-INV-001 (ADR-006; TP-018 PR-2)
+        """
+        self._require(session_id)
+        self._index_update(session_id, status="aborted", abort_reason=reason)
+        self.append_event(session_id, {"event": "error", "kind": "session-abort", "detail": reason})
 
     def resume(self, session_id: str, profile: Profile | str | None = None) -> dict[str, Any]:
         """Reopen a session; explicit error on any profile mismatch.
 
-        Implements: REQ-SI-FR-020 (ADR-001)
+        Aborted sessions are terminal (H4 residual, TP-018): the abort
+        threshold exists to stop a session that keeps fabricating; a
+        restart must not reset that verdict.
+
+        Implements: REQ-SI-FR-020, REQ-SI-INV-001 (ADR-001; TP-018 PR-2)
         """
         self._require(session_id)
         row = self._index_find(session_id)
+        if row.get("status") == "aborted":
+            raise SessionError(
+                f"session {session_id} was aborted by the guardrail "
+                f"({row.get('abort_reason', 'threshold reached')}); start a new session (INV-003)"
+            )
         if profile is not None and Profile(profile).value != row["profile"]:
             raise SessionError("profile is fixed for the session lifetime; switching requires a new session (FR-020)")
         self._index_update(session_id, status="active")
@@ -141,9 +165,18 @@ class SessionStore:
     def append_event(self, session_id: str, event: dict[str, Any]) -> None:
         """Append one JSON line to session.jsonl; prior lines never change.
 
-        Implements: REQ-SI-FR-011 (ADR-001)
+        Every event validates against the shared schema before it is
+        written (low-2, TP-018): an unknown kind fails closed here
+        instead of drifting onto disk unread (the pre-TP-018
+        "user-confirmation" kind wrote schema-invalid lines for exactly
+        this reason).
+
+        Implements: REQ-SI-FR-011 (ADR-004; TP-018 PR-3)
         """
-        session_dir = self._require(session_id)
+        from stockinsider.shared.events import validate_event
+
+        session_dir = self._require(session_id)  # unknown session first
+        validate_event(event)  # then the event shape (fail closed)
         with (session_dir / "session.jsonl").open("a", encoding="utf-8") as stream:
             stream.write(json.dumps(event) + "\n")
         self._index_update(session_id, last_active=_now())

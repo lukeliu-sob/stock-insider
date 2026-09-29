@@ -36,7 +36,13 @@ _NUMBER_TOKEN = re.compile(r"-?\d[\d,]*(?:\.\d+)?")
 _ENUM_MARKER = re.compile(r"(?m)^\s{0,8}\d{1,3}[.)]\s")
 
 
-_HEADING_ORDINAL = re.compile(r"(?m)^#{1,6}\s+\d{1,3}[.)]?\s+")
+#: new-5 (TP-018, ADR-006 Am6): heading ordinals strip only up to TWO
+#: digits. The old three-digit, punctuation-optional form stripped
+#: "## 850 HKD fair value" as if "850" were a section number — a
+#: leading numeric claim in a heading bypassed INV-001 entirely.
+#: Section numbers past 99 are vanishingly rare in this product's
+#: output; a false quarantine there is the accepted price.
+_HEADING_ORDINAL = re.compile(r"(?m)^#{1,6}\s+\d{1,2}[.)]?\s+")
 
 _SYMBOLISH = re.compile(r"\b(\d{1,5})\.[A-Za-z]{2,5}\b")
 
@@ -44,7 +50,7 @@ _SYMBOLISH = re.compile(r"\b(\d{1,5})\.[A-Za-z]{2,5}\b")
 def _strip_enumeration(text: str) -> str:
     """Remove layout numbering: line-leading markers and heading ordinals.
 
-    Implements: REQ-SI-INV-001 (ADR-006, BD-016 amendment; TP-017 PR-3a)
+    Implements: REQ-SI-INV-001 (ADR-006, BD-016 amendment; TP-018 ADR-006 Am6)
     """
     return _HEADING_ORDINAL.sub("", _ENUM_MARKER.sub("", text))
 
@@ -94,6 +100,85 @@ def _normalize_dates(text: str) -> str:
     Implements: REQ-SI-INV-001 (ADR-006, BD-018 amendment)
     """
     return _ISO_DATE.sub(r"\1\2\3", text)
+
+
+#: M2 phase 1 (TP-018, ADR-006 Am6): typed numeric provenance for the
+#: OHLCV field class. A pool hit used to pass regardless of WHICH
+#: field the sentence claimed - quoting the open as the close passed
+#: INV-001. The typed pool maps each canonical value to the set of
+#: OHLCV field names it is actually stored under; a token whose
+#: sentence context names a field the value is NOT stored under
+#: fails the check. Phase-2 (non-OHLCV semantics) is future work.
+_OHLCV_CANON = {
+    "open": "open", "opens": "open", "opened": "open", "opening": "open",
+    "high": "high", "highs": "high",
+    "low": "low", "lows": "low",
+    "close": "close", "closes": "close", "closed": "close",
+    "closing": "close", "closings": "close",
+    "volume": "volume", "volumes": "volume",
+    "adjusted_close": "adjusted_close", "adjusted": "adjusted_close",
+}
+
+_FIELD_WORD = re.compile(
+    r"\b(open|opens|opened|opening|high|highs|low|lows|close|closes|closed|closing"
+    r"|volume|volumes|adjusted)\b",
+    re.IGNORECASE,
+)
+
+
+def _typed_ohlcv_pool(snapshot_values: object) -> dict[str, set[str]]:
+    """Canonical value -> OHLCV field names it is stored under.
+
+    Only direct OHLCV-key -> numeric-leaf pairs register (the
+    product's bar payloads are flat); nothing is guessed.
+
+    Implements: REQ-SI-INV-001 (ADR-006 Am6; TP-018 PR-3)
+    """
+    out: dict[str, set[str]] = {}
+
+    def _visit(node: object) -> None:
+        if isinstance(node, dict):
+            for key, value in node.items():
+                canon_key = _OHLCV_CANON.get(str(key).lower())
+                if (
+                    canon_key
+                    and isinstance(value, (int, float))
+                    and not isinstance(value, bool)
+                ):
+                    out.setdefault(_canon_number(value), set()).add(canon_key)
+                else:
+                    _visit(value)
+        elif isinstance(node, (list, tuple)):
+            for item in node:
+                _visit(item)
+
+    _visit(snapshot_values)
+    return out
+
+
+def _field_mismatch(stripped_text: str, token: str, stored_fields: set[str]) -> bool:
+    """True when field-mentioning occurrences of token all disagree.
+
+    An occurrence is CONSISTENT when its word window mentions at
+    least one field the value is stored under (a doji's open ==
+    close passes); INCONSISTENT when it mentions only other
+    OHLCV fields. The token fails only when some occurrence is
+    inconsistent and none is consistent.
+
+    Implements: REQ-SI-INV-001 (ADR-006 Am6; TP-018 PR-3)
+    """
+    consistent = False
+    inconsistent = False
+    for match in re.finditer(re.escape(token), stripped_text):
+        window = stripped_text[max(0, match.start() - 48): match.end() + 48]
+        mentioned = {_OHLCV_CANON[w.lower()] for w in _FIELD_WORD.findall(window)}
+        if not mentioned:
+            continue
+        if mentioned & stored_fields:
+            consistent = True
+        else:
+            inconsistent = True
+    return inconsistent and not consistent
 
 
 def _canon_number(value: float | int) -> str:
@@ -247,6 +332,7 @@ class NumberCheck:
     failed: list[str]
     rounded: list[str] = field(default_factory=list)
     structural: list[str] = field(default_factory=list)
+    field_mismatch: list[str] = field(default_factory=list)
 
 
 def postcheck_numbers(candidate: str, snapshot_values: object) -> NumberCheck:
@@ -261,16 +347,25 @@ def postcheck_numbers(candidate: str, snapshot_values: object) -> NumberCheck:
     pool = _values_pool(snapshot_values)
     floats = _pool_floats(snapshot_values)
     structural = _structural_tokens(snapshot_values)
+    typed = _typed_ohlcv_pool(snapshot_values)
     matched: list[str] = []
     failed: list[str] = []
     rounded: list[str] = []
     structural_hits: list[str] = []
-    for token in extract_numbers(_normalize_dates(_strip_enumeration(candidate))):
+    mismatches: list[str] = []
+    stripped = _normalize_dates(_strip_enumeration(candidate))
+    for token in extract_numbers(stripped):
         canon = _canon_token(token)
         if canon in structural:
             structural_hits.append(token)
             continue
         if canon in pool:
+            stored_fields = typed.get(canon)
+            if stored_fields and _field_mismatch(stripped, token, stored_fields):
+                # M2 phase 1: numerically present, semantically wrong
+                # (open quoted as close) - quarantined like any fabrication.
+                mismatches.append(token)
+                continue
             matched.append(token)
             continue
         if any(_display_rounds_to(value, token) for value in floats):
@@ -282,12 +377,14 @@ def postcheck_numbers(candidate: str, snapshot_values: object) -> NumberCheck:
             rounded.append(token)  # percent-display conversion (BD-015)
             continue
         failed.append(token)
+    failed_all = failed + mismatches
     return NumberCheck(
-        passed=not failed,
+        passed=not failed_all,
         matched=matched,
-        failed=failed,
+        failed=failed_all,
         rounded=rounded,
         structural=structural_hits,
+        field_mismatch=mismatches,
     )
 
 
@@ -357,6 +454,29 @@ EPISTEMIC_PATTERNS: tuple[tuple[str, re.Pattern[str]], ...] = (
             re.IGNORECASE,
         ),
     ),
+    (
+        # M3 recall batch (TP-018, ADR-006 Am6): modal-certainty framing
+        # the audit's adversarial sentences used to slip through.
+        "modal-certainty",
+        re.compile(
+            rf"\b(likely|set|on track|poised|slated|forecast|positioned|primed)\b"
+            rf"[^.!?]{0,30}?\bto\s+({_VERBS}|collapse|surge|plummet|continue|reverse)\b",
+            re.IGNORECASE,
+        ),
+    ),
+)
+
+#: M3 false-positive fix (TP-018, ADR-006 Am6): REPORTED speech is
+#: factual reporting, not the product's own prediction. A sentence
+#: carrying an attribution marker ("Management said it will increase
+#: the dividend", "according to the filing, shares will...") is
+#: exempt from the prediction patterns - the claim belongs to the
+#: named source, and stripping it would delete citable evidence.
+_ATTRIBUTION = re.compile(
+    r"\b(said|says|announced|announce|guidance|guided|according to|"
+    r"\breported|reports|stated|notes that|management|company said\b"
+    r"\bceo|cfo|spokesperson|filing|release)\b",
+    re.IGNORECASE,
 )
 
 _HYPOTHESIS = re.compile(
@@ -394,7 +514,8 @@ def epistemic_filter(candidate: str) -> EpistemicCheck:
     for sentence in _sentences(candidate):
         has_pattern = any(pattern.search(sentence) for _name, pattern in EPISTEMIC_PATTERNS)
         labeled = _HYPOTHESIS.search(sentence) is not None
-        if has_pattern and not labeled:
+        attributed = _ATTRIBUTION.search(sentence) is not None
+        if has_pattern and not labeled and not attributed:
             violations.append(sentence.strip())
         else:
             kept.append(sentence)
@@ -485,7 +606,13 @@ def run_postcheck(candidate: str, snapshot_values: object) -> GuardrailVerdict:
     quarantined = (not numbers.passed) or not language_ok
     degraded = None
     if not numbers.passed:
-        degraded = "data unavailable for: " + ", ".join(numbers.failed)
+        parts = ["data unavailable for: " + ", ".join(numbers.failed)]
+        if numbers.field_mismatch:
+            parts.append(
+                "field mismatch (numeric present, wrong field quoted): "
+                + ", ".join(numbers.field_mismatch)
+            )
+        degraded = "; ".join(parts)
     if quarantined:
         display = degraded if degraded else "response withheld: language policy violation (GOV-001)"
     elif epi.violations:

@@ -161,9 +161,7 @@ class SyncService:
 
         if os.environ.get("EODHD_FUNDAMENTALS") == "1":
             return True
-        row = self._conn.execute(
-            "SELECT last_status FROM sync_state WHERE track = ?", (FUND_ACCESS_TRACK,)
-        ).fetchone()
+        row = self._conn.execute("SELECT last_status FROM sync_state WHERE track = ?", (FUND_ACCESS_TRACK,)).fetchone()
         return row is None or row["last_status"] != "denied"
 
     def _fundamentals_stale(self, symbol: str) -> bool:
@@ -195,7 +193,9 @@ class SyncService:
         cost = FUNDAMENTALS_COST if action == "fundamentals" else 1
         if not self._budget.try_spend(cost):
             return ItemResult(
-                symbol, action, "deferred",
+                symbol,
+                action,
+                "deferred",
                 f"daily call budget exhausted (needs {cost}); runs next sync",
             )
         if action == "fundamentals":
@@ -203,7 +203,18 @@ class SyncService:
         try:
             rows = self._adapter.fetch_eod(symbol, from_date, to_date)
             stored = store_bars(self._conn, symbol, rows)
-            last_date = rows[-1]["date"] if rows else to_date
+            if not rows:
+                # low-4 (TP-018): an empty fetch proves nothing. The old
+                # path advanced the cursor to to_date and marked the gap
+                # resolved anyway — a zero-data gap reported as fixed
+                # (INV-003). The gap stays open; the cursor does not move.
+                return ItemResult(
+                    symbol,
+                    action,
+                    "failed",
+                    f"0 bars returned for {from_date}..{to_date}; gap remains open, cursor unchanged (INV-003)",
+                )
+            last_date = rows[-1]["date"]
             previous = self._cursor(symbol)
             new_cursor = max(previous, last_date) if previous else last_date  # never regress
             self._set_cursor(symbol, new_cursor)
@@ -238,7 +249,9 @@ class SyncService:
                     ),
                 )
             return ItemResult(
-                symbol, "fundamentals", "ok",
+                symbol,
+                "fundamentals",
+                "ok",
                 (
                     f"{outcome['statements']} statement rows stored; "
                     f"profile {'updated' if outcome['profile'] else 'absent'}"
@@ -370,10 +383,7 @@ class SyncService:
             t0 = monotonic()
             result = self._execute(item, report)
             report.results.append(result)
-            emit(
-                f"market {result.symbol} {result.action}: {result.status} "
-                f"({result.detail}) +{monotonic() - t0:.1f}s"
-            )
+            emit(f"market {result.symbol} {result.action}: {result.status} ({result.detail}) +{monotonic() - t0:.1f}s")
         self._completeness_pass(report)
         report.calls_used = self._budget.used_today() - used_before
         report.calls_remaining = self._budget.remaining()
