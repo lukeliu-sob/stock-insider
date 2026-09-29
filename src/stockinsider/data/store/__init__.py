@@ -12,7 +12,10 @@ import sqlite3
 from typing import Any, Callable
 
 from stockinsider.data.store.db import SchemaVersionError, open_db
+from datetime import datetime, timedelta, timezone
+
 from stockinsider.data.store.resolver import (
+    Resolution,
     ResolverUnavailable,
     SymbolResolver,
     seed_benchmarks,
@@ -119,6 +122,48 @@ class DataStore:
         from stockinsider.data.store.info import render_info
 
         return render_info(self._conn, symbol)
+
+    def verify_symbol(self, canonical: str, adapter: "Any | None" = None) -> "Resolution | None":
+        """Direct-symbol verification via one budgeted EOD fetch (BD-017).
+
+        The vendor search endpoint does not index HK listings; a
+        query shaped like a canonical symbol goes straight to the
+        EOD seam. One bar proves existence (fail-closed: no data,
+        no candidate). The display name is honestly unverified.
+        Costs one budgeted call regardless of outcome (the vendor
+        saw the request). Adapter injection is the test seam.
+
+        Implements: REQ-SI-FR-004, REQ-SI-INV-004, REQ-SI-INV-003 (ADR-002, BD-017)
+        """
+        from stockinsider.data.ingest.budget import CallBudget
+        from stockinsider.data.ingest.market import EodhdMarketAdapter
+        adapter = adapter if adapter is not None else EodhdMarketAdapter()
+        if not adapter.is_live():
+            raise ResolverUnavailable(
+                "direct verification is not configured: set EODHD_API_KEY "
+                "(real environment variable or the local env file) (INV-003)"
+            )
+        budget = CallBudget(self._conn)
+        if not budget.try_spend(1):
+            raise ResolverUnavailable(
+                "direct verification refused: daily call budget exhausted; "
+                "retry after the budget resets (INV-003)"
+            )
+        suffix = canonical.rsplit(".", 1)[1].upper()
+        end = datetime.now(timezone.utc).date()
+        start = end - timedelta(days=30)
+        bars = adapter.fetch_eod(canonical, start.isoformat(), end.isoformat())
+        if not bars:
+            return None
+        return Resolution(
+            canonical_symbol=canonical,
+            exchange=suffix,
+            official_name=(
+                f"{canonical} (name unverified - vendor search does not index "
+                "this exchange; verify before adding)"
+            ),
+            asset_type="unverified",
+        )
 
     def close(self) -> None:
         """Close the underlying connection.
