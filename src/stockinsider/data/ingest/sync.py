@@ -16,7 +16,8 @@ from __future__ import annotations
 import sqlite3
 from dataclasses import dataclass, field
 from datetime import datetime, timedelta, timezone
-from typing import Any
+from time import monotonic
+from typing import Any, Callable
 
 from stockinsider.data.ingest.budget import CallBudget
 from stockinsider.data.ingest.calendar import CalendarUnavailable, missing_ranges, trading_dates
@@ -349,16 +350,30 @@ class SyncService:
             ).fetchall()
         }
 
-    def run(self) -> SyncReport:
+    def run(self, progress: "Callable[[str], None] | None" = None) -> SyncReport:
         """Execute one sync run; the report is the sole output surface.
+
+        The optional progress callback receives one human-readable
+        line per plan item and track boundary as work completes
+        (pure observability; it never alters execution) (TP-015).
 
         Implements: REQ-SI-FR-001, REQ-SI-QA-003, REQ-SI-INV-003 (ADR-002)
         """
+        emit = progress if progress is not None else (lambda _line: None)
+        started = monotonic()
         report = SyncReport(ran_at=datetime.now(timezone.utc).isoformat(timespec="seconds"))
         used_before = self._budget.used_today()
         self._enqueue_detected_gaps()  # deletions since last run enter THIS run's plan
-        for item in self._plan():
-            report.results.append(self._execute(item, report))
+        plan = self._plan()
+        emit(f"plan: {len(plan)} market item(s) (gaps detected first, then incrementals)")
+        for item in plan:
+            t0 = monotonic()
+            result = self._execute(item, report)
+            report.results.append(result)
+            emit(
+                f"market {result.symbol} {result.action}: {result.status} "
+                f"({result.detail}) +{monotonic() - t0:.1f}s"
+            )
         self._completeness_pass(report)
         report.calls_used = self._budget.used_today() - used_before
         report.calls_remaining = self._budget.remaining()
@@ -367,18 +382,25 @@ class SyncService:
         # failure never fails the market report (design §8).
         if self._news_enabled:
             report.news = {}
+            emit("news/gdelt: start")
             try:  # GDELT: macro groups (and symbols while throttled)
                 report.news["gdelt"] = run_news_sync(
-                    self._conn, adapter=GdeltNewsAdapter(transport=self._transport)
+                    self._conn,
+                    adapter=GdeltNewsAdapter(transport=self._transport),
+                    progress=progress,
                 )
             except Exception as exc:  # explicit isolation boundary
                 report.news["gdelt"] = {"failed": f"gdelt track aborted: {exc}"}
+                emit(f"news/gdelt: aborted ({exc})")
+            emit("news/eodhd: start")
             try:  # EODHD: primary symbol-scoped source (TP-014)
                 from stockinsider.data.ingest.eodnews import run_eodhd_news_sync
 
-                report.news["eodhd"] = run_eodhd_news_sync(self._conn)
+                report.news["eodhd"] = run_eodhd_news_sync(self._conn, progress=progress)
             except Exception as exc:  # explicit isolation boundary
                 report.news["eodhd"] = {"failed": f"eodhd track aborted: {exc}"}
+                emit(f"news/eodhd: aborted ({exc})")
+        emit(f"sync tracks complete +{monotonic() - started:.1f}s")
         return report
 
 

@@ -18,7 +18,7 @@ from __future__ import annotations
 import json
 import sqlite3
 from datetime import datetime, timedelta, timezone
-from typing import Any
+from typing import Any, Callable
 from urllib.parse import urlparse
 
 from stockinsider.data.ingest.http import FetchResult, Transport, stdlib_fetch
@@ -187,6 +187,7 @@ def run_eodhd_news_sync(
     *,
     now: datetime | None = None,
     budget: Any | None = None,
+    progress: "Callable[[str], None] | None" = None,
 ) -> dict[str, Any]:
     """Fetch and store news per active watchlist symbol (TP-014).
 
@@ -220,6 +221,8 @@ def run_eodhd_news_sync(
             raw_items = adapter.fetch(entry.canonical_symbol)
         except EodhdNewsError as exc:
             results.append({"bucket": entry.canonical_symbol, "status": exc.kind, "error": str(exc)})
+            if progress is not None:
+                progress(f"news/eodhd {entry.canonical_symbol}: {exc.kind}")
             continue
         counts = {"kept_new": 0, "dups": 0, "quarantined": 0, "rejected": 0}
         dup_cutoff = _seendate_str(now - timedelta(days=DUP_WINDOW_DAYS))
@@ -298,6 +301,10 @@ def run_eodhd_news_sync(
                 _insert_eodhd(conn, entry.canonical_symbol, query, item, url_norm, score, now)
                 counts["kept_new"] += 1
         results.append({"bucket": entry.canonical_symbol, "status": "ok", **counts})
+        if progress is not None:
+            progress(
+                f"news/eodhd {entry.canonical_symbol}: ok new={counts.get('kept_new', 0)} dup={counts.get('dups', 0)}"
+            )
     _set_news_cursor(conn, now.date().isoformat(), now)  # informational; dedup is the idempotence
     return {
         "ran_at": _iso(now),

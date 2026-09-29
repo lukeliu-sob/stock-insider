@@ -1925,3 +1925,47 @@ sessions:
       Owner instructed the live verification round (option A
       news.recent, env budget line added).
     status: applied
+
+  - id: AILOG-0050
+    date: "2026-09-27"
+    tool: "pi coding agent (LLM session)"
+    role: ai
+    task: >-
+      TP-015 PR-a (P0 CLI polish, six items): new cli/render.py with
+      init_output (UTF-8 + errors=replace on both streams), chrome
+      ASCII degradation for console strings, sync summary/notable/
+      verbose partitioning, news-track rendering for both sources,
+      and region-aware day-change coloring (red-up for .HK/.CN,
+      green-up otherwise). Sync observability: a progress callback
+      threads facade -> SyncService -> both news tracks, emitting
+      plan size, per-item status with timing, track boundaries, and
+      a total wall-time line; the callback is pure observability
+      and defaults to None (report stays the sole seam contract).
+      REPL: /help grouped (session/data/tools) with unimplemented
+      commands hidden from the listing (explicit failure on
+      invocation retained); TTY-only context prompt (watchlist size
+      + budget remaining), plain prompt when piped. Failure exit
+      code and deferred-budget semantics unchanged. Thirteen new
+      tests (317 total). Build-round lessons: replace anchors must
+      assert; substring matches can collide across indentation
+      levels (news.py except-body was pierced by a 4-space-shorter
+      anchor, producing an UnboundLocalError caught as a track
+      failure); the worktree reverter poisoned the index mid-stage
+      once (full restage loop recovered it).
+    artifacts:
+      - src/stockinsider/cli/render.py
+      - src/stockinsider/cli/app.py
+      - src/stockinsider/agent/repl.py
+      - src/stockinsider/data/ingest/sync.py
+      - src/stockinsider/data/ingest/news.py
+      - src/stockinsider/data/ingest/eodnews.py
+      - src/stockinsider/data/store/__init__.py
+      - test/offline/test_cli_render.py
+      - docs/test-plans/TP-015.md
+      - docs/ai-use-log.yaml
+    human_decision: >-
+      Owner confirmed the P1 proposal, asked to fold the P0 fixes
+      in, and instructed implementation to start; the three open
+      option points resolved to defaults (name-unverified accepted,
+      aggressive folding, sessions filters as specified).
+    status: applied
