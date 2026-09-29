@@ -2010,3 +2010,32 @@ sessions:
       display accepted, aggressive folding) and instructed
       continuation after merging PR-a.
     status: applied
+
+  - id: AILOG-0052
+    date: "2026-09-29"
+    tool: "pi coding agent (LLM session)"
+    role: ai
+    task: >-
+      TP-015 PR-c (closing the test plan): one error channel and
+      session-list governance. render_error(message) in cli/render —
+      a red rich Panel on a TTY, the exact historical 'error: ...'
+      plain line when piped, so scripted consumers and existing test
+      assertions are unchanged; all ten CLI error sites migrated
+      (exception sites via str(exc), literal sites reworded through
+      the same channel; exit-code semantics untouched). sessions
+      gains --status (active/closed — noting the index vocabulary:
+      create records 'active', not 'open', caught by the new test
+      on first run) and --limit N with an explicit truncation hint
+      line, never silent truncation. REPL /sessions accepts
+      [symbol] [page] with page clamping and a page x/y banner.
+      Five new tests (332 total). TP-015 complete: PR-a (#41),
+      PR-b (#42), PR-c.
+    artifacts:
+      - src/stockinsider/cli/render.py
+      - src/stockinsider/cli/app.py
+      - src/stockinsider/agent/repl.py
+      - test/offline/test_cli_errors_sessions.py
+      - docs/ai-use-log.yaml
+    human_decision: >-
+      Owner instructed continuation after merging PR-b.
+    status: applied

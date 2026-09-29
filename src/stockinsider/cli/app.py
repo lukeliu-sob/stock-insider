@@ -31,6 +31,7 @@ from stockinsider.cli.render import (
     info_lines_chromed,
     init_output,
     news_track_lines,
+    render_error,
     sync_notable_lines,
     sync_summary_line,
     sync_verbose_lines,
@@ -156,7 +157,11 @@ def watch(
             return
         if action == "add":
             if not query:
-                typer.secho("error: `watch add` requires a mention or name to resolve", fg=typer.colors.RED, err=True)
+                typer.secho(
+            render_error("`watch add` requires a mention or name to resolve"),
+            fg=typer.colors.RED,
+            err=True,
+        )
                 raise typer.Exit(code=2)
             try:
                 if SYMBOL_SHAPE.match(query.strip()):
@@ -176,7 +181,7 @@ def watch(
                 else:
                     candidates = order_candidates(data_store.resolver.search(query), query)
             except (ResolverUnavailable, MarketKeyMissing) as exc:
-                typer.secho(f"error: {exc}", fg=typer.colors.RED, err=True)
+                typer.secho(render_error(str(exc)), fg=typer.colors.RED, err=True)
                 raise typer.Exit(code=2) from exc
             if not candidates:
                 typer.secho(
@@ -210,7 +215,7 @@ def watch(
             else:
                 raw = typer.prompt(f"select 1-{len(candidates)}")
                 if not raw.isdigit() or not 1 <= int(raw) <= len(candidates):
-                    typer.secho("error: invalid selection; cancelled", fg=typer.colors.RED, err=True)
+                    typer.secho(render_error("invalid selection; cancelled"), fg=typer.colors.RED, err=True)
                     raise typer.Exit(code=2)
                 choice = int(raw)
             picked = candidates[choice - 1]
@@ -225,15 +230,19 @@ def watch(
             return
         if action == "remove":
             if not query:
-                typer.secho("error: `watch remove` requires a canonical symbol", fg=typer.colors.RED, err=True)
+                typer.secho(render_error("`watch remove` requires a canonical symbol"), fg=typer.colors.RED, err=True)
                 raise typer.Exit(code=2)
             result = data_store.watchlist.remove(query)
             typer.echo(f"removed {result['canonical_symbol']} (status: {result['status']})")
             return
-        typer.secho(f"error: unknown watch action {action!r} (list | add | remove)", fg=typer.colors.RED, err=True)
+        typer.secho(
+            render_error(f"unknown watch action {action!r} (list | add | remove)"),
+            fg=typer.colors.RED,
+            err=True,
+        )
         raise typer.Exit(code=2)
     except WatchlistError as exc:
-        typer.secho(f"error: {exc}", fg=typer.colors.RED, err=True)
+        typer.secho(render_error(str(exc)), fg=typer.colors.RED, err=True)
         raise typer.Exit(code=1) from exc
     finally:
         data_store.close()
@@ -250,7 +259,7 @@ def info(symbol: str = typer.Argument(..., help="Canonical symbol, e.g. 0700.HK"
         try:
             lines = data_store.info_lines(symbol)
         except Exception as exc:  # noqa: BLE001 — explicit not-found path
-            typer.secho(f"error: {exc}", fg=typer.colors.RED, err=True)
+            typer.secho(render_error(str(exc)), fg=typer.colors.RED, err=True)
             raise typer.Exit(code=1) from exc
         for line in info_lines_chromed(lines):
             typer.echo(day_change_styled(symbol, line))
@@ -278,7 +287,7 @@ def resume(
     try:
         resume_session(SessionStore(), session_id, data_store=open_data_store())
     except SessionError as exc:
-        typer.secho(f"error: {exc}", fg=typer.colors.RED, err=True)
+        typer.secho(render_error(str(exc)), fg=typer.colors.RED, err=True)
         raise typer.Exit(code=2) from None
 
 
@@ -286,15 +295,23 @@ def resume(
 def sessions(
     symbol: str = typer.Option(None, help="Filter by subject symbol, e.g. 0700.HK."),
     date: str = typer.Option(None, help="Filter by creation date prefix (YYYY-MM-DD)."),
+    status: str = typer.Option(None, help="Filter by status: open | closed."),
+    limit: int = typer.Option(None, help="Show at most N sessions (hint on truncation)."),
 ) -> None:
     """List sessions from the sessions index.
 
-    Implements: REQ-SI-FR-012
+    Implements: REQ-SI-FR-012 (TP-015 P1-9)
     """
     rows = SessionStore().list_sessions(symbol=symbol, date=date)
+    if status is not None:
+        rows = [row for row in rows if row["status"] == status]
     if not rows:
         typer.echo("no sessions match the filter")
         return
+    total = len(rows)
+    if limit is not None and limit >= 0 and total > limit:
+        rows = rows[-limit:]
+        typer.echo(f"(showing the {limit} most recent of {total}; raise --limit for more)")
     for row in rows:
         symbols = ",".join(row["subject_symbols"]) or "-"
         typer.echo(f"{row['session_id']}  {row['created']}  {row['status']}  {symbols}  {row['profile']}")
@@ -319,7 +336,7 @@ def show(
     try:
         render_session(store, target, typer.echo)
     except SessionError as exc:
-        typer.secho(f"error: {exc}", fg=typer.colors.RED, err=True)
+        typer.secho(render_error(str(exc)), fg=typer.colors.RED, err=True)
         raise typer.Exit(code=2) from None
 
 

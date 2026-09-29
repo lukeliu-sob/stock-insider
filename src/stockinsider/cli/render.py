@@ -173,3 +173,21 @@ def day_change_styled(symbol: str, line: str) -> str:
     else:
         return line
     return f"\033[{color}m{line}\033[0m"
+
+
+def render_error(message: str) -> str:
+    """One error channel: rich red panel on a TTY, plain line piped.
+
+    The plain path keeps the exact historical `error: ...` text so
+    scripted consumers and tests are unchanged (TP-015 P1-8).
+
+    Implements: REQ-SI-FR-013, REQ-SI-INV-003 (ADR-001)
+    """
+    if sys.stdout.isatty():
+        from rich.console import Console
+        from rich.panel import Panel
+
+        console = Console()
+        console.print(Panel(message, title="error", border_style="red"))
+        return ""
+    return f"error: {message}"
