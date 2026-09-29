@@ -172,6 +172,7 @@ class TurnEngine:
         candidate = ""
         tools_used = 0
         snapshot_values: dict[str, Any] = {}
+        call_seq = 0
         streamed = False
         for _iteration in range(limit):
             outcome = self._provider.complete(messages, tools=tool_specs, stream_sink=stream_sink)
@@ -222,7 +223,13 @@ class TurnEngine:
                         }
                     )
                     if result.ok:
-                        snapshot_values[name] = result.result
+                        # BD-019: key per successful call, not per tool
+                        # name — same-tool repeat calls used to evict
+                        # earlier results from the INV-001 pool
+                        # (last-wins), so citations of the first call
+                        # quarantined spuriously.
+                        call_seq += 1
+                        snapshot_values[f"{name}#{call_seq}"] = result.result
                 continue
             candidate = outcome.text
             streamed = True

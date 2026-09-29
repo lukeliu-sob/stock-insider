@@ -104,7 +104,7 @@ def test_tool_loop_end_to_end(store, prompts_dir) -> None:
     snapshot_path = store.root / record["session_id"] / "context" / "turn-0001.json"
     assert snapshot_path.is_file()
     values = json.loads(snapshot_path.read_text(encoding="utf-8"))["values"]
-    assert values["budget.query"]["max_session_tokens"] == 30000
+    assert values["budget.query#1"]["max_session_tokens"] == 30000
     events = store.read_events(record["session_id"])
     kinds = [e["event"] for e in events]
     assert kinds == ["session-open", "user-message", "tool-call", "tool-result", "assistant-message"]

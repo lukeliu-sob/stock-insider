@@ -2039,3 +2039,49 @@ sessions:
     human_decision: >-
       Owner instructed continuation after merging PR-b.
     status: applied
+
+  - id: AILOG-0053
+    date: "2026-09-29"
+    tool: "pi coding agent (LLM session)"
+    role: ai
+    task: >-
+      Comprehensive CLI test round (owner-instructed: command-surface
+      sweep plus simulated real-user conversations) surfaced BD-019:
+      the INV-001 context snapshot keyed tool results by tool NAME,
+      so same-tool repeat calls evicted earlier results (last-wins) —
+      a two-quote turn quarantined the first quote's citations, and
+      a seven-tool compare turn kept only the last result (its pool
+      even rendered empty when the final call returned a non-dict).
+      Fix: snapshot keys carry a per-call sequence (market.quote#1,
+      market.quote#2, ...); the guardrail pool walker is
+      key-agnostic, so verification semantics are unchanged while
+      every successful call now contributes. Two regression tests
+      pin both-call citability and the fabricated-value negative;
+      the loop test's snapshot key expectation updated. Live re-run
+      after the fix: the quotes turn passes; remaining quarantines
+      are exactly the recorded residual classes (prose year
+      references like October 2025, integer-percent renderings of
+      0.4528, session-count words like 20, seendate time-of-day
+      renderings 14:05:09 vs compact 140509, and -002 identifier
+      fragments) — left for the owner extraction-semantics decision
+      per protocol. The test round also verified end to end: 337-
+      item gap-repair sync with streamed progress and 220.8s wall
+      time, dual-source news isolation (GDELT throttle-aborted,
+      cursor held; EODHD 4 buckets new 69), fundamentals 403
+      explicit failures with exit 1, direct-symbol watch add with
+      decline, folded candidate display, sessions filters and
+      truncation hints, error channel exit codes, digest honest
+      stub refusal, system-prompt injection refusal, INV-002
+      price-prediction refusal, and the quarantine/regeneration/
+      abort fallback chain (the model even self-corrected a
+      degraded turn mid-session).
+    artifacts:
+      - src/stockinsider/agent/loop.py
+      - test/offline/test_inv1_postcheck.py
+      - test/offline/test_agent_loop.py
+      - docs/ai-use-log.yaml
+    human_decision: >-
+      Owner instructed the comprehensive test round; the residual
+      extraction-semantics classes remain parked pending the
+      standing owner decision from PR #36.
+    status: applied
