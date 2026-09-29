@@ -295,7 +295,7 @@ def resume(
 def sessions(
     symbol: str = typer.Option(None, help="Filter by subject symbol, e.g. 0700.HK."),
     date: str = typer.Option(None, help="Filter by creation date prefix (YYYY-MM-DD)."),
-    status: str = typer.Option(None, help="Filter by status: open | closed."),
+    status: str = typer.Option(None, help="Filter by status: active | closed."),
     limit: int = typer.Option(None, help="Show at most N sessions (hint on truncation)."),
 ) -> None:
     """List sessions from the sessions index.

@@ -69,7 +69,14 @@ def test_info_lines_chromed_ascii() -> None:
     assert all(ord(ch) < 128 for ch in out[0])
 
 
-def test_day_change_region_colors() -> None:
+def test_day_change_region_colors(monkeypatch) -> None:
+    import io
+
+    class _Tty(io.StringIO):
+        def isatty(self) -> bool:
+            return True
+
+    monkeypatch.setattr("sys.stdout", _Tty())  # N4: ANSI only on a TTY
     up = "day change (2026-09-26 vs 2026-09-25): +1.23%"
     down = "day change (2026-09-26 vs 2026-09-25): -0.40%"
     # HK: red up / green down

@@ -62,6 +62,11 @@ def _identifiers(node: ast.AST) -> set[str]:
             out.add(sub.id)
         elif isinstance(sub, ast.Attribute):
             out.add(sub.attr)
+        elif isinstance(sub, ast.Subscript):
+            # row["close"] — the subscript literal names the field (N1)
+            sl = sub.slice
+            if isinstance(sl, ast.Constant) and isinstance(sl.value, str):
+                out.add(sl.value)
     return out
 
 

@@ -160,6 +160,8 @@ def day_change_styled(symbol: str, line: str) -> str:
     """
     if not line.startswith("day change"):
         return line
+    if not sys.stdout.isatty():  # N4: no ANSI escapes when piped
+        return line
     up = ".HK" in symbol or ".CN" in symbol
     red_up = up
     try:
