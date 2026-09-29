@@ -28,6 +28,17 @@ from stockinsider.shared.language import is_english_only
 
 _NUMBER_TOKEN = re.compile(r"-?\d[\d,]*(?:\.\d+)?")
 
+#: Fourth-audit fix (TP-018b): identifier-shaped codes (GOV-001,
+#: ADR-005, TP-018, INV-001, BD-016, RM-54, PR-2) are references,
+#: not numerics. The extractor used to mine "-005" out of "ADR-005"
+#: and quarantine a sentence for quoting the product's own rule IDs
+#: back at the user. Letters-then-hyphen-then-digits is never a
+#: numeric claim in this product's output classes. The second
+#: alternative covers unhyphenated reference tokens (Am2, Q1, H2,
+#: v5, SP500): a short letter run glued to a digit run is an
+#: identifier, never a cited value.
+_ID_CODE = re.compile(r"\b[A-Za-z]{1,6}-\d+\b|\b[A-Za-z]{1,3}\d{1,4}\b")
+
 #: Line-leading enumeration markers ("1. ", "12) ") are document
 #: structure, not cited numerics (BD-016). A marker is at most three
 #: digits followed by a period/paren and whitespace; genuine values
@@ -36,7 +47,12 @@ _NUMBER_TOKEN = re.compile(r"-?\d[\d,]*(?:\.\d+)?")
 _ENUM_MARKER = re.compile(r"(?m)^\s{0,8}\d{1,3}[.)]\s")
 
 
-_HEADING_ORDINAL = re.compile(r"(?m)^#{1,6}\s+\d{1,3}[.)]?\s+")
+#: new-5 (TP-018, ADR-006 Am6) + fourth-audit tightening (TP-018b):
+#: only a PUNCTUATED 1-2 digit ordinal ("## 12. Data") or a single
+#: bare digit ("## 6 Summary") is layout. An unpunctuated leading
+#: heading number of two digits or more ("## 85 USD price target")
+#: is a numeric claim and is checked like any other.
+_HEADING_ORDINAL = re.compile(r"(?m)^#{1,6}\s+(?:\d{1,2}[.)]|\d)\s+")
 
 _SYMBOLISH = re.compile(r"\b(\d{1,5})\.[A-Za-z]{2,5}\b")
 
@@ -44,7 +60,7 @@ _SYMBOLISH = re.compile(r"\b(\d{1,5})\.[A-Za-z]{2,5}\b")
 def _strip_enumeration(text: str) -> str:
     """Remove layout numbering: line-leading markers and heading ordinals.
 
-    Implements: REQ-SI-INV-001 (ADR-006, BD-016 amendment; TP-017 PR-3a)
+    Implements: REQ-SI-INV-001 (ADR-006, BD-016 amendment; TP-018 ADR-006 Am6)
     """
     return _HEADING_ORDINAL.sub("", _ENUM_MARKER.sub("", text))
 
@@ -96,6 +112,100 @@ def _normalize_dates(text: str) -> str:
     return _ISO_DATE.sub(r"\1\2\3", text)
 
 
+#: M2 phase 1 (TP-018, ADR-006 Am6): typed numeric provenance for the
+#: OHLCV field class. A pool hit used to pass regardless of WHICH
+#: field the sentence claimed - quoting the open as the close passed
+#: INV-001. The typed pool maps each canonical value to the set of
+#: OHLCV field names it is actually stored under; a token whose
+#: sentence context names a field the value is NOT stored under
+#: fails the check. Phase-2 (non-OHLCV semantics) is future work.
+_OHLCV_CANON = {
+    "open": "open", "opens": "open", "opened": "open", "opening": "open",
+    "open_price": "open", "day_open": "open",
+    "high": "high", "highs": "high", "day_high": "high",
+    "low": "low", "lows": "low", "day_low": "low",
+    "close": "close", "closes": "close", "closed": "close",
+    "closing": "close", "closings": "close",
+    "close_price": "close", "last_close": "close", "prev_close": "close",
+    "previous_close": "close", "adj_close": "adjusted_close",
+    "adjusted": "adjusted_close", "adjusted_close": "adjusted_close",
+    "volume": "volume", "volumes": "volume", "vol": "volume",
+}
+
+#: Fourth-audit fix (TP-018b): field mentions tokenize as identifiers
+#: so snake_case names ("adjusted_close" in a model-authored table
+#: row) resolve to their field - the word-boundary alternation used
+#: to see nothing inside "adjusted_close" and then mis-attribute the
+#: value to the "close" word two rows up.
+_FIELD_TOKEN = re.compile("[A-Za-z_]+")
+
+
+def _mentioned_fields(window: str) -> "set[str]":
+    """OHLCV fields named (directly or by alias) inside a word window."""
+    return {
+        _OHLCV_CANON[token.lower()]
+        for token in _FIELD_TOKEN.findall(window)
+        if token.lower() in _OHLCV_CANON
+    }
+
+
+
+
+def _typed_ohlcv_pool(snapshot_values: object) -> dict[str, set[str]]:
+    """Canonical value -> OHLCV field names it is stored under.
+
+    Only direct OHLCV-key -> numeric-leaf pairs register (the
+    product's bar payloads are flat); nothing is guessed.
+
+    Implements: REQ-SI-INV-001 (ADR-006 Am6; TP-018 PR-3)
+    """
+    out: dict[str, set[str]] = {}
+
+    def _visit(node: object) -> None:
+        if isinstance(node, dict):
+            for key, value in node.items():
+                canon_key = _OHLCV_CANON.get(str(key).lower())
+                if (
+                    canon_key
+                    and isinstance(value, (int, float))
+                    and not isinstance(value, bool)
+                ):
+                    out.setdefault(_canon_number(value), set()).add(canon_key)
+                else:
+                    _visit(value)
+        elif isinstance(node, (list, tuple)):
+            for item in node:
+                _visit(item)
+
+    _visit(snapshot_values)
+    return out
+
+
+def _field_mismatch(stripped_text: str, token: str, stored_fields: set[str]) -> bool:
+    """True when field-mentioning occurrences of token all disagree.
+
+    An occurrence is CONSISTENT when its word window mentions at
+    least one field the value is stored under (a doji's open ==
+    close passes); INCONSISTENT when it mentions only other
+    OHLCV fields. The token fails only when some occurrence is
+    inconsistent and none is consistent.
+
+    Implements: REQ-SI-INV-001 (ADR-006 Am6; TP-018 PR-3)
+    """
+    consistent = False
+    inconsistent = False
+    for match in re.finditer(re.escape(token), stripped_text):
+        window = stripped_text[max(0, match.start() - 48): match.end() + 48]
+        mentioned = _mentioned_fields(window)
+        if not mentioned:
+            continue
+        if mentioned & stored_fields:
+            consistent = True
+        else:
+            inconsistent = True
+    return inconsistent and not consistent
+
+
 def _canon_number(value: float | int) -> str:
     if isinstance(value, float) and value.is_integer():
         return str(int(value))
@@ -112,9 +222,16 @@ def _canon_token(token: str) -> str:
 def extract_numbers(text: str) -> list[str]:
     """Extract normalized numeric tokens (thousands separators stripped).
 
-    Implements: REQ-SI-INV-001 (ADR-006)
+    Identifier codes are blanked first (TP-018b): a hyphen between a
+    short letter run and a digit run is a rule/artifact ID, not a
+    negative number.
+
+    Implements: REQ-SI-INV-001 (ADR-006; TP-018b)
     """
-    return [token.replace(",", "") for token in _NUMBER_TOKEN.findall(text)]
+    return [
+        token.replace(",", "")
+        for token in _NUMBER_TOKEN.findall(_ID_CODE.sub(" ", text))
+    ]
 
 
 def _walk(node: object, sink: Callable[[object], None]) -> None:
@@ -247,6 +364,7 @@ class NumberCheck:
     failed: list[str]
     rounded: list[str] = field(default_factory=list)
     structural: list[str] = field(default_factory=list)
+    field_mismatch: list[str] = field(default_factory=list)
 
 
 def postcheck_numbers(candidate: str, snapshot_values: object) -> NumberCheck:
@@ -261,16 +379,25 @@ def postcheck_numbers(candidate: str, snapshot_values: object) -> NumberCheck:
     pool = _values_pool(snapshot_values)
     floats = _pool_floats(snapshot_values)
     structural = _structural_tokens(snapshot_values)
+    typed = _typed_ohlcv_pool(snapshot_values)
     matched: list[str] = []
     failed: list[str] = []
     rounded: list[str] = []
     structural_hits: list[str] = []
-    for token in extract_numbers(_normalize_dates(_strip_enumeration(candidate))):
+    mismatches: list[str] = []
+    stripped = _normalize_dates(_strip_enumeration(candidate))
+    for token in extract_numbers(stripped):
         canon = _canon_token(token)
         if canon in structural:
             structural_hits.append(token)
             continue
         if canon in pool:
+            stored_fields = typed.get(canon)
+            if stored_fields and _field_mismatch(stripped, token, stored_fields):
+                # M2 phase 1: numerically present, semantically wrong
+                # (open quoted as close) - quarantined like any fabrication.
+                mismatches.append(token)
+                continue
             matched.append(token)
             continue
         if any(_display_rounds_to(value, token) for value in floats):
@@ -282,12 +409,14 @@ def postcheck_numbers(candidate: str, snapshot_values: object) -> NumberCheck:
             rounded.append(token)  # percent-display conversion (BD-015)
             continue
         failed.append(token)
+    failed_all = failed + mismatches
     return NumberCheck(
-        passed=not failed,
+        passed=not failed_all,
         matched=matched,
-        failed=failed,
+        failed=failed_all,
         rounded=rounded,
         structural=structural_hits,
+        field_mismatch=mismatches,
     )
 
 
@@ -357,7 +486,52 @@ EPISTEMIC_PATTERNS: tuple[tuple[str, re.Pattern[str]], ...] = (
             re.IGNORECASE,
         ),
     ),
+    (
+        # M3 recall batch (TP-018, ADR-006 Am6): modal-certainty framing
+        # the audit's adversarial sentences used to slip through.
+        "modal-certainty",
+        re.compile(
+            rf"\b(likely|set|on track|poised|slated|forecast|positioned|primed|"
+            rf"expected|predicted|projected|anticipated)\b"
+            rf"[^.!?]{0,30}?\bto\s+({_VERBS}|collapse|surge|plummet|continue|reverse|reach|exceed|double|triple)\b",
+            re.IGNORECASE,
+        ),
+    ),
 )
+
+#: M3 (TP-018, ADR-006 Am6) + fourth-audit narrowing (TP-018b):
+#: REPORTED speech is factual reporting, not the product's own
+#: prediction - but the first cut exempted any sentence carrying
+#: ANY attribution marker, so "According to the chart, the stock
+#: will rise" laundered a prediction through the word "according
+#: to". The exemption now requires BOTH a reporting speech-act
+#: verb AND a named institutional source (or an explicit
+#: "according to the <document/company>" construction). Charts,
+#: patterns and the model's own reading are not sources.
+_REPORTING_VERB = re.compile(
+    r"\b(said|says|announced|announces|stated|states|declared|declares|"
+    r"reported|reports|noted|notes that|guided|indicates|suggests|confirmed)\b",
+    re.IGNORECASE,
+)
+_SOURCE_NOUN = re.compile(
+    r"\b(management|company|issuer|ceo|cfo|president|spokesperson|"
+    r"spokesman|filing|release|statement|report|guidance|earnings call|"
+    r"regulator|exchange)\b",
+    re.IGNORECASE,
+)
+_ACCORDING_TO_SOURCE = re.compile(
+    r"according to (the |a )?(filing|report|release|statement|company|"
+    r"management|issuer|regulator|exchange|earnings call)",
+    re.IGNORECASE,
+)
+
+
+def _is_reported_speech(sentence: str) -> bool:
+    """True when the claim is attributed to a named institutional source."""
+    if _ACCORDING_TO_SOURCE.search(sentence):
+        return True
+    return bool(_REPORTING_VERB.search(sentence) and _SOURCE_NOUN.search(sentence))
+
 
 _HYPOTHESIS = re.compile(
     r"hypothesis|speculat|\bmight\b|\bcould\b|\bmay\b|possibly|conceivab",
@@ -394,7 +568,8 @@ def epistemic_filter(candidate: str) -> EpistemicCheck:
     for sentence in _sentences(candidate):
         has_pattern = any(pattern.search(sentence) for _name, pattern in EPISTEMIC_PATTERNS)
         labeled = _HYPOTHESIS.search(sentence) is not None
-        if has_pattern and not labeled:
+        attributed = _is_reported_speech(sentence)
+        if has_pattern and not labeled and not attributed:
             violations.append(sentence.strip())
         else:
             kept.append(sentence)
@@ -485,7 +660,13 @@ def run_postcheck(candidate: str, snapshot_values: object) -> GuardrailVerdict:
     quarantined = (not numbers.passed) or not language_ok
     degraded = None
     if not numbers.passed:
-        degraded = "data unavailable for: " + ", ".join(numbers.failed)
+        parts = ["data unavailable for: " + ", ".join(numbers.failed)]
+        if numbers.field_mismatch:
+            parts.append(
+                "field mismatch (numeric present, wrong field quoted): "
+                + ", ".join(numbers.field_mismatch)
+            )
+        degraded = "; ".join(parts)
     if quarantined:
         display = degraded if degraded else "response withheld: language policy violation (GOV-001)"
     elif epi.violations:

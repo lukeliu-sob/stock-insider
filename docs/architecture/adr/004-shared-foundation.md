@@ -60,3 +60,52 @@ provides the post-check used by the injection suite: any active
 directive surviving the sanitizer is a sanitizer defect, not a
 content judgment. Pattern-list changes are adversarial-suite-gated
 (QA-002 discipline).
+
+## Amendment 2 (2026-09-29, TP-018) — egress: model-runtime hosts, write-time config validation, no-bare-EgressViolationError
+
+M9 (TP-017 PR-3b) put the provider layer behind the SEC-003
+whitelist but shipped three defects found by the third audit:
+`EgressViolationError` (a bare RuntimeError) escaped the REPL's
+ProviderError handler and crashed the session into a stuck "active"
+state; `config set --chat-base-url` accepted any URL and deferred
+the failure to the first question; and OpenRouter-class endpoints
+had no legal path. Corrected rules:
+
+1. Fail-closed everywhere, crash nowhere: the provider wraps
+   EgressViolationError into ProviderError with the host named; the
+   REPL's conversational handler additionally catches
+   EgressViolationError as defense in depth. A policy rejection is
+   an explicit error line, never a session crash.
+2. Write-time validation: `config set --chat-base-url` /
+   `--embedding-base-url` validate against the whitelist before
+   persisting; the error names the host and the extension path.
+3. Extension surface: the `.env` entry
+   `EGRESS_EXTRA_HOSTS` (comma-separated) extends the allowed set
+   for provider endpoints at resolution time — an explicit,
+   auditable owner decision, not a silent default (INV-003
+   discipline).
+
+Implements: REQ-SI-SEC-003.
+
+## Amendment 3 (2026-09-29, TP-018b) — language allowlist design; loopback HTTP
+
+Fourth-audit corrections to Am2's neighborhood (the language change
+had shipped without an ADR of its own - a governance miss the audit
+rightly flagged):
+
+1. Runtime English-only (shared/language.py) is a positive allowlist:
+   printable ASCII, Latin-1 supplement, Latin Extended-A, a closed
+   typographic/arrows/comparison set, and a closed report-emoji set
+   (check/cross/warning/chart up/down/bars + variation selector).
+   The first cut omitted arrows, bullets and narrow no-break spaces
+   the model genuinely uses in date ranges and lists; whole correct
+   answers were withheld. Widening stays closed-set: anything not
+   enumerated fails closed (Cyrillic, Hangul, Greek, CJK verified
+   rejected).
+2. Egress loopback exception: http:// (plain HTTP) is allowed when
+   and only when the host is loopback (localhost, ::1, 127.0.0.0/8).
+   Local model runtimes do not egress; refusing them made the
+   documented local-endpoint path unusable. Non-loopback HTTP is
+   still refused exactly as before.
+
+Implements: REQ-SI-FR-014, REQ-SI-GOV-001, REQ-SI-SEC-003.

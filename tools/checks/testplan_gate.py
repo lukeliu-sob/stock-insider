@@ -33,17 +33,108 @@ def changed_files():
         cwd=ROOT,
         capture_output=True,
         text=True,
+        encoding="utf-8",  # TP-018: repo diffs are UTF-8; the platform
+        errors="replace",  # default codec (GBK on zh-CN Windows) crashed
         check=True,
     ).stdout
     return [line.strip() for line in out.splitlines() if line.strip()]
 
 
+def added_memo_headings() -> list[str]:
+    """New '### RM-' heading lines in the docs/review-memo.md diff.
+
+    new-7 (TP-018): the memo check must see a REAL entry, not file
+    churn — appending a blank line to docs/review-memo.md used to
+    satisfy "the file is in the diff".
+    """
+    base = os.environ.get("CI_BASE_SHA")
+    if not base:
+        return []
+    out = subprocess.run(
+        ["git", "diff", f"{base}...HEAD", "--", "docs/review-memo.md"],
+        cwd=ROOT,
+        capture_output=True,
+        text=True,
+        encoding="utf-8",  # memo text carries typographic UTF-8
+        errors="replace",
+        check=True,
+    ).stdout
+    return [
+        line[1:].strip()
+        for line in out.splitlines()
+        if line.startswith("+") and line[1:].lstrip().startswith("### RM-")
+    ]
+
+
+SAFETY_PREFIXES = (
+    "src/stockinsider/agent/guardrail",
+    "src/stockinsider/agent/registry",
+    "src/stockinsider/shared/",
+    "prompts/",
+    ".github/workflows/",
+)
+
+
+def safety_memo_check(changed: list[str], body: str) -> None:
+    """Safety-path change sets carry a real review-memo entry.
+
+    new-7 (TP-018): this check runs BEFORE the "no implementation
+    files" early return — a prompts/-only or workflow-only change set
+    is exactly the safety-relevant case the old ordering waved through
+    (nothing under src/ or test/ -> PASS without ever reaching this
+    block). Requires: body attestation + the memo file in the diff +
+    at least one ADDED '### RM-' heading (blank-line padding fails).
+    """
+    safety_hits = [f for f in changed if f.startswith(SAFETY_PREFIXES)]
+    if not safety_hits:
+        return
+    if "review-memo: appended" not in body.lower():
+        sys.exit(
+            "FAIL test-plan gate: safety-critical paths touched "
+            f"({safety_hits}) but the PR body lacks 'Review-Memo: appended' "
+            "(docs/review-memo.md entry in the same change set)"
+        )
+    # N2 (TP-017): the attestation must be backed by a real diff - an
+    # entry in docs/review-memo.md must travel in the same change set.
+    if not any(f == "docs/review-memo.md" for f in changed):
+        sys.exit(
+            "FAIL test-plan gate: safety-critical paths touched and the "
+            "body attests a review memo, but docs/review-memo.md is NOT "
+            "in this change set - append the entry, do not just claim it"
+        )
+    # new-7 (TP-018): the diff must ADD a real entry heading, not merely
+    # touch the file (blank-line padding used to pass).
+    import re as _re
+
+    headings = [h for h in added_memo_headings() if _re.search(r"RM-" + chr(92) + "d+", h)]
+    if not headings:
+        sys.exit(
+            "FAIL test-plan gate: docs/review-memo.md is in the change set "
+            "but the diff adds no '### RM-' entry heading - append a real "
+            "entry for this change set"
+        )
+    print(f"PASS test-plan gate: review-memo entries added (safety path): {headings}")
+
+
 def main() -> None:
     changed = changed_files()
     body = os.environ.get("PR_BODY")
-    if changed is None or not body:
+    if changed is None:
         print("PASS test-plan gate: non-PR context (skipped)")
         return
+    if not body:
+        # Fourth-audit finding (TP-018b): CI_BASE_SHA is set, so this IS
+        # a PR context - an empty body cannot reference a test plan nor
+        # attest a review memo. Skipping here waved through PRs whose
+        # entire change set never met the gate.
+        sys.exit(
+            "FAIL test-plan gate: PR context (CI_BASE_SHA set) but PR_BODY "
+            "is empty - the PR must reference 'Test-Plan: TP-NNN' (GOV-006)"
+        )
+
+    # Safety-path memo attestation runs FIRST (new-7, TP-018): it must
+    # hold even when no implementation file is touched.
+    safety_memo_check(changed, body)
 
     triggers = [f for f in changed if f.startswith(TRIGGER_PREFIXES)]
     if not triggers:
@@ -76,38 +167,7 @@ def main() -> None:
             f"{tp_id} mentions none of the changed files ({sorted(basenames)}); "
             "append an amendment section covering this change before merging"
         )
-    print(
-        f"PASS test-plan gate: {tp_id} referenced, approved, "
-        f"and covers {sorted(mentioned)}"
-    )
-
-    # Safety-path memo attestation (review finding 1): changes to
-    # guardrail / registry / shared / prompts / CI workflows require a
-    # review-memo entry in the same change set; the PR body attests it.
-    SAFETY_PREFIXES = (
-        "src/stockinsider/agent/guardrail",
-        "src/stockinsider/agent/registry",
-        "src/stockinsider/shared/",
-        "prompts/",
-        ".github/workflows/",
-    )
-    safety_hits = [f for f in changed if f.startswith(SAFETY_PREFIXES)]
-    if safety_hits:
-        if "review-memo: appended" not in body.lower():
-            sys.exit(
-                "FAIL test-plan gate: safety-critical paths touched "
-                f"({safety_hits}) but the PR body lacks 'Review-Memo: appended' "
-                "(docs/review-memo.md entry in the same change set)"
-            )
-        # N2 (TP-017): the attestation must be backed by a real diff - an
-        # entry in docs/review-memo.md must travel in the same change set.
-        if not any(f == "docs/review-memo.md" for f in changed):
-            sys.exit(
-                "FAIL test-plan gate: safety-critical paths touched and the "
-                "body attests a review memo, but docs/review-memo.md is NOT "
-                "in this change set - append the entry, do not just claim it"
-            )
-        print("PASS test-plan gate: review-memo present in diff (safety path)")
+    print(f"PASS test-plan gate: {tp_id} referenced, approved, and covers {sorted(mentioned)}")
 
 
 if __name__ == "__main__":

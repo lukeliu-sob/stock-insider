@@ -112,9 +112,7 @@ def embed() -> None:
     config = resolve_config()
     key, _source = resolve_api_key()
     if not config.embedding_base_url or key is None:
-        typer.echo(
-            "embedding provider not configured (embedding base_url + api key required); nothing done"
-        )
+        typer.echo("embedding provider not configured (embedding base_url + api key required); nothing done")
         raise typer.Exit(code=1)
     provider = OpenAICompatibleProvider(config, api_key=key)
     data_store = open_data_store()
@@ -158,10 +156,10 @@ def watch(
         if action == "add":
             if not query:
                 typer.secho(
-            render_error("`watch add` requires a mention or name to resolve"),
-            fg=typer.colors.RED,
-            err=True,
-        )
+                    render_error("`watch add` requires a mention or name to resolve"),
+                    fg=typer.colors.RED,
+                    err=True,
+                )
                 raise typer.Exit(code=2)
             try:
                 if SYMBOL_SHAPE.match(query.strip()):
@@ -172,8 +170,7 @@ def watch(
                     candidates = [verified] if verified is not None else []
                     if not candidates:
                         typer.secho(
-                            f"not found: {query.strip()} returned no data via direct "
-                            "verification; watchlist unchanged",
+                            f"not found: {query.strip()} returned no data via direct verification; watchlist unchanged",
                             fg=typer.colors.RED,
                             err=True,
                         )
@@ -194,15 +191,8 @@ def watch(
             for cand in candidates:
                 data_store.record(cand)
             for i, cand in enumerate(visible, start=1):
-                badge = (
-                    f"  [{cand.asset_type}]"
-                    if cand.asset_type not in ("stock", "unverified")
-                    else ""
-                )
-                typer.echo(
-                    f"{i}) {cand.canonical_symbol}  {cand.official_name}"
-                    f"  exchange {cand.exchange}{badge}"
-                )
+                badge = f"  [{cand.asset_type}]" if cand.asset_type not in ("stock", "unverified") else ""
+                typer.echo(f"{i}) {cand.canonical_symbol}  {cand.official_name}  exchange {cand.exchange}{badge}")
             if folded_count:
                 typer.echo(
                     f"   (+{folded_count} secondary-exchange listings folded: "
@@ -403,6 +393,25 @@ def config_set(
             typer.secho("nothing to set; see --help for options", fg=typer.colors.RED, err=True)
             raise typer.Exit(code=2)
         return
+    # ADR-004 Am2 (TP-018): endpoint URLs validate at WRITE time, not at
+    # first question - a bad host is rejected here, naming the extension
+    # path, instead of crashing a live session later (new-4).
+    from stockinsider.shared.egress import EgressViolationError, provider_egress_allowed, validate_egress_url
+
+    for field in ("chat_base_url", "embedding_base_url"):
+        url = updates.get(field)
+        if not isinstance(url, str):
+            continue
+        try:
+            validate_egress_url(url, extra_allowed=provider_egress_allowed())
+        except EgressViolationError as exc:
+            typer.secho(
+                f"error: {exc}; to allow this host, add it to EGRESS_EXTRA_HOSTS "
+                "in your environment file (explicit owner decision, SEC-003)",
+                fg=typer.colors.RED,
+                err=True,
+            )
+            raise typer.Exit(code=2) from exc
     save_config(updates)
     typer.echo(f"config updated: {sorted(updates)}")
 

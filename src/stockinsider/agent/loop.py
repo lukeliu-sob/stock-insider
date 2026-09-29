@@ -42,15 +42,26 @@ ProgressFn = Callable[[str], None]
 SinkFn = Callable[[str], None]
 
 
+def _default_prompts_dir() -> Path:
+    """The repository's prompts/ directory, package-root relative (low-3).
+
+    Implements: REQ-SI-GOV-003 (ADR-001; TP-018 PR-3)
+    """
+    return Path(__file__).resolve().parents[3] / "prompts"
+
+
 def load_identity_prompt(prompts_dir: Path | str | None = None) -> tuple[str, str]:
     """Load prompts/identity.md; return (version-stamp, body).
 
     The version stamp ("identity-v<N>") feeds the session provenance
-    (GOV-003/GOV-005); prompt changes are eval-gated by CI.
+    (GOV-003/GOV-005); prompt changes are eval-gated by CI. The default
+    directory resolves relative to the package root (low-3, TP-018):
+    the old cwd-relative default broke when the loop ran from any
+    other directory.
 
     Implements: REQ-SI-GOV-003 (ADR-001)
     """
-    directory = Path(prompts_dir) if prompts_dir is not None else Path("prompts")
+    directory = Path(prompts_dir) if prompts_dir is not None else _default_prompts_dir()
     path = directory / "identity.md"
     if not path.exists():
         raise FileNotFoundError(f"identity prompt missing: {path}")
@@ -143,7 +154,6 @@ class TurnEngine:
         """
         return self._registry
 
-
     def _next_turn_id(self, session_id: str) -> str:
         """Derive the next turn id from the session's existing events (resume-safe).
 
@@ -197,6 +207,9 @@ class TurnEngine:
                 usage={},
             )
         turn_id = self._next_turn_id(session_id)
+        # H3-5 (TP-018): stale confirmation tokens age out at every turn
+        # boundary; they no longer linger for the whole process lifetime.
+        self.confirmations.expire_turns(_turn_number(turn_id))
         # M6 (2026-09-29 audit): read history BEFORE appending this turn's
         # user event — the old order duplicated the current message into
         # the model context (the model literally saw it twice).
@@ -216,6 +229,12 @@ class TurnEngine:
             wire_map[wire_name(spec.name)] = spec.name
         limit = tool_loop_limit(profile)
         candidate = ""
+        # H1 residual (TP-018): provider text emitted BEFORE tool calls in
+        # this same turn accumulates as prelude. The post-check validates
+        # prelude + candidate as one string — nothing the user sees on
+        # the replay path bypasses INV-001, and the assistant-message
+        # event stores the same full text (screen == record).
+        preludes: list[str] = []
         tools_used = 0
         snapshot_values: dict[str, Any] = {}
         call_seq = 0
@@ -228,6 +247,8 @@ class TurnEngine:
             outcome = self._provider.complete(messages, tools=tool_specs, stream_sink=provider_sink)
             _accumulate(usage_total, outcome.usage)
             if outcome.tool_calls:
+                if outcome.text.strip():
+                    preludes.append(outcome.text.strip())
                 messages.append({"role": "assistant", "tool_calls": outcome.tool_calls})
                 for call in outcome.tool_calls:
                     function = call.get("function") or {}
@@ -237,46 +258,72 @@ class TurnEngine:
                     try:
                         arguments = json.loads(raw_arguments or "{}")
                     except json.JSONDecodeError:
-                        arguments = {}
-                    # H3 (TP-017 PR-2): the conversational path NEVER sets
-                    # allow_write — the model\'s assertions are not consent.
-                    # Write-class calls are intercepted: a one-time token is
-                    # issued and the model is told to let the human confirm.
-                    _effect = getattr(self._registry, "effect_class", lambda _n: None)(name)
-                    if _effect is EffectClass.WRITE:
-                        token = self.confirmations.issue(
-                            session_id, name, arguments, turn=_turn_number(turn_id)
-                        )
+                        # low-1 (TP-018): a malformed argument payload is an
+                        # explicit tool failure — never a silent {} execution
+                        # (empty defaults could fire wrong-path effects).
+                        arguments = None
+                    if arguments is None:
                         result = ToolResult(
                             call_id=call.get("id") or turn_id,
                             ok=False,
                             error=(
-                                "write gate: human confirmation required "
-                                f"(one-time token {token}; the user replies "
-                                f"'confirm {token}' in the harness)"
+                                "malformed tool arguments (not JSON): "
+                                f"{str(raw_arguments)[:120]!r} (INV-003)"
                             ),
                         )
                     else:
-                        result = self._registry.execute(
-                            ToolCall(tool=name, arguments=arguments, call_id=call.get("id") or turn_id),
-                            allow_write=False,
-                        )
+                        # H3 (TP-018): the conversational path NEVER sets
+                        # allow_write — the model's assertions are not consent.
+                        # Write-class calls are intercepted: a one-time token
+                        # is issued and the pending write renders to the HUMAN
+                        # directly through progress chrome. The token never
+                        # travels through model text (ADR-005 Am3 non-relay
+                        # principle): INV-001 would quarantine a relayed
+                        # digit-bearing token, and the user would never see it.
+                        _effect = getattr(self._registry, "effect_class", lambda _n: None)(name)
+                        if _effect is EffectClass.WRITE:
+                            token = self.confirmations.issue(
+                                session_id, name, arguments, turn=_turn_number(turn_id)
+                            )
+                            progress(
+                                f"pending write confirmation: {name} "
+                                f"{json.dumps(arguments, sort_keys=True)} -- reply "
+                                f"'confirm {token}' to execute, anything else to ignore"
+                            )
+                            result = ToolResult(
+                                call_id=call.get("id") or turn_id,
+                                ok=False,
+                                error=(
+                                    "write gate: human confirmation required. The "
+                                    "harness shows the user a one-time confirmation "
+                                    "prompt in the terminal — do NOT repeat or invent "
+                                    "the token; ask the user to confirm there."
+                                ),
+                            )
+                        else:
+                            result = self._registry.execute(
+                                ToolCall(tool=name, arguments=arguments, call_id=call.get("id") or turn_id),
+                                allow_write=False,
+                            )
                     tools_used += 1
                     self._store.append_event(
                         session_id,
                         {"event": "tool-call", "tool": name, "arguments": arguments, "turn": turn_id},
                     )
-                    self._store.append_event(
-                        session_id,
-                        {
-                            "event": "tool-result",
-                            "tool": name,
-                            "ok": result.ok,
-                            "result": result.result,
-                            "provenance": result.provenance,
-                            "turn": turn_id,
-                        },
-                    )
+                    result_event: dict[str, Any] = {
+                        "event": "tool-result",
+                        "tool": name,
+                        "ok": result.ok,
+                        "result": result.result,
+                        "provenance": result.provenance,
+                        "turn": turn_id,
+                    }
+                    if not result.ok:
+                        # INV-003: the log states WHY a tool failed (write
+                        # gate, malformed arguments, unknown tool) instead
+                        # of recording a bare null.
+                        result_event["error"] = result.error
+                    self._store.append_event(session_id, result_event)
                     marker = "ok" if result.ok else "failed"
                     source = result.provenance.get("source_kind", "error") if result.ok else "error"
                     progress(f"· {name} … {marker} ({source})")
@@ -289,13 +336,15 @@ class TurnEngine:
                         }
                     )
                     if result.ok:
-                        # BD-019: key per successful call, not per tool
-                        # name — same-tool repeat calls used to evict
-                        # earlier results from the INV-001 pool
-                        # (last-wins), so citations of the first call
-                        # quarantined spuriously.
+                        # BD-019 + M5 residual (TP-018): the key carries the
+                        # TURN as well as the per-turn call sequence — a later
+                        # turn's market.quote#1 used to evict an earlier
+                        # turn's from the session ledger (BD-019 at session
+                        # scope); citations of first-turn evidence no longer
+                        # quarantine spuriously after a second symbol is
+                        # queried.
                         call_seq += 1
-                        snapshot_values[f"{name}#{call_seq}"] = result.result
+                        snapshot_values[f"{turn_id}/{name}#{call_seq}"] = result.result
                 continue
             candidate = outcome.text
             break
@@ -323,7 +372,12 @@ class TurnEngine:
         self._store.snapshot(session_id, turn_id, snapshot_values)
         ledger = self._session_ledger(session_id)
         ledger.update(snapshot_values)
-        verdict = run_postcheck(candidate, ledger)
+        # H1 residual (TP-018): the CHECKED string is everything the user
+        # will see on the replay path — pre-tool-call prelude text plus
+        # the final candidate. Fabricated numbers in opening prose used to
+        # stream through unvalidated (and never entered session.jsonl).
+        combined = "\n".join([*preludes, candidate]) if preludes else candidate
+        verdict = run_postcheck(combined, ledger)
 
         def _replay() -> None:
             if stream_sink is not None:
@@ -338,7 +392,7 @@ class TurnEngine:
                     "event": "error",
                     "kind": "post-check",
                     "post_check": "failed",
-                    "original": candidate,
+                    "original": combined,
                     "turn": turn_id,
                 },
             )
@@ -347,37 +401,69 @@ class TurnEngine:
             displayed = verdict.display_text
         elif verdict.epistemic.violations:
 
+            # H1 residual (TP-018b, fourth audit): the regeneration used
+            # to stream through the RAW user sink - fabricated numbers
+            # showed on screen before the recheck, and a passing
+            # regeneration displayed twice (streamed, then rendered).
+            # The regeneration buffers in its OWN deferred sink and is
+            # replayed only after the numeric recheck passes.
+            regen_sink = _DeferredSink()
+
             def _regenerator(reminder_text: str) -> str:
                 regen_messages: list[dict[str, str]] = [
                     {"role": "system", "content": reminder_text},
                     {"role": "user", "content": verdict.epistemic.clean_text},
                 ]
-                regen = self._provider.complete(regen_messages, tools=None, stream_sink=stream_sink)
+                regen = self._provider.complete(
+                    regen_messages,
+                    tools=None,
+                    stream_sink=regen_sink.push if stream_sink is not None else None,
+                )
                 _accumulate(usage_total, regen.usage)
                 return regen.text
 
-            epi = run_with_regeneration(candidate, _regenerator)
+            epi = run_with_regeneration(combined, _regenerator)
             # H2 (2026-09-29 audit): regenerated text is NOT trusted — it
             # goes through the same numeric post-check as the primary
             # candidate. A fabricated number in a regeneration degrades
             # exactly like the primary path (the old code archived
             # unchecked regenerations as INV-001-passed).
-            recheck = run_postcheck(epi.displayed, snapshot_values)
+            # H2b (TP-018): the recheck runs against the SESSION LEDGER —
+            # the turn snapshot alone wrongly quarantined restatements of
+            # earlier turns' correct numbers inside a regeneration.
+            recheck = run_postcheck(epi.displayed, ledger)
             if recheck.quarantined:
                 deferred.reset()
+                regen_sink.reset()
+                # the degraded line is ALL the user sees; neither the
+                # quarantined original nor the failed regeneration
+                # ever reached the screen
                 render(recheck.display_text)
                 displayed = recheck.display_text
                 verdict = recheck
+            elif getattr(epi, "refused", False):
+                deferred.reset()
+                regen_sink.reset()
+                render(epi.displayed)  # the INV-002 refusal summary
+                displayed = epi.displayed
             else:
-                if epi.displayed == candidate:
+                deferred.reset()
+                if epi.displayed == combined:
                     _replay()
+                elif stream_sink is not None:
+                    # verify-then-display for the regeneration: replay
+                    # the checked deltas exactly once (screen == displayed)
+                    for piece in regen_sink.buffer:
+                        stream_sink(piece)
+                    stream_sink("\n")
                 else:
-                    deferred.reset()
                     render(epi.displayed)
                 displayed = epi.displayed
         else:
             _replay()
-            displayed = candidate
+            # screen == record: the event stores the full validated text
+            # (prelude included), exactly what the replay displayed.
+            displayed = combined
         self._store.append_event(
             session_id,
             {
@@ -393,6 +479,11 @@ class TurnEngine:
             # H4: the abort is now session-sticky — the next run_turn refuses
             # before any model call (the old code only printed a line).
             self._aborted = abort_reason
+            # H4 residual (TP-018): the state also persists in the session
+            # index; resume() refuses aborted sessions, so restarting the
+            # process no longer resets the counters (close() will not
+            # downgrade the status).
+            self._store.abort(session_id, abort_reason)
             render(f"session aborted: {abort_reason} threshold reached (invariant fallback)")
         progress(_footer(tools_used, verdict.quarantined, usage_total))
         return TurnOutcome(

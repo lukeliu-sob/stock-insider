@@ -38,6 +38,16 @@ from stockinsider.data.ingest.market import (
 from stockinsider.data.store.resolver import BENCHMARK_INDICES
 
 BACKFILL_DAYS = 5 * 365
+#: Fourth-audit high finding (TP-018b): a gap that returns zero bars
+#: three times in a row is confirmed no-data (pre-listing suspension,
+#: vendor holes) and closes with resolution='no-data' instead of
+#: retrying forever and starving the daily budget (INV-003: the
+#: absence is recorded, never silently re-queued).
+MAX_EMPTY_ATTEMPTS = 3
+#: Gap-repair may consume at most half the daily call cap per run;
+#: the rest stays available to incremental updates so a long gap
+#: queue can never starve the rest of the watchlist (fourth audit).
+GAP_BUDGET_SHARE = 0.5
 MARKET_TRACK = "market:{symbol}"
 FUND_TRACK = "fundamentals:{symbol}"
 FUND_ACCESS_TRACK = "fundamentals-access"
@@ -161,9 +171,7 @@ class SyncService:
 
         if os.environ.get("EODHD_FUNDAMENTALS") == "1":
             return True
-        row = self._conn.execute(
-            "SELECT last_status FROM sync_state WHERE track = ?", (FUND_ACCESS_TRACK,)
-        ).fetchone()
+        row = self._conn.execute("SELECT last_status FROM sync_state WHERE track = ?", (FUND_ACCESS_TRACK,)).fetchone()
         return row is None or row["last_status"] != "denied"
 
     def _fundamentals_stale(self, symbol: str) -> bool:
@@ -185,6 +193,27 @@ class SyncService:
         cutoff = (_date(y, m, d) - timedelta(days=FUND_STALENESS_DAYS)).isoformat()
         return row["p"] < cutoff
 
+    def _detection_start(self, symbol: str, window_start: str) -> "str | None":
+        """Earliest date worth gap-detecting for this symbol (or None: skip).
+
+        Fourth-audit fix (TP-018b): the window start clips to the symbol's
+        own earliest stored bar. Dates BEFORE a listing were detected as
+        ~170 weekly gap segments that can never be filled (the vendor
+        returns nothing pre-listing); with zero-bar gaps now staying open,
+        those segments starved the whole daily budget. A symbol with no
+        bars yet is skipped entirely - its backfill populates history and
+        the NEXT run detects real gaps from the true first bar.
+
+        Implements: REQ-SI-FR-001, REQ-SI-INV-003 (ADR-002; TP-018b)
+        """
+        row = self._conn.execute(
+            "SELECT MIN(date) AS d FROM market_bars WHERE canonical_symbol = ?", (symbol,)
+        ).fetchone()
+        earliest = row["d"] if row else None
+        if earliest is None:
+            return None
+        return max(window_start, earliest)
+
     def _has_bars(self, symbol: str) -> bool:
         row = self._conn.execute("SELECT 1 FROM market_bars WHERE canonical_symbol = ? LIMIT 1", (symbol,)).fetchone()
         return row is not None
@@ -195,7 +224,9 @@ class SyncService:
         cost = FUNDAMENTALS_COST if action == "fundamentals" else 1
         if not self._budget.try_spend(cost):
             return ItemResult(
-                symbol, action, "deferred",
+                symbol,
+                action,
+                "deferred",
                 f"daily call budget exhausted (needs {cost}); runs next sync",
             )
         if action == "fundamentals":
@@ -203,7 +234,64 @@ class SyncService:
         try:
             rows = self._adapter.fetch_eod(symbol, from_date, to_date)
             stored = store_bars(self._conn, symbol, rows)
-            last_date = rows[-1]["date"] if rows else to_date
+            if not rows and action == "gap-repair":
+                # low-4 (TP-018) + fourth-audit high finding (TP-018b):
+                # an empty fetch proves nothing. The old path marked the
+                # gap resolved anyway (zero-data-as-fixed, INV-003); the
+                # naive fix kept it open forever, letting unfillable gaps
+                # (pre-listing, suspension, vendor holes) eat the whole
+                # daily budget. Now: attempts are counted, and after
+                # MAX_EMPTY_ATTEMPTS the gap CLOSES as confirmed
+                # no-data - recorded, not silently re-queued nor faked.
+                with self._conn:
+                    self._conn.execute(
+                        "UPDATE sync_gaps SET empty_attempts = empty_attempts + 1 "
+                        "WHERE canonical_symbol = ? AND from_date = ? AND to_date = ? "
+                        "AND resolved_at IS NULL",
+                        (symbol, from_date, to_date),
+                    )
+                    row = self._conn.execute(
+                        "SELECT empty_attempts FROM sync_gaps "
+                        "WHERE canonical_symbol = ? AND from_date = ? AND to_date = ?",
+                        (symbol, from_date, to_date),
+                    ).fetchone()
+                attempts = row["empty_attempts"] if row else 1
+                if attempts >= MAX_EMPTY_ATTEMPTS:
+                    with self._conn:
+                        self._conn.execute(
+                            "UPDATE sync_gaps SET resolved_at = ?, resolution = 'no-data' "
+                            "WHERE canonical_symbol = ? AND from_date = ? AND to_date = ? "
+                            "AND resolved_at IS NULL",
+                            (
+                                datetime.now(timezone.utc).isoformat(timespec="seconds"),
+                                symbol,
+                                from_date,
+                                to_date,
+                            ),
+                        )
+                    return ItemResult(
+                        symbol,
+                        action,
+                        "failed",
+                        f"0 bars for {from_date}..{to_date} after {attempts} attempts; "
+                        f"gap closed as confirmed no-data (INV-003)",
+                    )
+                return ItemResult(
+                    symbol,
+                    action,
+                    "failed",
+                    f"0 bars returned for {from_date}..{to_date}; retry scheduled "
+                    f"({attempts}/{MAX_EMPTY_ATTEMPTS} attempts, cursor unchanged)",
+                )
+            if not rows:
+                # backfill/incremental over a range with no trading data
+                # (weekend, holiday): nothing to store, but the cursor
+                # advances - the completeness pass re-detects genuinely
+                # missing weekdays as explicit gaps (the safety net that
+                # makes cursor advancement honest here).
+                last_date = to_date
+            else:
+                last_date = rows[-1]["date"]
             previous = self._cursor(symbol)
             new_cursor = max(previous, last_date) if previous else last_date  # never regress
             self._set_cursor(symbol, new_cursor)
@@ -238,7 +326,9 @@ class SyncService:
                     ),
                 )
             return ItemResult(
-                symbol, "fundamentals", "ok",
+                symbol,
+                "fundamentals",
+                "ok",
                 (
                     f"{outcome['statements']} statement rows stored; "
                     f"profile {'updated' if outcome['profile'] else 'absent'}"
@@ -292,13 +382,16 @@ class SyncService:
         """Compare stored dates vs the index calendar; enqueue new gaps."""
         start, today = self._window()
         for symbol in self._tracked_symbols():
+            detect_from = self._detection_start(symbol, start)
+            if detect_from is None:
+                continue
             exchange = _calendar_exchange(symbol)
             try:
-                expected = trading_dates(self._conn, exchange, start, today)
+                expected = trading_dates(self._conn, exchange, detect_from, today)
             except CalendarUnavailable as exc:
                 report.results.append(ItemResult(symbol, "completeness", "failed", str(exc)))
                 continue
-            stored = self._stored_in_window(symbol, start, today)
+            stored = self._stored_in_window(symbol, detect_from, today)
             for from_date, to_date in missing_ranges(stored, expected):
                 self._enqueue_gap(symbol, from_date, to_date)
 
@@ -325,11 +418,14 @@ class SyncService:
         """
         start, today = self._window()
         for symbol in self._tracked_symbols():
+            detect_from = self._detection_start(symbol, start)
+            if detect_from is None:
+                continue
             try:
-                expected = trading_dates(self._conn, _calendar_exchange(symbol), start, today)
+                expected = trading_dates(self._conn, _calendar_exchange(symbol), detect_from, today)
             except CalendarUnavailable:
                 continue
-            stored = self._stored_in_window(symbol, start, today)
+            stored = self._stored_in_window(symbol, detect_from, today)
             for from_date, to_date in missing_ranges(stored, expected):
                 self._enqueue_gap(symbol, from_date, to_date)
 
@@ -366,14 +462,29 @@ class SyncService:
         self._enqueue_detected_gaps()  # deletions since last run enter THIS run's plan
         plan = self._plan()
         emit(f"plan: {len(plan)} market item(s) (gaps detected first, then incrementals)")
+        # Fourth-audit fix (TP-018b): gap-repair may consume at most half
+        # the daily cap per run; the remainder always stays available to
+        # incremental updates, so a long unfillable gap queue can never
+        # starve the rest of the watchlist.
+        gap_quota = max(1, int((self._budget.remaining() + self._budget.used_today()) * GAP_BUDGET_SHARE))
+        gap_spent = 0
         for item in plan:
+            if item[1] == "gap-repair" and gap_spent >= gap_quota:
+                deferred = ItemResult(
+                    item[0], item[1], "deferred",
+                    f"gap-repair budget share ({gap_quota} calls/run) exhausted; "
+                    "incremental updates proceed first",
+                )
+                report.results.append(deferred)
+                emit(f"market {deferred.symbol} {deferred.action}: {deferred.status} ({deferred.detail})")
+                continue
             t0 = monotonic()
+            before = self._budget.used_today()
             result = self._execute(item, report)
             report.results.append(result)
-            emit(
-                f"market {result.symbol} {result.action}: {result.status} "
-                f"({result.detail}) +{monotonic() - t0:.1f}s"
-            )
+            if item[1] == "gap-repair":
+                gap_spent += self._budget.used_today() - before
+            emit(f"market {result.symbol} {result.action}: {result.status} ({result.detail}) +{monotonic() - t0:.1f}s")
         self._completeness_pass(report)
         report.calls_used = self._budget.used_today() - used_before
         report.calls_remaining = self._budget.remaining()

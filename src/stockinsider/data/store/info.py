@@ -27,7 +27,8 @@ class SymbolUnknown(RuntimeError):
 
 def _latest_bars(conn: sqlite3.Connection, symbol: str, limit: int) -> list[dict[str, Any]]:
     rows = conn.execute(
-        "SELECT date, close, adjusted_close, volume FROM market_bars "
+        "SELECT date, close, adjusted_close, "
+        "COALESCE(adjusted_close, close) AS eff_close, volume FROM market_bars "
         "WHERE canonical_symbol = ? ORDER BY date DESC LIMIT ?",
         (symbol, limit),
     ).fetchall()
@@ -71,15 +72,20 @@ def render_info(conn: sqlite3.Connection, symbol: str) -> list[str]:
         from stockinsider.data.compute import pct_change
 
         try:
+            # M7 residual (TP-018): day-change percentages price the
+            # ADJUSTED series (eff_close) — raw closes double-count
+            # splits/dividends as price moves. Selection happens in SQL;
+            # the arithmetic stays in data/compute.
             lines.append(
-                f"day change ({last['date']} vs {prev['date']}): {pct_change(prev['close'], last['close']):+.2f}%"
+                f"day change ({last['date']} vs {prev['date']}): {pct_change(prev['eff_close'], last['eff_close']):+.2f}%"
             )
         except Exception:  # noqa: BLE001 — zero base: explicit, never fabricated
             lines.append(f"day change ({last['date']}): unavailable (zero base)")
-    big = max_abs_daily_move(bars)
+    eff_bars = [dict(bar, close=bar["eff_close"]) for bar in bars]
+    big = max_abs_daily_move(eff_bars)
     if big is not None:
         lines.append(f"largest daily move (last {len(bars)} sessions): {big['abs_pct']:.2f}% abs on {big['date']}")
-    versus = move_vs(bars, 20)
+    versus = move_vs(eff_bars, 20)
     if versus is not None:
         lines.append(f"vs 20 sessions ago ({versus['from_date']} -> {versus['date']}): {versus['pct']:+.2f}%")
     from stockinsider.data.ingest.fundamentals import ALL_REQUIRED_FIELDS, STATEMENTS

@@ -295,3 +295,76 @@ test-plan gate's safety-path attestation).
 - Architecture: providers gain the same whitelist hop as data fetching; the CI regression job installs from uv.lock (the lock is load-bearing).
 - Test quality: cap-bypass negative, egress-rejection negative, memo-in-diff negative, INV-002 10/10 labeled suite; full prior suites green.
 - Security: model-runtime egress now whitelist-gated (the last uncovered outbound hop).
+
+### RM-51 — PR #51: write tools take human confirmation tokens (H3) — BACKFILLED
+
+- Verdict: APPROVE (backfilled 2026-09-29 by owner-authorized TP-018; the PR body claimed
+  "Review-Memo: appended" but no entry rode the diff — the third audit caught the forgery).
+- Spec alignment: REQ-SI-INV-004, REQ-SI-FR-004 (user_confirmed boolean removed from every
+  write tool spec; single-use ConfirmationBroker introduced).
+- Architecture: conversational path never sets allow_write; write calls intercepted with a
+  one-time token; consumed-token replay is the only executing path.
+- Test quality: token single-use negative, unknown-token negative, replay positive.
+- Security: model-filled consent booleans eliminated at the tool boundary.
+- Residuals found by the third audit and fixed in TP-018 PR-1 (ADR-005 Am3): digit-bearing
+  tokens were quarantined when relayed (flow unusable), confirmations were invisible to the
+  model history, tokens never expired, "confirm"-prefixed questions were swallowed.
+
+### RM-52 — PR #52: numbers pipeline (cross-turn ledger, structural tokens, M7/M8/M11, N1) — BACKFILLED
+
+- Verdict: APPROVE (backfilled 2026-09-29 by owner-authorized TP-018; same forgery class as
+  RM-51 — the branch commit message said "RM-52 appended" but docs/review-memo.md was not in
+  the diff).
+- Spec alignment: REQ-SI-INV-001 (session ledger, structural symbol fragments), REQ-SI-FR-005
+  (M7 adjusted prices in indicators), REQ-SI-FR-002 (M8 honesty record), REQ-SI-FR-007 (M11
+  news k clamp).
+- Architecture: snapshot keys per successful call (BD-019); symbol-shaped fragments become
+  structural tokens; indicators price the COALESCE(adjusted_close, close) series.
+- Test quality: same-tool eviction negative, symbol-fragment positive, k-clamp negatives.
+- Security: none beyond INV-001 semantics.
+- Residuals found by the third audit and fixed in TP-018 (ADR-006 Am5/Am6): ledger keys were
+  turn-colliding (a later turn's market.quote#1 evicted an earlier turn's), the regeneration
+  recheck used the turn snapshot instead of the session ledger, and info.py day-move/vs-20
+  lines still priced raw closes.
+
+### RM-54 — TP-018: third-audit remediation (token flow, prelude validation, gates, honesty)
+
+- Verdict: APPROVE (owner authorized the full plan in session 2026-09-29 after the third
+  review; executed as one change set with ADR amendments attached).
+- Spec alignment: REQ-SI-INV-001 (prelude validated + session ledger with turn-scoped keys +
+  OHLCV typed provenance phase 1), REQ-SI-INV-002 (reported-speech exemption, modal classes,
+  author-separated battery), REQ-SI-INV-003 (zero-bar gaps stay open; malformed tool
+  arguments fail explicitly; event schema enforced at append; fundamentals.summary honest
+  shape), REQ-SI-INV-004 (non-relay letter tokens, bound-content display, history write-back,
+  expiry, strict routing, primary-exchange-only verification), REQ-SI-SEC-003 (no-bare-
+  EgressViolationError, write-time config validation, EGRESS_EXTRA_HOSTS), REQ-SI-GOV-006
+  (memo gate runs before the no-implementation early return and requires a real RM heading),
+  REQ-SI-FR-014 (Latin allowlist), REQ-SI-FR-023 (aborted sessions terminal).
+- Architecture: ADR-004 Am2, ADR-005 Am2/Am3, ADR-006 Am5/Am6; invariants.md INV-001 wording
+  updated to the session-ledger semantics; ci.yml --frozen -> --locked.
+- Test quality: 26 new adversarial tests (test/offline/test_tp018_remediation.py) including
+  token-relay non-leak, confirm-question routing, fabricated prelude, aborted-resume refusal,
+  blank-line memo, three-digit heading ordinal, zero-bar gap, Cyrillic/Hangul/Greek,
+  open-quoted-as-close, doji pass; full suite 406 green; ruff + mypy clean; all structural
+  gates pass.
+- Security: the egress policy surface is unchanged in scope but now fail-closed at config
+  write time and crash-free at runtime; extension hosts require an explicit owner env entry.
+
+
+### RM-55 — TP-018b: fourth-audit remediation (sync starvation, guardrail regressions, gates)
+
+- Verdict: APPROVE (owner authorized the full plan and PR submission, 2026-09-29).
+- Spec alignment: REQ-SI-FR-001 (budget share + listing-clip + honest no-data terminal
+  state), REQ-SI-INV-001 (snake_case fields, identifier codes, heading ordinals,
+  deferred regeneration replay), REQ-SI-INV-002 (narrowed attribution, expected-to
+  class), REQ-SI-INV-003 (empty PR body fails the gate; deferrals explicit),
+  REQ-SI-INV-004 (identity v6 non-relay wording; migration v6 demotes stale verified
+  rows), REQ-SI-FR-014 (widened closed allowlist), REQ-SI-SEC-003 (loopback HTTP
+  exception), REQ-SI-FR-006 (N1 gate: .get/variable-key/alias detection).
+- Architecture: ADR-004 Am3, ADR-006 Am7, schema migration v6.
+- Test quality: 18 new adversarial tests (test_tp018b_fourth_audit.py) - quota
+  simulation, clip-to-listing, migration demotion, laundering sentences, table
+  prose, deferred replay (fabricated regen never reaches the screen), empty-body
+  gate, loopback; full suite 424 green; ruff/mypy clean.
+- Security: loopback HTTP is scoped to 127/8 + localhost + ::1 only; remote HTTP
+  still refused.
