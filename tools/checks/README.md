@@ -25,3 +25,7 @@ python tools/checks/registry_schema.py   # etc.
 Guard discipline: scripts marked [DE-05] pass with a note until
 scaffolding lands; their activation is part of the guard-removal PRs
 (verification-constraints §4).
+
+## static_arithmetic.py
+
+FR-006 acceptance (a): market-data arithmetic (BinOps over close/open/high/low/adjusted_close/volume/quote identifiers) outside `data/compute/` fails the gates job. Built 2026-09-29 (TP-016 PR-delta) — the control had been referenced by FR-006, blueprint S10, and risk R-05 but never existed until the third-party review caught it.
