@@ -33,6 +33,8 @@ def changed_files():
         cwd=ROOT,
         capture_output=True,
         text=True,
+        encoding="utf-8",  # TP-018: repo diffs are UTF-8; the platform
+        errors="replace",  # default codec (GBK on zh-CN Windows) crashed
         check=True,
     ).stdout
     return [line.strip() for line in out.splitlines() if line.strip()]
@@ -53,6 +55,8 @@ def added_memo_headings() -> list[str]:
         cwd=ROOT,
         capture_output=True,
         text=True,
+        encoding="utf-8",  # memo text carries typographic UTF-8
+        errors="replace",
         check=True,
     ).stdout
     return [
