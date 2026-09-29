@@ -296,7 +296,10 @@ def test_two_digit_heading_ordinal_still_layout() -> None:
 # ---- low-4: zero-bar gap repair ---------------------------------------------
 
 
-def test_zero_bar_gap_repair_keeps_gap_open(tmp_path) -> None:
+def test_zero_bar_gap_repair_three_attempts_then_terminal(tmp_path) -> None:
+    """Fourth-audit high finding: unfillable gaps must CLOSE honestly
+    (attempt-counted, resolution='no-data') instead of retrying forever
+    and starving the daily budget - and must not be marked repaired."""
     from stockinsider.data.ingest.sync import SyncService
 
     # minimal wiring: service._execute with a dead adapter returning []
@@ -333,11 +336,57 @@ def test_zero_bar_gap_repair_keeps_gap_open(tmp_path) -> None:
             return False
 
     engine._conn = _Conn()
+    gaps = {("0700.HK", "2026-01-02", "2026-01-05"): {"attempts": 0, "resolved_at": None, "resolution": None}}
+
+    class _GapConn:
+        def __init__(self):
+            self.log = []
+
+        def execute(self, sql, params=()):
+            self.log.append((sql, params))
+            if sql.startswith("UPDATE sync_gaps SET empty_attempts"):
+                key = (params[0], params[1], params[2])
+                gaps[key]["attempts"] += 1
+            elif sql.startswith("UPDATE sync_gaps SET resolved_at"):
+                key = (params[1], params[2], params[3])
+                gaps[key]["resolved_at"] = params[0]
+                gaps[key]["resolution"] = "no-data"
+            elif sql.startswith("SELECT empty_attempts"):
+                key = (params[0], params[1], params[2])
+
+                class _R:
+                    def __getitem__(self, item):
+                        assert item == "empty_attempts"
+                        return gaps[key]["attempts"]
+
+                    def fetchone(self):
+                        return self
+
+                return _R()
+            return None
+
+        def __enter__(self):
+            return self
+
+        def __exit__(self, *a):
+            return False
+
+    engine._conn = _GapConn()
     engine._cursor = lambda symbol: "2026-01-01"  # noqa: E731
     engine._set_cursor = lambda symbol, d: None
-    result = engine._execute(("0700.HK", "gap-repair", "2026-01-02", "2026-01-05"), None)
+    key = ("0700.HK", "2026-01-02", "2026-01-05")
+    # attempts 1 and 2: failed, still open, retry scheduled
+    for attempt in (1, 2):
+        result = engine._execute((key[0], "gap-repair", key[1], key[2]), None)
+        assert result.status == "failed"
+        assert f"({attempt}/3 attempts" in result.detail
+        assert gaps[key]["resolved_at"] is None
+    # attempt 3: terminal, honest resolution
+    result = engine._execute((key[0], "gap-repair", key[1], key[2]), None)
     assert result.status == "failed"
-    assert "gap remains open" in result.detail
+    assert "confirmed no-data" in result.detail
+    assert gaps[key]["resolution"] == "no-data"
+    assert gaps[key]["resolved_at"] is not None
 
 
 # ---- M4: language allowlist ---------------------------------------------------
@@ -448,9 +497,11 @@ def test_identity_prompt_resolves_from_package_root() -> None:
 # ---- E-007 adversarial battery (auditor-authored classes) ---------------------
 
 
-#: Sentences lifted/adapted from the THIRD-PARTY audit report (the
-#: auditor is the author; the filter writer is not) - E-007's
-#: author-separation requirement. Violating: must be stripped or
+#: Sentences DERIVED FROM the violation CLASSES the third-party audit
+#: reported (authorship honesty, E-007a: these are adaptations written
+#: by the remediation author from the audit's described classes, not
+#: verbatim auditor sentences - a truly auditor-authored held-out set
+#: remains the reviewer's to run). Violating: must be stripped or
 #: refused. Reported/attributed: must pass (factual reporting).
 AUDIT_VIOLATING = [
     "The price will increase tomorrow.",

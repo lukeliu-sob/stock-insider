@@ -99,9 +99,11 @@ Verdict: pass · Notes: after TP-017 PR-3a the battery's historical failure clas
 ### E-007a — INV-002 adversarial battery, author-separated (TP-018)
 
 Date: 2026-09-29 - Prompt version: identity v5 - Model(s): n/a (filter, unit-level)
-Scores: auditor-sourced battery (10 violating / 4 reported-speech, from the
-third review report's own sentence classes - not authored by the pattern
-writer): precision 1.00, recall 1.00
+Scores: battery DERIVED FROM the third review's reported violation classes
+(10 violating / 4 reported-speech; adapted by the remediation author, NOT
+verbatim auditor sentences - an auditor-authored held-out set remains the
+reviewer's instrument; fourth-audit honesty correction): precision 1.00,
+recall 1.00
 (test/offline/test_tp018_remediation.py, CI-blocking). The original
 same-author labeled suite (20 sentences) remains green at P=1.00/R=1.00;
 the new battery additionally pins the reported-speech exemption (4/4 pass)
@@ -110,3 +112,18 @@ Verdict: pass - Notes: M3 measured on an author-separated set as the third
 audit required; regex recall remains inherently bounded - new violation
 classes beyond the pattern families are a documented limitation
 (ADR-006 Am6), with the phase-2 direction recorded there.
+
+
+### E-007b — INV-002 fourth-audit battery (narrowed attribution + modal recall)
+
+Date: 2026-09-29 - Model(s): n/a (filter, unit-level)
+Scores: adapted battery (9 directional: 5 laundering/prediction must-fail,
+4 true reported speech must-pass): 9/9 correct
+(test/offline/test_tp018b_fourth_audit.py, CI-blocking). The auditor's own
+held-out sentences (11 + 10 from the fourth report) remain unmeasured here -
+the reviewer must run them; local recall on their REPORTED classes improved
+(4/11 -> covered classes for chart-analysis attribution, expected/predicted/
+projected reach/exceed/double, modal set) but the full held-out number is
+theirs to publish.
+Verdict: pass (bounded) - Notes: regex recall stays inherently bounded;
+phase-2 direction and known open classes recorded in ADR-006 Am7.

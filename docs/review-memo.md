@@ -349,3 +349,22 @@ test-plan gate's safety-path attestation).
   gates pass.
 - Security: the egress policy surface is unchanged in scope but now fail-closed at config
   write time and crash-free at runtime; extension hosts require an explicit owner env entry.
+
+
+### RM-55 — TP-018b: fourth-audit remediation (sync starvation, guardrail regressions, gates)
+
+- Verdict: APPROVE (owner authorized the full plan and PR submission, 2026-09-29).
+- Spec alignment: REQ-SI-FR-001 (budget share + listing-clip + honest no-data terminal
+  state), REQ-SI-INV-001 (snake_case fields, identifier codes, heading ordinals,
+  deferred regeneration replay), REQ-SI-INV-002 (narrowed attribution, expected-to
+  class), REQ-SI-INV-003 (empty PR body fails the gate; deferrals explicit),
+  REQ-SI-INV-004 (identity v6 non-relay wording; migration v6 demotes stale verified
+  rows), REQ-SI-FR-014 (widened closed allowlist), REQ-SI-SEC-003 (loopback HTTP
+  exception), REQ-SI-FR-006 (N1 gate: .get/variable-key/alias detection).
+- Architecture: ADR-004 Am3, ADR-006 Am7, schema migration v6.
+- Test quality: 18 new adversarial tests (test_tp018b_fourth_audit.py) - quota
+  simulation, clip-to-listing, migration demotion, laundering sentences, table
+  prose, deferred replay (fabricated regen never reaches the screen), empty-body
+  gate, loopback; full suite 424 green; ruff/mypy clean.
+- Security: loopback HTTP is scoped to 127/8 + localhost + ::1 only; remote HTTP
+  still refused.

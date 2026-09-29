@@ -2488,3 +2488,57 @@ sessions:
     Owner authorized the full remediation plan in session (2026-09-29),
     including the docs/ADR/memo/CI writes this entry records.
   status: applied
+
+- id: AILOG-0064
+  date: "2026-09-29"
+  agent_task: >-
+    TP-018b fourth-audit remediation under explicit owner authorization
+    ("modify, confirm, then submit PR"). High finding: sync budget
+    starvation closed three ways - gap detection clips to the symbol's
+    earliest stored bar (pre-listing dates never enqueue), gap-repair
+    consumes at most half the daily cap per run with explicit deferrals,
+    and a zero-bar gap closes after 3 attempts with resolution=no-data
+    (migration v6 also demotes stale verified=1 secondary-exchange rows).
+    Guardrail: snake_case field tokens resolve (adjusted_close et al.);
+    identifier codes (GOV-001/ADR-005/Am2/Q1/SP500) blanked before
+    extraction; internal numbering removed from symbol.search's
+    description; heading ordinals tightened to punctuated 1-2 digit or
+    single bare digit; attribution exemption requires verb+source (or
+    "according to the <doc>") closing the chart-laundering hole;
+    expected/predicted/projected + reach/exceed/double/triple added;
+    regeneration buffers in its own deferred sink (verify-then-display,
+    single display). Language allowlist widened to arrows/bullets/
+    comparison/narrow-space/Latin Ext-A/closed emoji set (ADR-004 Am3);
+    loopback-only HTTP exception. Gate: empty PR_BODY in PR context
+    fails; RM heading must contain digits; static arithmetic gate now
+    detects .get(field), variable keys, and one-level direct-read
+    aliases. prompts/identity.md v6 (non-relay token rules, no
+    user_confirmed). REPL /resume peeks at the target before closing
+    the live session. ADR-004 Am3 + ADR-006 Am7 written (Am7 also
+    reconciles Am6 claims with code and records phase-2 known
+    limitations honestly); E-007a authorship corrected, E-007b added;
+    RM-55; TP-018 amendment 1.
+  artifacts:
+    - src/stockinsider/data/ingest/sync.py
+    - src/stockinsider/data/store/schema.py
+    - src/stockinsider/agent/guardrail.py
+    - src/stockinsider/agent/loop.py
+    - src/stockinsider/agent/repl.py
+    - src/stockinsider/agent/registry.py
+    - src/stockinsider/shared/language.py
+    - src/stockinsider/shared/egress.py
+    - prompts/identity.md
+    - tools/checks/static_arithmetic.py
+    - tools/checks/testplan_gate.py
+    - docs/test-plans/TP-018.md
+    - docs/architecture/adr/004-shared-foundation.md
+    - docs/architecture/adr/006-guardrail.md
+    - docs/architecture/evaluation-logbook.md
+    - docs/review-memo.md
+    - test/offline/test_tp018b_fourth_audit.py
+    - test/offline/test_tp018_remediation.py
+    - docs/ai-use-log.yaml
+  human_decision: >-
+    Owner authorized full-plan execution and PR submission after the
+    fourth review (2026-09-29), including prompts/ v6.
+  status: applied

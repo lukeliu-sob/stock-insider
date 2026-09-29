@@ -86,3 +86,26 @@ had no legal path. Corrected rules:
    discipline).
 
 Implements: REQ-SI-SEC-003.
+
+## Amendment 3 (2026-09-29, TP-018b) — language allowlist design; loopback HTTP
+
+Fourth-audit corrections to Am2's neighborhood (the language change
+had shipped without an ADR of its own - a governance miss the audit
+rightly flagged):
+
+1. Runtime English-only (shared/language.py) is a positive allowlist:
+   printable ASCII, Latin-1 supplement, Latin Extended-A, a closed
+   typographic/arrows/comparison set, and a closed report-emoji set
+   (check/cross/warning/chart up/down/bars + variation selector).
+   The first cut omitted arrows, bullets and narrow no-break spaces
+   the model genuinely uses in date ranges and lists; whole correct
+   answers were withheld. Widening stays closed-set: anything not
+   enumerated fails closed (Cyrillic, Hangul, Greek, CJK verified
+   rejected).
+2. Egress loopback exception: http:// (plain HTTP) is allowed when
+   and only when the host is loopback (localhost, ::1, 127.0.0.0/8).
+   Local model runtimes do not egress; refusing them made the
+   documented local-endpoint path unusable. Non-loopback HTTP is
+   still refused exactly as before.
+
+Implements: REQ-SI-FR-014, REQ-SI-GOV-001, REQ-SI-SEC-003.

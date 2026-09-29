@@ -155,3 +155,38 @@ OHLCV mismatch class — a sentence naming one OHLCV field whose
 number matches only a different OHLCV field's value — fails the
 check ("open quoted as close"). Remaining semantic gaps are a
 documented limitation until phase 2.
+
+## Amendment 7 (2026-09-29, TP-018b) — Am6 code/doc reconciliation + fourth-audit corrections
+
+The fourth audit caught Am6 claiming things the code did not do, plus
+three real defects. All four are corrected here and pinned by tests:
+
+1. "expected to" is now actually implemented (modal class gains
+   expected/predicted/projected/anticipated; verbs gain
+   reach/exceed/double/triple). Am6's original text claimed it; the
+   code did not have it.
+2. Attribution exemption narrowed (fourth-audit laundering finding):
+   REPORTED speech requires BOTH a reporting speech-act verb (said,
+   announced, ...) AND an institutional source noun (management,
+   company, filing, ...), or an explicit "according to the
+   <document/company>" form. "According to the chart" no longer
+   exempts anything. The Am6-era single-marker exemption is retired.
+3. Heading ordinals: only a punctuated 1-2 digit ordinal or a single
+   bare digit is layout; "## 85 USD price target" is a numeric claim.
+4. Identifier codes (GOV-001, ADR-005, TP-018, Am2, Q1, SP500) are
+   blanked before number extraction: a letters-hyphen-digits or short
+   letters-glued-digits token is a reference, never a cited value.
+   Field mentions tokenize as identifiers, so snake_case table rows
+   ("| adjusted_close | 642.8959 |") resolve to their field instead
+   of mis-attributing the neighboring "close" row's word.
+
+Known phase-2 limitations, recorded honestly (not claimed fixed):
+word-form numbers ("eighty percent"), non-OHLCV semantic swaps
+(drawdown quoted as volatility), "18.57 (vs 3% margin)" context
+class, and 1-decimal percent display. These remain open for a
+dedicated test plan.
+
+E-007a authorship note: the adversarial battery sentences are
+ADAPTATIONS of the audit's reported violation classes written by the
+remediation author - not verbatim auditor sentences. A truly
+auditor-authored held-out set remains the reviewer's instrument.
