@@ -86,11 +86,17 @@ def validate_egress_url(url: str, *, extra_allowed: tuple[str, ...] = ()) -> Non
     Implements: REQ-SI-SEC-003 (ADR-004)
     """
     parsed = urlparse(url)
-    if parsed.scheme != "https":
+    host = (parsed.hostname or "").lower().rstrip(".")
+    loopback = host in ("localhost", "::1") or host.startswith("127.")
+    if parsed.scheme != "https" and not (parsed.scheme == "http" and loopback):
+        # Fourth-audit fix (TP-018b, ADR-004 Am2): plain HTTP remains
+        # refused for everything that can leave the machine - except an
+        # explicit loopback endpoint (local model runtimes). Loopback
+        # traffic does not egress; refusing it made the documented local
+        # endpoint path unusable.
         raise EgressViolationError(f"egress refused: non-HTTPS scheme {parsed.scheme!r} in {url!r} (SEC-003)")
-    host = parsed.hostname or ""
     allowed = EGRESS_WHITELIST | frozenset(name.lower() for name in extra_allowed)
-    if not _domain_allowed(host, allowed):
+    if not loopback and not _domain_allowed(host, allowed):
         raise EgressViolationError(
             f"egress refused: host {host!r} not in whitelist (SEC-003); allowed: {sorted(allowed)}"
         )

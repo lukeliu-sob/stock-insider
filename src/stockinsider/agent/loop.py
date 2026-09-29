@@ -401,12 +401,24 @@ class TurnEngine:
             displayed = verdict.display_text
         elif verdict.epistemic.violations:
 
+            # H1 residual (TP-018b, fourth audit): the regeneration used
+            # to stream through the RAW user sink - fabricated numbers
+            # showed on screen before the recheck, and a passing
+            # regeneration displayed twice (streamed, then rendered).
+            # The regeneration buffers in its OWN deferred sink and is
+            # replayed only after the numeric recheck passes.
+            regen_sink = _DeferredSink()
+
             def _regenerator(reminder_text: str) -> str:
                 regen_messages: list[dict[str, str]] = [
                     {"role": "system", "content": reminder_text},
                     {"role": "user", "content": verdict.epistemic.clean_text},
                 ]
-                regen = self._provider.complete(regen_messages, tools=None, stream_sink=stream_sink)
+                regen = self._provider.complete(
+                    regen_messages,
+                    tools=None,
+                    stream_sink=regen_sink.push if stream_sink is not None else None,
+                )
                 _accumulate(usage_total, regen.usage)
                 return regen.text
 
@@ -422,14 +434,29 @@ class TurnEngine:
             recheck = run_postcheck(epi.displayed, ledger)
             if recheck.quarantined:
                 deferred.reset()
+                regen_sink.reset()
+                # the degraded line is ALL the user sees; neither the
+                # quarantined original nor the failed regeneration
+                # ever reached the screen
                 render(recheck.display_text)
                 displayed = recheck.display_text
                 verdict = recheck
+            elif getattr(epi, "refused", False):
+                deferred.reset()
+                regen_sink.reset()
+                render(epi.displayed)  # the INV-002 refusal summary
+                displayed = epi.displayed
             else:
+                deferred.reset()
                 if epi.displayed == combined:
                     _replay()
+                elif stream_sink is not None:
+                    # verify-then-display for the regeneration: replay
+                    # the checked deltas exactly once (screen == displayed)
+                    for piece in regen_sink.buffer:
+                        stream_sink(piece)
+                    stream_sink("\n")
                 else:
-                    deferred.reset()
                     render(epi.displayed)
                 displayed = epi.displayed
         else:

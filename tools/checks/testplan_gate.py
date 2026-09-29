@@ -104,7 +104,9 @@ def safety_memo_check(changed: list[str], body: str) -> None:
         )
     # new-7 (TP-018): the diff must ADD a real entry heading, not merely
     # touch the file (blank-line padding used to pass).
-    headings = added_memo_headings()
+    import re as _re
+
+    headings = [h for h in added_memo_headings() if _re.search(r"RM-" + chr(92) + "d+", h)]
     if not headings:
         sys.exit(
             "FAIL test-plan gate: docs/review-memo.md is in the change set "
@@ -117,9 +119,18 @@ def safety_memo_check(changed: list[str], body: str) -> None:
 def main() -> None:
     changed = changed_files()
     body = os.environ.get("PR_BODY")
-    if changed is None or not body:
+    if changed is None:
         print("PASS test-plan gate: non-PR context (skipped)")
         return
+    if not body:
+        # Fourth-audit finding (TP-018b): CI_BASE_SHA is set, so this IS
+        # a PR context - an empty body cannot reference a test plan nor
+        # attest a review memo. Skipping here waved through PRs whose
+        # entire change set never met the gate.
+        sys.exit(
+            "FAIL test-plan gate: PR context (CI_BASE_SHA set) but PR_BODY "
+            "is empty - the PR must reference 'Test-Plan: TP-NNN' (GOV-006)"
+        )
 
     # Safety-path memo attestation runs FIRST (new-7, TP-018): it must
     # hold even when no implementation file is touched.

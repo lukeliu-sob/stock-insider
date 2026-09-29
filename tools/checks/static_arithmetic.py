@@ -54,8 +54,16 @@ ARITH_OPS = (
 COMPUTE_PREFIX = ("data", "compute")
 
 
-def _identifiers(node: ast.AST) -> set[str]:
-    """Identifier roots referenced by an expression node."""
+def _identifiers(node: ast.AST, market_keys: "set[str] | None" = None) -> set[str]:
+    """Identifier roots referenced by an expression node.
+
+    Fourth-audit N1 completion (TP-018b): recognizes row["close"],
+    row.get("close") (dict-access calls with constant market-field
+    keys), variables USED AS KEYS whose value is a market-field string
+    (key = "close"; row[key]), and one-level aliases (c = row["close"]
+    resolves through the caller-supplied alias set).
+    """
+    aliases = market_keys or set()
     out: set[str] = set()
     for sub in ast.walk(node):
         if isinstance(sub, ast.Name):
@@ -63,11 +71,56 @@ def _identifiers(node: ast.AST) -> set[str]:
         elif isinstance(sub, ast.Attribute):
             out.add(sub.attr)
         elif isinstance(sub, ast.Subscript):
-            # row["close"] — the subscript literal names the field (N1)
             sl = sub.slice
             if isinstance(sl, ast.Constant) and isinstance(sl.value, str):
                 out.add(sl.value)
+            elif isinstance(sl, ast.Name) and sl.id in aliases:
+                out.add(sl.id)
+        elif isinstance(sub, ast.Call):
+            fn = sub.func
+            if (
+                isinstance(fn, ast.Attribute)
+                and fn.attr in ("get", "pop", "setdefault")
+                and sub.args
+            ):
+                first = sub.args[0]
+                if isinstance(first, ast.Constant) and isinstance(first.value, str):
+                    out.add(first.value)
+                elif isinstance(first, ast.Name) and first.id in aliases:
+                    out.add(first.id)
     return out
+
+
+def _scope_market_names(tree: ast.AST) -> "set[str]":
+    """Names that carry a market-field string or a market-field value.
+
+    One conservative pass over Assign targets: key = "close" makes key
+    a market-KEY variable; c = row["close"] (or row.get("close")) makes
+    c a market-value alias. Only direct assignments propagate (no
+    chains through calls); anything more complex stays untracked and
+    relies on the base identifier rules.
+    """
+    names: set[str] = set()
+    for node in ast.walk(tree):
+        if not isinstance(node, ast.Assign):
+            continue
+        targets = [t.id for t in node.targets if isinstance(t, ast.Name)]
+        if not targets:
+            continue
+        value = node.value
+        # key = "close"
+        if isinstance(value, ast.Constant) and isinstance(value.value, str) and value.value in MARKET_FIELDS:
+            names.update(targets)
+            continue
+        # c = row["close"] / row.get("close") / row[key-with-market-value]
+        # DIRECT data reads only: a value that is itself arithmetic
+        # (a = row["close"] * 2) is already flagged at its own BinOp and
+        # must not re-taint downstream uses (no double counting).
+        if isinstance(value, (ast.Subscript, ast.Call)):
+            idents = _identifiers(value)
+            if idents & MARKET_FIELDS:
+                names.update(targets)
+    return names
 
 
 def _under_compute(rel_parts: tuple[str, ...]) -> bool:
@@ -87,10 +140,11 @@ def scan(root: Path) -> list[str]:
             continue
         rel = path.relative_to(root).as_posix()
         tree = ast.parse(path.read_text(encoding="utf-8"), filename=rel)
+        market_names = _scope_market_names(tree)
         for node in ast.walk(tree):
             if isinstance(node, ast.BinOp) and isinstance(node.op, ARITH_OPS):
-                idents = _identifiers(node.left) | _identifiers(node.right)
-                hit = idents & MARKET_FIELDS
+                idents = _identifiers(node.left, market_names) | _identifiers(node.right, market_names)
+                hit = idents & (MARKET_FIELDS | market_names)
                 if hit:
                     violations.append(
                         f"{rel}:{node.lineno}: arithmetic on market field(s) "

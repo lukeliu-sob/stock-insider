@@ -639,6 +639,19 @@ def _session_loop(
                     if resolved == record["session_id"]:
                         echo("error: already in this session; /resume switches to a different closed session")
                         continue
+                    # Fourth-audit fix (TP-018b): peek at the target BEFORE
+                    # closing the current session. Resuming an aborted
+                    # session used to close the live one first, then raise,
+                    # leaving the loop appending events to a closed record.
+                    target_row = next(
+                        (row for row in store.list_sessions() if row["session_id"] == resolved), None
+                    )
+                    if target_row is not None and target_row.get("status") == "aborted":
+                        echo(
+                            f"error: session {resolved} was aborted by the guardrail; "
+                            "aborted sessions are terminal — start a new session (INV-003)"
+                        )
+                        continue
                     store.close(record["session_id"])
                     echo(f"session {record['session_id']} closed (switching)")
                     record = store.resume(resolved)
