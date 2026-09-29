@@ -82,6 +82,15 @@ def main() -> None:
                 bad = (
                     (src_tier == "data" and tgt in ("agent", "agent.registry"))
                     or (src_tier == "agent" and tgt == "data")
+                    # agent/registry may import the data FACADE package
+                    # only (ADR-005 Amendment 1): stockinsider.data, not
+                    # any deeper module. Review finding 2: the previous
+                    # rule let registry import arbitrary data internals.
+                    or (
+                        src_tier == "agent.registry"
+                        and tgt == "data"
+                        and mod[1:] != ["data"]
+                    )
                     or (tgt == "cli" and src_tier != "cli")
                     # shared may not depend on other internal packages,
                     # but intra-package imports are legitimate.
