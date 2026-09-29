@@ -404,6 +404,18 @@ class SyncService:
         return report
 
 
+def _last_run_row(conn: sqlite3.Connection) -> "dict[str, Any] | None":
+    """The newest market-track cursor as a plain dict (H5: a raw sqlite Row
+    is not JSON-serializable and crashed the tool-result relay).
+
+    Implements: REQ-SI-INV-003 (ADR-002; TP-017 PR-1)
+    """
+    row = conn.execute(
+        "SELECT last_run_at FROM sync_state WHERE track LIKE 'market:%' ORDER BY last_run_at DESC LIMIT 1"
+    ).fetchone()
+    return dict(row) if row is not None else None
+
+
 def sync_status(conn: sqlite3.Connection) -> dict[str, Any]:
     """Read-only sync status: budget, pending gaps, tracked symbols.
 
@@ -422,8 +434,6 @@ def sync_status(conn: sqlite3.Connection) -> dict[str, Any]:
         },
         "pending_gaps": [dict(row) for row in pending],
         "active_symbols": int(active),
-        "last_run": conn.execute(
-            "SELECT last_run_at FROM sync_state WHERE track LIKE 'market:%' ORDER BY last_run_at DESC LIMIT 1"
-        ).fetchone(),
+        "last_run": _last_run_row(conn),
         "news": news_status(conn),
     }

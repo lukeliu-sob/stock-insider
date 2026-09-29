@@ -2267,3 +2267,39 @@ sessions:
       remediation program; this round's approval doubles as the
       retrospective review approval for the backfilled entries.
     status: applied
+  - id: AILOG-0059
+    date: "2026-09-29"
+    tool: "pi coding agent (LLM session)"
+    role: ai
+    task: >-
+      TP-017 PR-1 (second-audit pipeline core): verify-then-display
+      (H1) - provider deltas buffer in a deferred sink and replay
+      to the user only after the numeric post-check passes, so a
+      quarantined turn never shows its original text;
+      regenerations re-checked (H2) - regenerated text runs through
+      run_postcheck against the same snapshot and a fabricated
+      number degrades like the primary path, so /report refuses to
+      archive it; sticky abort (H4) - the abort reason persists on
+      the engine and the next run_turn refuses before any model
+      call, the REPL leaves the loop; three crash paths fixed
+      (H5) - bare slash guard, sync_status.last_run as a plain
+      dict (the raw sqlite Row crashed the JSON relay), mid-stream
+      provider breaks wrapped as ProviderError; duplicated user
+      message fixed (M6) - history is read before the turn's event
+      append; status prompt key corrected (N3). Infra first:
+      the worktree reverter identified as the local harness's own
+      git-safety.ts + AUTO_MERGE replay (BD-006 corrected),
+      extension disabled, thirty stashes archived and cleared.
+    artifacts:
+      - src/stockinsider/agent/loop.py
+      - src/stockinsider/agent/repl.py
+      - src/stockinsider/agent/providers.py
+      - src/stockinsider/data/ingest/sync.py
+      - docs/bug-diary.md
+      - docs/test-plans/TP-017.md
+      - test/offline/test_guardrail_pipeline.py
+      - docs/ai-use-log.yaml
+    human_decision: >-
+      Owner approved the second-audit remediation plan and
+      instructed execution.
+    status: applied

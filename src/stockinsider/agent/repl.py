@@ -61,7 +61,7 @@ def _context_prompt(data_store: Any) -> str:
         return PROMPT
     try:
         symbols = data_store.watchlist.list()
-        remaining = data_store.sync_status()["calls"]["remaining"]
+        remaining = data_store.sync_status()["budget"]["remaining"]
         return f"stockinsider [{len(symbols)} sym | {remaining} calls]> "
     except Exception:  # noqa: BLE001 — prompt must never crash the loop
         return PROMPT
@@ -492,7 +492,11 @@ def _session_loop(
         if line == "/exit":
             break
         if line.startswith("/"):
-            name, *args = line[1:].split()
+            parts = line[1:].split()
+            if not parts:  # H5: bare "/" never crashes the loop
+                echo("unknown command: '/' (type /help for the command list)")
+                continue
+            name, *args = parts
             if name == "help":
                 _cmd_help(echo)
             elif name == "sessions":
@@ -577,7 +581,12 @@ def _session_loop(
                     f"{API_KEY_ENV}); slash commands remain available"
                 )
             else:
-                _run_conversational_turn(engine, record, line, echo)
+                outcome = _run_conversational_turn(engine, record, line, echo)
+                if outcome is not None and getattr(outcome, "aborted", None):
+                    # H4: the abort threshold is sticky — leave the loop
+                    # instead of accepting further turns on an aborted session.
+                    echo("closing the session (abort threshold reached)")
+                    break
     return record
 
 
