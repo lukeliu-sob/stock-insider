@@ -2198,3 +2198,36 @@ sessions:
       Owner instructed full sequential implementation of the
       remediation program.
     status: applied
+
+  - id: AILOG-0057
+    date: "2026-09-29"
+    tool: "pi coding agent (LLM session)"
+    role: ai
+    task: >-
+      Remediation PR-delta (third-party review finding 3; TP-016):
+      the static arithmetic gate exists for real. Until now FR-006
+      acceptance (a), blueprint S10, risk-list R-05, and approved
+      TP-013 all referenced a control that had never been built,
+      and no approval chain caught the fabrication. The gate is an
+      AST scan: BinOp arithmetic (+ - * / // % **) over market-
+      field identifier roots (close/open/high/low/adjusted_close/
+      volume/quote...) outside data/compute fails the build;
+      compute-function calls and comparisons are the sanctioned
+      paths and never flagged. Self-tests pin the violation case,
+      the compute exemption, non-market arithmetic, call-vs-
+      arithmetic distinction, and the real tree scanning clean
+      (PR-gamma moved the last stray computation behind the
+      facade, so the repo passes first try). Wired into the CI
+      gates job; tools/checks/README documents the gate and its
+      provenance honestly.
+    artifacts:
+      - tools/checks/static_arithmetic.py
+      - tools/checks/README.md
+      - .github/workflows/ci.yml
+      - test/offline/test_static_arithmetic.py
+      - docs/test-plans/TP-016.md
+      - docs/ai-use-log.yaml
+    human_decision: >-
+      Owner instructed full sequential implementation of the
+      remediation program.
+    status: applied
