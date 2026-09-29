@@ -491,6 +491,59 @@ def _session_loop(
             continue
         if line == "/exit":
             break
+        if line.split(" ", 1)[0] == "confirm" and engine is not None:
+            # H3: human confirmation for a proposed write (one-time token).
+            parts = line.split()
+            if len(parts) != 2:
+                echo("usage: confirm <token>  (tokens are single-use)")
+                continue
+            pending = engine.confirmations.consume(parts[1])
+            if pending is None:
+                echo("unknown or already-used token; nothing executed (INV-004)")
+                continue
+            confirmed_result = engine.registry.execute(
+                ToolCall(
+                    tool=pending.tool,
+                    arguments=pending.arguments,
+                    call_id=f"confirm-{parts[1]}",
+                ),
+                allow_write=True,  # the consumed token IS the human's consent
+            )
+            store.append_event(
+                record["session_id"],
+                {
+                    "event": "user-confirmation",
+                    "token": parts[1],
+                    "tool": pending.tool,
+                    "arguments": pending.arguments,
+                    "turn": None,
+                },
+            )
+            store.append_event(
+                record["session_id"],
+                {
+                    "event": "tool-call",
+                    "tool": pending.tool,
+                    "arguments": pending.arguments,
+                    "turn": None,
+                },
+            )
+            store.append_event(
+                record["session_id"],
+                {
+                    "event": "tool-result",
+                    "tool": pending.tool,
+                    "ok": confirmed_result.ok,
+                    "result": confirmed_result.result,
+                    "provenance": confirmed_result.provenance,
+                    "turn": None,
+                },
+            )
+            if confirmed_result.ok:
+                echo(f"confirmed: {pending.tool} executed (single-use token consumed)")
+            else:
+                echo(f"confirmed but failed: {confirmed_result.error}")
+            continue
         if line.startswith("/"):
             parts = line[1:].split()
             if not parts:  # H5: bare "/" never crashes the loop

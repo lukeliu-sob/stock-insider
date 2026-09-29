@@ -31,7 +31,8 @@ from stockinsider.agent.guardrail import PostCheckCounter, run_postcheck, run_wi
 from stockinsider.agent.profiles import tool_loop_limit
 from stockinsider.agent.registry import Registry
 from stockinsider.agent.session import SessionStore
-from stockinsider.shared.tools import ToolCall
+from stockinsider.agent.confirm import ConfirmationBroker
+from stockinsider.shared.tools import EffectClass, ToolCall, ToolResult
 
 #: Conversation-history window mapped into provider messages.
 HISTORY_WINDOW = 20
@@ -104,9 +105,11 @@ class TurnEngine:
     ) -> None:
         """Bind the store, registry membrane, and provider; load the identity prompt."""
         self._aborted: str | None = None  # H4: sticky session abort
+        self.confirmations = ConfirmationBroker()  # H3: write-token broker
 
         self._store = store
         self._registry = registry
+
         self._provider = provider
         self._prompt_version, self._identity = load_identity_prompt(prompts_dir)
         self._counter = PostCheckCounter()
@@ -118,6 +121,15 @@ class TurnEngine:
         Implements: REQ-SI-GOV-003 (ADR-001)
         """
         return self._prompt_version
+
+    @property
+    def registry(self) -> Registry:
+        """Public read access for the confirmation replay path (H3).
+
+        Implements: REQ-SI-INV-004 (ADR-005; TP-017 PR-2)
+        """
+        return self._registry
+
 
     def _next_turn_id(self, session_id: str) -> str:
         """Derive the next turn id from the session's existing events (resume-safe).
@@ -213,13 +225,29 @@ class TurnEngine:
                         arguments = json.loads(raw_arguments or "{}")
                     except json.JSONDecodeError:
                         arguments = {}
-                    result = self._registry.execute(
-                        ToolCall(tool=name, arguments=arguments, call_id=call.get("id") or turn_id),
-                        # Write gate: a write tool executes only when its call
-                        # carries an explicit user confirmation (INV-004 pattern);
-                        # the tool re-checks its own gate on the data side.
-                        allow_write=arguments.get("user_confirmed") is True,
-                    )
+                    # H3 (TP-017 PR-2): the conversational path NEVER sets
+                    # allow_write — the model\'s assertions are not consent.
+                    # Write-class calls are intercepted: a one-time token is
+                    # issued and the model is told to let the human confirm.
+                    _effect = getattr(self._registry, "effect_class", lambda _n: None)(name)
+                    if _effect is EffectClass.WRITE:
+                        token = self.confirmations.issue(
+                            session_id, name, arguments, turn=_turn_number(turn_id)
+                        )
+                        result = ToolResult(
+                            call_id=call.get("id") or turn_id,
+                            ok=False,
+                            error=(
+                                "write gate: human confirmation required "
+                                f"(one-time token {token}; the user replies "
+                                f"'confirm {token}' in the harness)"
+                            ),
+                        )
+                    else:
+                        result = self._registry.execute(
+                            ToolCall(tool=name, arguments=arguments, call_id=call.get("id") or turn_id),
+                            allow_write=False,
+                        )
                     tools_used += 1
                     self._store.append_event(
                         session_id,
@@ -355,6 +383,12 @@ class TurnEngine:
             tools_used=tools_used,
             usage=dict(usage_total),
         )
+
+
+def _turn_number(turn_id: str) -> int:
+    """Numeric part of a turn id (turn-0007 -> 7); 0 when unparseable."""
+    digits = "".join(ch for ch in turn_id if ch.isdigit())
+    return int(digits) if digits else 0
 
 
 class _DeferredSink:
