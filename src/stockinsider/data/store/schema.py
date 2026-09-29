@@ -168,6 +168,17 @@ ALTER TABLE news ADD COLUMN source TEXT NOT NULL DEFAULT 'gdelt';
 ALTER TABLE news_quarantine ADD COLUMN source TEXT NOT NULL DEFAULT 'gdelt';
 """
 
+#: Migration v6 (TP-018b, fourth-audit high finding): the gap queue
+#: gains empty-attempt accounting so a confirmed-no-data gap can close
+#: honestly instead of retrying forever (resolution records WHY), and
+#: pre-existing secondary-exchange rows lose the verified flag they
+#: were granted before ADR-005 Am2 scoped verification to HK/US/INDX.
+MIGRATION_V6 = """
+ALTER TABLE sync_gaps ADD COLUMN empty_attempts INTEGER NOT NULL DEFAULT 0;
+ALTER TABLE sync_gaps ADD COLUMN resolution TEXT;
+UPDATE symbols SET verified = 0 WHERE exchange NOT IN ('HK', 'US', 'INDX');
+"""
+
 #: Append-only migration list: index i holds migration to version i+1.
 MIGRATIONS: tuple[str, ...] = (
     MIGRATION_V1,
@@ -175,6 +186,7 @@ MIGRATIONS: tuple[str, ...] = (
     MIGRATION_V3,
     MIGRATION_V4,
     MIGRATION_V5,
+    MIGRATION_V6,
 )
 
 #: Latest schema version this code understands.
