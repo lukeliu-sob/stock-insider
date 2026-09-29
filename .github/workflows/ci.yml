@@ -28,6 +28,7 @@ jobs:
         run: python tools/checks/trace_coverage.py
       - name: Language gate (GOV-001)
         run: python tools/checks/language_policy.py
+      - run: python tools/checks/tautology_gate.py
       - name: Docstring traceability (R3, code side)
         run: python tools/checks/docstring_ids.py
       - name: Import boundaries (fitness function)

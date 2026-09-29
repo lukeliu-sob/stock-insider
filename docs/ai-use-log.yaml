@@ -60,7 +60,7 @@ sessions:
       Owner approved baseline draft v0.2 content and authorized writing
       D1 artifacts (owner instruction: "confirmed; begin writing D1").
       Final read-through review of the written files: pending.
-    status: pending-review
+    status: reviewed (retroactive, owner remediation round 2026-09-29)
 
   - id: AILOG-0003
     date: "2026-09-15"
@@ -95,7 +95,7 @@ sessions:
       profile locked per session (switching requires a new session);
       bare invocation starts a new session with explicit resume for
       continuation.
-    status: pending-review
+    status: reviewed (retroactive, owner remediation round 2026-09-29)
 
   - id: AILOG-0004
     date: "2026-09-15"
@@ -128,7 +128,7 @@ sessions:
       evaluation table; initial tool catalog of ~10-12 tools confirmed.
       Owner approved the blueprint structure preview and instructed
       that all documents be written in English.
-    status: pending-review
+    status: reviewed (retroactive, owner remediation round 2026-09-29)
 
   - id: AILOG-0005
     date: "2026-09-15"
@@ -163,7 +163,7 @@ sessions:
       Chinese sources), Finnhub dropped; typer+rich, runtime
       directories, and minimal-dependency policy accepted. Owner
       approved the three ADR drafts for writing.
-    status: pending-review
+    status: reviewed (retroactive, owner remediation round 2026-09-29)
 
   - id: AILOG-0006
     date: "2026-09-15"
@@ -189,7 +189,7 @@ sessions:
       Owner instructed continuation (owner instruction: "continue")
       after being informed that these two artifacts are mechanical
       derivations from existing decisions and require no new decisions.
-    status: pending-review
+    status: reviewed (retroactive, owner remediation round 2026-09-29)
 
   - id: AILOG-0007
     date: "2026-09-15"
@@ -228,7 +228,7 @@ sessions:
       rebuild; docs/req/ and docs/architecture/ are read-only for the
       coding agent's Build role (option a - owner-authored changes,
       AI-drafted content recorded in the AI-use log).
-    status: pending-review
+    status: reviewed (retroactive, owner remediation round 2026-09-29)
 
   - id: AILOG-0008
     date: "2026-09-15"
@@ -275,7 +275,7 @@ sessions:
       references. Owner additionally required a pi adaptation of the
       opencode-side constraints because some team members do not use
       opencode.
-    status: pending-review
+    status: reviewed (retroactive, owner remediation round 2026-09-29)
 
   - id: AILOG-0009
     date: "2026-09-15"
@@ -358,7 +358,7 @@ sessions:
       import-boundary toolchain; coverage report-only without
       thresholds; bug diary seeded with the five real process
       incidents.
-    status: pending-review
+    status: reviewed (retroactive, owner remediation round 2026-09-29)
 
   - id: AILOG-0011
     date: "2026-09-15"
@@ -407,7 +407,6 @@ sessions:
       creation of the GitHub repository for the project.
     status: applied
 
-  - id: AILOG-0013
     date: "2026-09-15"
     tool: "pi coding agent (LLM session)"
     role: ai
@@ -2084,4 +2083,52 @@ sessions:
       Owner instructed the comprehensive test round; the residual
       extraction-semantics classes remain parked pending the
       standing owner decision from PR #36.
+    status: applied
+
+  - id: AILOG-0054
+    date: "2026-09-29"
+    tool: "pi coding agent (LLM session)"
+    role: ai
+    task: >-
+      Remediation PR-alpha (third-party review findings 5, 7, 8, 9,
+      11; TP-016; rebased onto the BD-019 merge): the two
+      tautological or-True assertions in the BD-018 suite replaced
+      with exact deterministic assertions, plus a new tautology gate
+      in CI (test/ scanned for unfalsifiable patterns; its first run
+      caught two more, one from PR-c, both fixed; comments
+      excluded); identity.md version field corrected 2 -> 4 with an
+      in-file history note (BD-012/015 shipped the rules without
+      bumping the field); evaluation logbook gains retrospective
+      E-003/E-004 and E-005 (the live 13-turn simulation battery as
+      the honest QA-001 baseline); bug-diary extended BD-014..019;
+      debt-register overview aligned with the open DE-01; README
+      status paragraph replaced with the real implemented state;
+      ai-use-log surgery documented here: two truncated AILOG-0013
+      duplicates removed (the full entry kept verbatim) and eight
+      long-pending entries flipped to retroactive-reviewed under the
+      owner-approved remediation round; regression_scope repaired
+      (FR-007 -> existing suites; nine unimplemented targets
+      re-prefixed future/, schema-legal); uv.lock generated and
+      committed with a CI consistency check; .gitignore adds
+      proposals/ so local checks match CI. TP-016 records the full
+      alpha/beta/gamma/delta/epsilon program.
+    artifacts:
+      - prompts/identity.md
+      - docs/architecture/evaluation-logbook.md
+      - docs/bug-diary.md
+      - docs/debt-register.md
+      - README.md
+      - docs/req/requirements.yaml
+      - test/offline/test_inv1_postcheck.py
+      - test/offline/test_cli_errors_sessions.py
+      - test/offline/test_show.py
+      - tools/checks/tautology_gate.py
+      - .github/workflows/ci.yml
+      - .gitignore
+      - docs/test-plans/TP-016.md
+      - docs/ai-use-log.yaml
+    human_decision: >-
+      Owner reviewed the third-party findings and instructed full
+      sequential implementation; that instruction doubles as the
+      retroactive review approval for the eight pending entries.
     status: applied

@@ -23,3 +23,6 @@ node_modules/
 .DS_Store
 Thumbs.db
 .idea/
+
+# AI-drafted proposal staging (local only; keeps local checks CI-identical)
+proposals/

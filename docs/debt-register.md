@@ -14,7 +14,7 @@
 | Untouchable code | 0 |
 | Hidden dependencies | 0 |
 | Agent-induced bloat | 0 |
-| Evaluation debt | 0 |
+| Evaluation debt | 1 (DE-01) |
 | Guardrail debt | 2 |
 | Human/cognitive debt | 1 |
 

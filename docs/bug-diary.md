@@ -135,3 +135,45 @@ Invariant/process gap exposed → what changed:
 - **Classification**: integration bug across a module seam + an unknown vendor behavior (the BD-008..011 family: a vendor-constant assumption corrected by live fire).
 - **Fix**: the transport-exception path recovers the status from the message (`429` -> throttle); an empty 200 body raises `throttle` explicitly (an empty artlist is never valid JSON, and misclassifying it would advance the cursor past unsynced data). The CLI `sync` rendering now shows the news track (the report carried it; the surface dropped it — INV-003 visibility).
 - **Gap exposed -> change**: throttle semantics must be tested at the seam level, not only against status codes — a stub returning FetchResult(429) exercises a path the live stdlib transport never takes. The failure taxonomy tests now cover both seam shapes.
+
+## BD-014 — SyncReport.as_dict dropped the news field
+- **Date / discovered by**: 2026-09-24 / agent during live news verification.
+- **Symptom**: `stockinsider sync` and the `sync.run` tool output carried no news track although the news sync ran and stored rows.
+- **Investigation**: `SyncReport.as_dict` — the sole rendering surface for both CLI and registry tool — omitted the `news` attribute added in TP-011b; both surfaces dropped the track silently (an INV-003 visibility defect, not a data defect).
+- **Classification**: representation bug at a single serialization point.
+- **Fix**: one line (`news`) in `as_dict` + a regression test pinning the field's presence on both surfaces.
+- **Gap exposed -> change**: new report fields need a serialization test at the seam that owns rendering, not just the producer.
+
+## BD-015 — Postcheck flagged percent-converted citations (false positive)
+- **Date / discovered by**: 2026-09-25 / first live indicator report.
+- **Symptom**: the report cited 0.18573119602909305 exactly, then added "about 18.57%" — quarantined.
+- **Investigation**: percent conversion (pool x 100) was accepted only for bare equal renderings; a rounded percent with an adjacent marker is the same number in display convention.
+- **Classification**: guardrail matching-semantics gap (BD-012 family).
+- **Fix**: token = pool*100 within half-ulp of a 1-4dp rendering qualifies only when a %/percent/pct marker is adjacent; bare numbers never qualify. Adversarial negatives pin the edges (identity v4, ADR-006 Amendment 2).
+
+## BD-016 — Line-leading enumeration ordinals extracted as numerics
+- **Date / discovered by**: 2026-09-26 / first live /report.
+- **Symptom**: "Known gaps" numbered 1. 2. 3. — the ordinals were extracted as numeric claims and quarantined the whole report through regeneration.
+- **Classification**: extraction-shape gap (layout markers vs data numerals).
+- **Fix**: line-leading enumeration markers (1-3 digits + . or ) + whitespace) strip before extraction. Residual classes deliberately NOT patched (inline enumerations, identifier fragments) — recorded for the owner extraction-semantics decision; ADR-006 Amendment 3.
+
+## BD-017 — EODHD /api/search does not index HK listings
+- **Date / discovered by**: 2026-09-27 / live watchlist verification.
+- **Symptom**: searching "Tencent" or its ISIN returns zero HKEX rows while EOD/news endpoints serve 0700.HK fine.
+- **Investigation**: live probes against name and ISIN queries both empty for .HK; the search index simply does not cover the exchange.
+- **Classification**: vendor coverage gap, not a defect in our seam.
+- **Fix**: direct-symbol verification path (TP-015 PR-b): canonical-shaped queries verify existence with one budgeted EOD fetch; display name honestly "name unverified"; INV-004 confirmation unchanged.
+
+## BD-018 — ISO date citations fragmented by the extractor
+- **Date / discovered by**: 2026-09-27 / live news-analysis turn.
+- **Symptom**: fully-cited analysis quarantined with dozens of `-09`/`-23` tokens: the model rendered ISO dates (2026-09-23) while the pool carries compact seendates (20260923).
+- **Classification**: rendering-convention mismatch (BD-012/015/016 family).
+- **Fix**: a 4-2-2 ISO calendar date folds to compact YYYYMMDD on both sides (candidate and pool string extraction); fabricated dates still fail (ADR-006 Amendment 4).
+
+## BD-019 — INV-001 snapshot keyed by tool name (last-wins eviction)
+- **Date / discovered by**: 2026-09-29 / comprehensive user-simulation round.
+- **Symptom**: a two-quote turn quarantined the FIRST quote's citations; a seven-tool compare turn kept only the last result (its pool even rendered empty when the final call returned a non-dict).
+- **Investigation**: `snapshot_values[name] = result.result` in the tool loop — same-tool repeat calls evicted earlier results from the verification pool.
+- **Classification**: implementation bug in the INV-001 enforcement point (the worst kind: the invariant's checker was losing evidence).
+- **Fix**: snapshot keys carry a per-call sequence (`market.quote#1`, `#2`, ...); the pool walker is key-agnostic so verification semantics are unchanged. Regression tests pin both-call citability and the fabricated-value negative.
+- **Gap exposed -> change**: found only by simulation with same-tool repeat calls — added to the standing battery pattern.

@@ -70,3 +70,18 @@ endpoint's accepted model under the rejected-name default only where a
 PROVIDER_CHAT_MODEL override existed; where the default was used, calls
 would have failed. Defaults are corrected to `deepseek-flash` from this
 date (AILOG-0023); the historical entries stand as written.
+
+### E-003 — BD-012 display-rounding amendment (retrospective record)
+Date: 2026-09-21 (recorded 2026-09-29) · Prompt version: identity v2->v3 (the version field itself was not bumped at the time — corrected in E-005) · Model(s): deepseek-flash
+Scores: adversarial suite for the bounded display-rounding allowance: all pass (2-4 decimal renderings accepted within half-ulp; out-of-window renderings and fabricated values fail); live case: the 24,879.24 citation quarantined pre-fix, passed post-fix.
+Verdict: pass · Notes: recorded retrospectively during the remediation round (review finding 5): the identity behavioral change shipped with ADR-006 Amendment 1 but without an evaluation-log entry at the time.
+
+### E-004 — BD-015 marker-gated percent amendment (retrospective record)
+Date: 2026-09-25 (recorded 2026-09-29) · Prompt version: identity v3->v4 content (field not bumped at the time — corrected in E-005) · Model(s): deepseek-flash
+Scores: adversarial suite: percent-adjacent-marker conversions pass within half-ulp; bare numbers never qualify; +-1 classes unchanged; `101 percent` negative pinned. Live case: the 0.18573119602909305 -> "about 18.57%" citation quarantined pre-fix, passed post-fix.
+Verdict: pass · Notes: recorded retrospectively (review finding 5).
+
+### E-005 — identity v4 consolidation + live simulation battery (INV-002 record)
+Date: 2026-09-29 · Prompt version: identity v4 (field corrected) · Model(s): deepseek-flash · Profile: standard
+Scores: live 13-turn user-simulation battery (quotes/indicators/news/fundamentals/compare + adversarial): pre-BD-019 post-check pass rate 4/10 data-bearing turns; post-BD-019 7/10 with the three residual failures fully attributed to the recorded extraction-semantics classes (prose years, integer percents, window words, time-of-day renderings) — enumerated for the standing owner decision. Injection refusal: 1/1; INV-002 price-prediction refusal: 1/1; INV-004 agent-path confirmation: 1/1. News-filter S2 offline fixture: precision 0.927 / recall 1.000 (200 hand-labeled items).
+Verdict: pass with recorded residual classes · Notes: this entry is the honest baseline for QA-001 faithfulness work (TP-017): the seed set covers format stability; numeric-provenance pass rate over live conversations is the richer measure and now has a recorded number.

@@ -225,7 +225,7 @@ requirements:
     status: conceptual
     depends_on: [REQ-SI-FR-003]
     regression_trigger: true
-    regression_scope: [test/offline/test_retrieval.py]
+    regression_scope: [test/offline/test_registry_news_tools.py, test/offline/test_ingest_news.py]
 
   - id: REQ-SI-FR-008
     type: functional
@@ -271,7 +271,7 @@ requirements:
     status: conceptual
     depends_on: [REQ-SI-FR-003]
     regression_trigger: true
-    regression_scope: [test/offline/test_event_scoring.py]
+    regression_scope: ["future/test/offline/test_event_scoring.py"]
 
   - id: REQ-SI-FR-010
     type: functional
@@ -295,7 +295,7 @@ requirements:
     status: conceptual
     depends_on: [REQ-SI-FR-009, REQ-SI-FR-001]
     regression_trigger: true
-    regression_scope: [test/offline/test_event_study.py]
+    regression_scope: ["future/test/offline/test_event_study.py"]
 
   - id: REQ-SI-FR-011
     type: functional
@@ -409,7 +409,7 @@ requirements:
     status: conceptual
     depends_on: [REQ-SI-SEC-002]
     regression_trigger: true
-    regression_scope: [test/offline/test_crawler.py]
+    regression_scope: ["future/test/offline/test_crawler.py"]
     notes: >-
       Positioning (ADR-002): GDELT alone satisfies REQ-SI-FR-003 (Must);
       the crawler is the extension path with a documented future role of
@@ -433,7 +433,7 @@ requirements:
     status: conceptual
     depends_on: [REQ-SI-FR-009]
     regression_trigger: true
-    regression_scope: [test/offline/test_weekly_digest.py]
+    regression_scope: ["future/test/offline/test_weekly_digest.py"]
 
   - id: REQ-SI-FR-017
     type: functional
@@ -450,7 +450,7 @@ requirements:
     status: conceptual
     depends_on: [REQ-SI-FR-001]
     regression_trigger: true
-    regression_scope: [test/offline/test_currency_display.py]
+    regression_scope: ["future/test/offline/test_currency_display.py"]
 
   - id: REQ-SI-FR-018
     type: functional
@@ -470,7 +470,7 @@ requirements:
     status: conceptual
     depends_on: [REQ-SI-FR-001]
     regression_trigger: true
-    regression_scope: [test/offline/test_bulk_sync.py]
+    regression_scope: ["future/test/offline/test_bulk_sync.py"]
 
   - id: REQ-SI-FR-019
     type: functional
@@ -607,7 +607,7 @@ requirements:
     status: conceptual
     depends_on: [REQ-SI-FR-003, REQ-SI-GOV-001]
     regression_trigger: true
-    regression_scope: [test/offline/test_zh_news.py]
+    regression_scope: ["future/test/offline/test_zh_news.py"]
 
   - id: REQ-SI-FR-025
     type: functional
@@ -774,7 +774,7 @@ requirements:
     status: conceptual
     depends_on: [REQ-SI-FR-007]
     regression_trigger: true
-    regression_scope: [test/offline/test_retrieval.py]
+    regression_scope: [test/offline/test_registry_news_tools.py, test/offline/test_ingest_news.py]
 
   - id: REQ-SI-QA-003
     type: quality
@@ -882,7 +882,7 @@ requirements:
     status: conceptual
     depends_on: [REQ-SI-FR-020]
     regression_trigger: true
-    regression_scope: [test/offline/test_budget_overflow.py]
+    regression_scope: ["future/test/offline/test_budget_overflow.py"]
 
   - id: REQ-SI-COST-002
     type: cost

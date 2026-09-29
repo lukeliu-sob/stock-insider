@@ -132,4 +132,4 @@ def test_show_defaults_to_most_recent(seeded) -> None:
     result = runner.invoke(app, ["show"])
     assert result.exit_code == 0
     assert newer["session_id"] in result.output
-    assert record["session_id"] not in result.output.split("──")[0] or True
+    assert record["session_id"] not in result.output  # default renders only the newest

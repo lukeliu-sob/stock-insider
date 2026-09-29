@@ -23,8 +23,7 @@ def test_render_error_panel_when_tty(monkeypatch, capsys) -> None:
             return True
 
     monkeypatch.setattr("sys.stdout", _Tty())
-    assert render_error("boom") == ""  # panel printed to the captured console
-    assert "boom" in capsys.readouterr().out or True  # console may bypass capsys; shape asserted
+    assert render_error("boom") == ""  # panel path prints, returns empty
 
 
 def test_sessions_status_and_limit_filters(tmp_path, monkeypatch) -> None:
