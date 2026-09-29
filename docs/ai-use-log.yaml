@@ -2411,3 +2411,80 @@ sessions:
     human_decision: >-
       Owner approved the remediation plan; this closes TP-017.
     status: applied
+
+- id: AILOG-0063
+  date: "2026-09-29"
+  agent_task: >-
+    TP-018 third-audit remediation, executed under explicit owner
+    authorization (session approval of the full plan). P0: H3 token
+    flow redesigned per the non-relay principle (REPL renders pending
+    write + letter token via progress chrome; model result carries no
+    token; 8-letter alphabet; bound-content echo; confirmation outcome
+    written back into model history as a [harness] user-message;
+    expire_turns at every turn start; strict confirm-line routing;
+    resolver verifies only PRIMARY_EXCHANGES candidates). H1 residual
+    closed: per-iteration prelude accumulates and the post-check
+    validates prelude+candidate as one string; assistant events store
+    the full displayed text. new-4 closed: EgressViolationError wraps
+    into ProviderError at the provider, config set validates endpoint
+    URLs at write time (EGRESS_EXTRA_HOSTS extension surface),
+    REPL catches RuntimeError as defense in depth. H2b: regeneration
+    recheck runs against the session ledger. P1: snapshot keys are
+    turn-scoped (turn-NNNN/tool#seq, M5 residual); abort persists as
+    session status "aborted" with close() non-downgrading and resume()
+    refusing; memo gate safety check runs before the no-implementation
+    early return and requires an added "### RM-" heading (new-7);
+    heading ordinals strip only up to 2 digits (new-5); zero-bar
+    gap-repair keeps the gap open and the cursor unchanged (low-4).
+    P2: info.py day-change/largest-move/vs-20 price the
+    COALESCE(adjusted_close, close) series (M7 residual);
+    fundamentals_summary returns coverage + stored rows + explicit
+    unavailable reason (M8); language policy is a positive Latin
+    allowlist (M4); malformed tool arguments fail explicitly (low-1);
+    append_event validates the shared event schema (low-2, which also
+    retired the schema-invalid user-confirmation kind); identity
+    prompt resolves from the package root (low-3); OHLCV typed
+    provenance phase 1 (open-quoted-as-close fails, doji passes, M2);
+    INV-002 reported-speech exemption + modal-certainty classes with
+    an author-separated auditor-sourced battery (E-007a, P/R 1.00/1.00
+    on 14 + 20 sentences) (M3). Governance: ADR-004 Am2 / ADR-005
+    Am2+Am3 / ADR-006 Am5+Am6 written; invariants.md INV-001 wording
+    updated to the session-ledger semantics; RM-51/RM-52 backfilled
+    honestly; ci.yml --frozen -> --locked; workspace rollback reverted
+    (ci.yml + requirements.yaml restored to HEAD 13f4933); one
+    environment-coupled offline test made hermetic via monkeypatch.
+  artifacts:
+    - src/stockinsider/agent/confirm.py
+    - src/stockinsider/agent/loop.py
+    - src/stockinsider/agent/repl.py
+    - src/stockinsider/agent/providers.py
+    - src/stockinsider/agent/session.py
+    - src/stockinsider/agent/registry.py
+    - src/stockinsider/agent/guardrail.py
+    - src/stockinsider/shared/egress.py
+    - src/stockinsider/shared/language.py
+    - src/stockinsider/data/store/resolver.py
+    - src/stockinsider/data/store/info.py
+    - src/stockinsider/data/store/__init__.py
+    - src/stockinsider/data/ingest/sync.py
+    - src/stockinsider/cli/app.py
+    - tools/checks/testplan_gate.py
+    - .github/workflows/ci.yml
+    - docs/req/requirements.yaml
+    - docs/test-plans/TP-018.md
+    - docs/architecture/adr/004-shared-foundation.md
+    - docs/architecture/adr/005-tool-registry.md
+    - docs/architecture/adr/006-guardrail.md
+    - docs/architecture/invariants.md
+    - docs/architecture/evaluation-logbook.md
+    - docs/review-memo.md
+    - test/offline/test_tp018_remediation.py
+    - test/offline/test_agent_loop.py
+    - test/offline/test_provider_config.py
+    - test/offline/test_testplan_coverage.py
+    - test/offline/test_watch_governance.py
+    - docs/ai-use-log.yaml
+  human_decision: >-
+    Owner authorized the full remediation plan in session (2026-09-29),
+    including the docs/ADR/memo/CI writes this entry records.
+  status: applied

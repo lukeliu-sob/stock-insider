@@ -66,9 +66,9 @@ jobs:
           python-version: "3.13"
       - run: pip install uv
       - name: Locked environment install (uv.lock is load-bearing)
-        run: uv sync --frozen --all-extras
+        run: uv sync --locked --all-extras
       - name: Full offline suite (locked deps)
-        run: uv run --frozen --all-extras python -m pytest test/offline --cov=src --cov-report=term-missing
+        run: uv run --locked --all-extras python -m pytest test/offline --cov=src --cov-report=term-missing
 
   # ------------------------------------------------------------------
   # Change-set gates — every PR (D7-6 + parity)

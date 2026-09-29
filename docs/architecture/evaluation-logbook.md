@@ -95,3 +95,18 @@ Verdict: pass with residuals pinned · Notes: this is the honest QA-001 answer t
 Date: 2026-09-29 · Prompt version: identity v5 · Model(s): n/a (filter: unit-level; battery: deepseek-flash, gated)
 Scores: INV-002 labeled suite (10 violating / 10 clean): precision 1.00, recall 1.00 (test/offline/test_inv2_eval.py - deterministic, CI-blocking). Live battery: the six-turn audit conversation shape is now a replayable set (test/live/test_battery_simulation.py, EVAL_SET=1); outcomes print per turn for this logbook rather than asserting a pass, because model prose is non-deterministic while the filter is.
 Verdict: pass · Notes: after TP-017 PR-3a the battery's historical failure classes (restated numbers, stock codes, heading ordinals) are structurally covered; the count-class ("2 symbols") remains strictly quarantined by design (owner decision record, PR-016 epsilon / TP-017 PR-3a).
+
+### E-007a — INV-002 adversarial battery, author-separated (TP-018)
+
+Date: 2026-09-29 - Prompt version: identity v5 - Model(s): n/a (filter, unit-level)
+Scores: auditor-sourced battery (10 violating / 4 reported-speech, from the
+third review report's own sentence classes - not authored by the pattern
+writer): precision 1.00, recall 1.00
+(test/offline/test_tp018_remediation.py, CI-blocking). The original
+same-author labeled suite (20 sentences) remains green at P=1.00/R=1.00;
+the new battery additionally pins the reported-speech exemption (4/4 pass)
+and the modal-certainty classes the audit showed slipping (10/10 caught).
+Verdict: pass - Notes: M3 measured on an author-separated set as the third
+audit required; regex recall remains inherently bounded - new violation
+classes beyond the pattern families are a documented limitation
+(ADR-006 Am6), with the phase-2 direction recorded there.

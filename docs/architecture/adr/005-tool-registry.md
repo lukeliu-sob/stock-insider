@@ -71,3 +71,50 @@ Restoration (PR-gamma, TP-016):
 
 The capability story is unchanged: injection remains the mechanism;
 the facade simply names the injection surface on the data side.
+
+## Amendment 3 (2026-09-29, TP-018) — write-tool confirmation tokens: design and its non-relay principle
+
+TP-017 PR-2 introduced one-time human confirmation tokens for
+write-class tools (H3). The design as shipped had four defects found
+by the third audit; this amendment records the corrected design (and
+supersedes the interim "ADR-005 Am1" citations on the token code,
+which were wrong: Am1 is about the facade boundary, not consent):
+
+1. Non-relay principle. The confirmation token NEVER travels through
+   model text. The engine intercepts a write-class call, issues the
+   token via the ConfirmationBroker, and renders the pending write
+   (tool + arguments + token) to the human directly through the
+   progress() chrome channel — chrome is harness output, not model
+   output, so INV-001 never post-checks it. The model's tool result
+   says only that a human confirmation is pending and must not be
+   repeated. Rationale: an 8-char hex token contains digits with
+   probability ~99.96%; a relayed token was guaranteed to be
+   quarantined by the numeric post-check ("data unavailable for:
+   808, 808"), making the flow unusable and invisible.
+2. Token alphabet: 8 lowercase letters (`secrets.choice`, 26^8
+   space). Defense in depth — even a model that disobeys and repeats
+   the token injects no extractable digits.
+3. Bound-content visibility: the confirm echo and the pending-write
+   render both show the exact (tool, arguments) the token unlocks.
+4. History write-back: after the harness executes a confirmed write,
+   it appends a `[harness] confirmed write executed: ...`
+   user-message event. `_history_messages` reads user/assistant
+   events only, so this is the minimal channel through which the
+   model learns the outcome — without it, /report truthfully-claimed
+   falsehoods about watchlist state that passed every check.
+5. Expiry: `expire_turns` runs at the start of every run_turn
+   (max_age 3 turns); tokens no longer linger indefinitely.
+6. Input routing: the REPL consumes an input line as a confirmation
+   only when it matches `confirm [a-z]{8}` exactly; anything else —
+   including questions that merely start with "confirm" — is a
+   normal conversational turn.
+
+Amendment 2 (resolver honesty, same date): `resolver.record` marks a
+candidate `verified=1` only when its exchange is in
+PRIMARY_EXCHANGES (HK/US/INDX). Secondary-venue listings return as
+folded `verified=0` candidates — the constant's original intent —
+because a verified XETRA row is a verified path to adding an
+out-of-scope listing (INV-004 requires verified resolution for
+watchlist additions; scope is HK + US).
+
+Implements (with ADR-006 Am5/Am6, ADR-004 Am2): REQ-SI-INV-004.

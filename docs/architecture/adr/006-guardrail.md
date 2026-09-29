@@ -103,3 +103,55 @@ rendering-convention alignment (same family as BD-012/015/016),
 not a tolerance: no numeric comparison changes, and the adversar-
 ial classes are unaffected (a fabricated compact date still must
 match the pool exactly).
+
+## Amendment 5 (2026-09-29, TP-018) — verify-then-display covers the whole turn; the pool is a session ledger with turn-scoped keys
+
+Two third-audit findings close here.
+
+(1) Prelude coverage. TP-017 PR-1 buffered provider deltas and
+replayed them only after the post-check — but only the FINAL
+iteration's text was checked: opening text emitted before tool calls
+streamed through unvalidated (and never entered session.jsonl, so
+screen and record diverged). Correction: every per-iteration provider
+text accumulates as a prelude; the post-check validates
+prelude + candidate as one string; the replay shows exactly what was
+validated; the assistant-message event stores the same full text.
+FR-019's "streaming" rendering is therefore "verified replay":
+deltas reach the user only after the whole turn's numbers pass.
+
+(2) Turn-scoped ledger keys. The cross-turn ledger (PR-3a) merged
+snapshots under keys `tool#seq` with a per-turn seq counter, so a
+later turn's `market.quote#1` evicted an earlier turn's — a
+BD-019-class collision at session scope. Keys become
+`turn-NNNN/tool#seq`; the session merge is a true union and earlier
+turns' numbers stay citable (with turn attribution already in the
+artifact files). INV-001's wording moves from "this response's
+snapshot" to "the session's evidence ledger (per-turn snapshots,
+turn-scoped keys)"; invariants.md records the change.
+
+## Amendment 6 (2026-09-29, TP-018) — heading ordinals: two digits, punctuated or bare, nothing larger
+
+Am3 exempted heading ordinals of one to three digits with optional
+punctuation. The audit showed the bypass: `## 850 HKD fair value`
+stripped "850" as if it were a section number, while the same number
+in prose was checked. Headings rarely number past 99; ordinals now
+strip only at one to two digits (`#{1,6} 12. Title`, `## 6 Summary`).
+A three-digit leading heading number is treated as a numeric claim
+and must trace like any other (a false quarantine there is the
+price of closing the bypass; document section numbers >= 100 are
+vanishingly rare in this product's output classes).
+
+Also recorded here (same change set): the INV-002 filter gains a
+reported-speech exemption (attribution markers — said, announced,
+guidance, according to — exempt prediction-pattern sentences as
+reporting, fixing the "Management said it will increase the
+dividend" false positive) and new prediction classes for recall
+(likely to / set to / on track to / expected to / forecast to);
+E-007's measured P/R moves to a separately-authored adversarial
+battery (the previous 1.00/1.00 was measured on sentences written
+by the same author as the patterns). Phase 1 of typed numeric
+provenance (M2): the pool carries (tool, field) per value, and the
+OHLCV mismatch class — a sentence naming one OHLCV field whose
+number matches only a different OHLCV field's value — fails the
+check ("open quoted as close"). Remaining semantic gaps are a
+documented limitation until phase 2.
