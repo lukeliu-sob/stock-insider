@@ -37,6 +37,12 @@ from stockinsider.cli.render import (
 )
 from stockinsider.agent.repl import render_session, repl, resume_session
 from stockinsider.agent.session import SessionError, SessionStore
+from stockinsider.data.ingest.market import MarketKeyMissing
+from stockinsider.data.store.resolver import (
+    SYMBOL_SHAPE,
+    fold_secondaries,
+    order_candidates,
+)
 from stockinsider.data import (
     ResolverUnavailable,
     WatchlistError,
@@ -153,8 +159,23 @@ def watch(
                 typer.secho("error: `watch add` requires a mention or name to resolve", fg=typer.colors.RED, err=True)
                 raise typer.Exit(code=2)
             try:
-                candidates = data_store.resolver.search(query)
-            except ResolverUnavailable as exc:
+                if SYMBOL_SHAPE.match(query.strip()):
+                    # Direct verification path (BD-017): vendor search does
+                    # not index HK listings; one budgeted EOD fetch proves
+                    # existence. INV-004 confirmation unchanged below.
+                    verified = data_store.verify_symbol(query.strip())
+                    candidates = [verified] if verified is not None else []
+                    if not candidates:
+                        typer.secho(
+                            f"not found: {query.strip()} returned no data via direct "
+                            "verification; watchlist unchanged",
+                            fg=typer.colors.RED,
+                            err=True,
+                        )
+                        raise typer.Exit(code=1)
+                else:
+                    candidates = order_candidates(data_store.resolver.search(query), query)
+            except (ResolverUnavailable, MarketKeyMissing) as exc:
                 typer.secho(f"error: {exc}", fg=typer.colors.RED, err=True)
                 raise typer.Exit(code=2) from exc
             if not candidates:
@@ -164,10 +185,26 @@ def watch(
                     err=True,
                 )
                 raise typer.Exit(code=1)
+            visible, folded_count, folded_exchanges = fold_secondaries(candidates)
             for cand in candidates:
                 data_store.record(cand)
-            for i, cand in enumerate(candidates, start=1):
-                typer.echo(f"{i}) {cand.canonical_symbol}  {cand.official_name}  exchange {cand.exchange}")
+            for i, cand in enumerate(visible, start=1):
+                badge = (
+                    f"  [{cand.asset_type}]"
+                    if cand.asset_type not in ("stock", "unverified")
+                    else ""
+                )
+                typer.echo(
+                    f"{i}) {cand.canonical_symbol}  {cand.official_name}"
+                    f"  exchange {cand.exchange}{badge}"
+                )
+            if folded_count:
+                typer.echo(
+                    f"   (+{folded_count} secondary-exchange listings folded: "
+                    f"{' '.join(sorted(set(folded_exchanges)))}; use a full "
+                    "symbol like AAPL.MU if you specifically want one)"
+                )
+            candidates = visible
             if len(candidates) == 1:
                 choice = 1
             else:

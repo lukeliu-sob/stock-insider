@@ -1969,3 +1969,44 @@ sessions:
       option points resolved to defaults (name-unverified accepted,
       aggressive folding, sessions filters as specified).
     status: applied
+
+  - id: AILOG-0051
+    date: "2026-09-29"
+    tool: "pi coding agent (LLM session)"
+    role: ai
+    task: >-
+      TP-015 PR-b (watch-add governance + BD-017 fix): direct-symbol
+      verification path — a query shaped like a canonical HK/US
+      symbol skips the blind vendor search and proves existence with
+      one budgeted EOD fetch (DataStore.verify_symbol; adapter
+      injection as the test seam; spend-before-fetch so any vendor
+      contact is accounted; no data -> None, never a fabricated
+      candidate; display name honestly "name unverified - vendor
+      search does not index this exchange"). INV-004 unchanged and
+      adversarially pinned: verified existence cannot bypass user
+      confirmation. Candidate governance for name searches:
+      deterministic ordering (exact-symbol > primary-exchange stock
+      > ADR > fund/ETF > index), asset-class badges parsed from the
+      vendor Type field (rich classes live on the in-memory
+      Resolution; the symbols-table CHECK keeps stock/index at
+      storage), and folding of non-primary venues — the first
+      folding attempt enumerated German two-letter codes and the
+      live run immediately disproved it (real codes are XETRA, LSE,
+      BA, BK, F, MX, SA...), so the rule flipped to a scope-aligned
+      whitelist: PRIMARY_EXCHANGES = HK/US/INDX, everything else
+      folds. Live proof on the export build (reverter wiped the
+      worktree copies mid-smoke again): "Alibaba" 15 vendor rows ->
+      2 visible US rows + one fold summary; 0005.HK direct path ->
+      verified row -> declined -> watchlist unchanged. Ten new
+      tests (327 total).
+    artifacts:
+      - src/stockinsider/data/store/resolver.py
+      - src/stockinsider/data/store/__init__.py
+      - src/stockinsider/cli/app.py
+      - test/offline/test_watch_governance.py
+      - docs/ai-use-log.yaml
+    human_decision: >-
+      Owner approved TP-015 scope and defaults (name-unverified
+      display accepted, aggressive folding) and instructed
+      continuation after merging PR-a.
+    status: applied

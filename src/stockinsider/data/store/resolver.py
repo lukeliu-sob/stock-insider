@@ -167,6 +167,88 @@ class SymbolResolver:
         return any(lowered == name.lower() or lowered == name.lower().replace(" ", "") for name in names)
 
 
+#: The product's markets. A listing on anything else (XETRA, LSE,
+#: Buenos Aires, Bangkok, ...) is a secondary venue: worth one folded
+#: summary line at the CLI, never a numbered row (scope: HK + US).
+PRIMARY_EXCHANGES: frozenset[str] = frozenset({"HK", "US", "INDX"})
+
+#: A query shaped like a canonical symbol takes the direct
+#: verification path (BD-017: vendor search does not index HK).
+SYMBOL_SHAPE = __import__("re").compile(r"^\d{1,5}\.HK$|^[A-Z]{1,5}\.US$")
+
+_ASSET_CLASS_MAP = {
+    "common stock": "stock",
+    "adr": "adr",
+    "etf": "etf",
+    "fund": "fund",
+}
+
+
+def _asset_class(type_field: object) -> str:
+    """Map the vendor Type string to a coarse asset class (honest).
+
+    Implements: REQ-SI-INV-003 (ADR-002)
+    """
+    lowered = str(type_field or "").strip().lower()
+    if "index" in lowered:
+        return "index"
+    if not lowered:
+        return "other"
+    return _ASSET_CLASS_MAP.get(lowered, "stock")
+
+
+def order_candidates(candidates: list, query: str) -> list:
+    """Deterministic candidate ordering for the confirmation display.
+
+    Exact-symbol match first, then primary-exchange stocks, then
+    ADRs, then funds/ETFs, then indices, then the rest; secondary-
+    exchange rows keep tail positions (they fold at the CLI). Pure;
+    never mutates the input.
+
+    Implements: REQ-SI-FR-004, REQ-SI-INV-004 (ADR-002, BD-017)
+    """
+
+    def rank(cand: "Resolution") -> tuple[int, int, int]:
+        """Sort key: exact match, primary venue, asset class.
+
+        Implements: REQ-SI-FR-004 (ADR-002, BD-017)
+        """
+        exact = 0 if cand.canonical_symbol.lower() == query.lower() else 1
+        secondary = 0 if cand.exchange.upper() in PRIMARY_EXCHANGES else 1
+        kind = cand.asset_type
+        if kind == "stock":
+            kind_rank = 0
+        elif kind == "adr":
+            kind_rank = 1
+        elif kind in ("etf", "fund"):
+            kind_rank = 2
+        elif kind == "index":
+            kind_rank = 3
+        else:
+            kind_rank = 4
+        return (exact, secondary, kind_rank)
+
+    return sorted(candidates, key=rank)
+
+
+def fold_secondaries(candidates: list) -> tuple[list, int, list]:
+    """Split candidates into visible rows and folded secondary listings.
+
+    Pure; the CLI renders the fold summary. Returns
+    (visible, folded_count, folded_exchanges).
+
+    Implements: REQ-SI-FR-004 (ADR-002, BD-017)
+    """
+    visible: list = []
+    folded: list = []
+    for cand in candidates:
+        if cand.exchange.upper() in PRIMARY_EXCHANGES:
+            visible.append(cand)
+        else:
+            folded.append(cand.exchange.upper())
+    return visible, len(folded), folded
+
+
 def parse_search_response(body: str) -> list[Resolution]:
     """Parse an EODHD search response body into resolutions (pure).
 
@@ -187,7 +269,7 @@ def parse_search_response(body: str) -> list[Resolution]:
         name = row.get("Name")
         if not (isinstance(code, str) and isinstance(exchange, str) and isinstance(name, str)):
             continue  # malformed row: skipped, never repaired (INV-003)
-        asset_type = "index" if "index" in str(row.get("Type", "")).lower() else "stock"
+        asset_type = _asset_class(row.get("Type"))
         out.append(
             Resolution(
                 canonical_symbol=f"{code}.{exchange}",
@@ -215,6 +297,10 @@ def record_resolution(conn: Any, resolution: Resolution) -> None:
 
     Implements: REQ-SI-FR-004, REQ-SI-INV-004 (ADR-002)
     """
+    # The symbols table constrains asset_type to stock/index; rich
+    # display classes (adr/etf/fund/unverified) live on the in-memory
+    # Resolution only (TP-015 PR-b).
+    storable_type = "index" if resolution.asset_type == "index" else "stock"
     resolved_at = datetime.now(timezone.utc).isoformat(timespec="seconds")
     with conn:
         conn.execute(
@@ -232,7 +318,7 @@ def record_resolution(conn: Any, resolution: Resolution) -> None:
                 resolution.canonical_symbol,
                 resolution.exchange,
                 resolution.official_name,
-                resolution.asset_type,
+                storable_type,
                 json.dumps(list(resolution.aliases)),
                 resolved_at,
             ),
