@@ -63,9 +63,11 @@ def register_data_tools(registry: Registry, data_store: Any) -> None:
         ToolSpec(
             name="symbol.search",
             description=(
-                "Resolve a security mention against the symbol map and the EODHD "
-                "search API; returns verified candidates. Present candidates to "
-                "the user before any watchlist add."
+                "Resolve a security mention against the symbol map and the "
+                "EODHD search API. Only primary-exchange (HK/US) listings "
+                "verify (ADR-005 Am2); secondary venues persist unverified "
+                "and the watchlist gate refuses them (INV-004). Present "
+                "primary candidates to the user before any watchlist add."
             ),
             arguments_spec={"query": "str"},
             result_spec="list",
@@ -179,7 +181,10 @@ def register_market_tools(registry: Registry, data_store: Any) -> None:
         return row | {"symbol": args["symbol"]}
 
     def _fundamentals(args: dict[str, Any]) -> dict[str, Any]:
-        return data_store.fundamentals_coverage(args["symbol"])
+        # M8 (TP-018): the honest summary — coverage AND stored rows (or an
+        # explicit unavailable reason), so the tool name stops implying data
+        # the vendor plan never delivered (INV-003).
+        return data_store.fundamentals_summary(args["symbol"])
 
     registry.register(
         ToolSpec(
@@ -220,8 +225,11 @@ def register_market_tools(registry: Registry, data_store: Any) -> None:
         ToolSpec(
             name="fundamentals.summary",
             description=(
-                "Latest stored fundamentals for a symbol with the FR-002 coverage "
-                "ratio and explicit gap list; empty when the feed has not been ingested."
+                "Fundamentals for a symbol: coverage ratio, gap list, AND the "
+                "actually stored rows (up to 4 latest) with an explicit "
+                "stored_unavailable_reason when the feed has never been "
+                "ingested; do not claim stored fundamentals when the reason "
+                "is set."
             ),
             arguments_spec={"symbol": "str"},
             result_spec="dict",

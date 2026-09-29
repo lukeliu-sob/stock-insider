@@ -149,6 +149,50 @@ class DataStore:
 
         return coverage(self._conn, symbol)
 
+    def fundamentals_summary(self, symbol: str) -> dict[str, Any]:
+        """Honest fundamentals summary for the registry tool (M8, TP-018).
+
+        The tool named fundamentals.summary used to return the coverage
+        ratio alone, while its description promised "latest stored
+        fundamentals" — the model read the name, claimed stored data,
+        and passed every check. This facade returns the coverage grid
+        AND whatever rows are actually stored, with an explicit
+        unavailable marker when the feed has never been ingested
+        (INV-003: the absence is stated, never implied away).
+
+        Implements: REQ-SI-FR-002 (ADR-005, ADR-002; TP-018 PR-3)
+        """
+        import json as _json
+
+        from stockinsider.data.ingest.fundamentals import coverage
+
+        cov = coverage(self._conn, symbol)
+        rows = self._conn.execute(
+            "SELECT period_end, statement_type, data FROM fundamentals "
+            "WHERE canonical_symbol = ? ORDER BY period_end DESC LIMIT 4",
+            (symbol,),
+        ).fetchall()
+        stored: list[dict[str, Any]] = []
+        for row in rows:
+            try:
+                data = _json.loads(row["data"])
+            except (ValueError, TypeError):
+                data = {"parse_error": "stored payload is not valid JSON (INV-003)"}
+            stored.append({"period_end": row["period_end"], "statement_type": row["statement_type"], "data": data})
+        return {
+            "symbol": symbol,
+            "coverage": cov,
+            "stored": stored,
+            "stored_unavailable_reason": (
+                None
+                if stored
+                else (
+                    "no fundamentals rows stored for this symbol: the fundamentals "
+                    "data feed is not in the current vendor plan (explicit, not omitted)"
+                )
+            ),
+        }
+
     def news_recent_rows(self, symbol: str, k: int) -> list[dict[str, Any]]:
         """Latest k stored news rows for a symbol bucket, newest first.
 
@@ -223,9 +267,7 @@ class DataStore:
         latest_income = income_rows[-1] if income_rows else None
         latest_revenue = _field(latest_income, "totalRevenue") if latest_income else None
         latest_net_income = _field(latest_income, "netIncome") if latest_income else None
-        latest_equity = (
-            _field(balance_rows[0], "totalStockholdersEquity") if balance_rows else None
-        )
+        latest_equity = _field(balance_rows[0], "totalStockholdersEquity") if balance_rows else None
         return {
             "symbol": symbol,
             "as_of": price_row["date"],
@@ -242,9 +284,7 @@ class DataStore:
             },
             "growth": {
                 "revenue_yoy": yoy_growth(revenue_series),
-                "earnings_yoy": {
-                    "unavailable": "quarterly net-income series not assembled in this snapshot"
-                },
+                "earnings_yoy": {"unavailable": "quarterly net-income series not assembled in this snapshot"},
             },
             "risk": {
                 "volatility": annualized_volatility([dict(bar) for bar in bars]),
@@ -266,6 +306,7 @@ class DataStore:
         """
         from stockinsider.data.ingest.budget import CallBudget
         from stockinsider.data.ingest.market import EodhdMarketAdapter
+
         adapter = adapter if adapter is not None else EodhdMarketAdapter()
         if not adapter.is_live():
             raise ResolverUnavailable(
@@ -275,8 +316,7 @@ class DataStore:
         budget = CallBudget(self._conn)
         if not budget.try_spend(1):
             raise ResolverUnavailable(
-                "direct verification refused: daily call budget exhausted; "
-                "retry after the budget resets (INV-003)"
+                "direct verification refused: daily call budget exhausted; retry after the budget resets (INV-003)"
             )
         suffix = canonical.rsplit(".", 1)[1].upper()
         end = datetime.now(timezone.utc).date()
@@ -288,8 +328,7 @@ class DataStore:
             canonical_symbol=canonical,
             exchange=suffix,
             official_name=(
-                f"{canonical} (name unverified - vendor search does not index "
-                "this exchange; verify before adding)"
+                f"{canonical} (name unverified - vendor search does not index this exchange; verify before adding)"
             ),
             asset_type="unverified",
         )
