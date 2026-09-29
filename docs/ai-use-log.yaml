@@ -2132,3 +2132,33 @@ sessions:
       sequential implementation; that instruction doubles as the
       retroactive review approval for the eight pending entries.
     status: applied
+
+  - id: AILOG-0055
+    date: "2026-09-29"
+    tool: "pi coding agent (LLM session)"
+    role: ai
+    task: >-
+      Remediation PR-beta (third-party review findings 4 and 10;
+      TP-016): the testplan gate gains a coverage heuristic - the
+      referenced plan must mention at least one changed
+      implementation file by basename, so a TP reference can no
+      longer be decorative (PR #39 had referenced TP-012 whose text
+      never mentioned news.recent); TP-012 gains a retroactive
+      Amendment 1 recording news.recent with its verification
+      chain, and the gate self-tests pin both the pass and fail
+      paths. invariants.md INV-004 gains the exemption record for
+      the three owner-directed HK additions (2026-09-27): the
+      verification substitute in force (live EOD fetch per symbol,
+      bars verified), the evidence chain (AILOG-0048/0049), and the
+      structural closure (direct-symbol path behind the INV-004
+      confirmation gate, TP-015 PR-b); no exemptions outstanding.
+    artifacts:
+      - tools/checks/testplan_gate.py
+      - test/offline/test_testplan_coverage.py
+      - docs/test-plans/TP-012.md
+      - docs/architecture/invariants.md
+      - docs/ai-use-log.yaml
+    human_decision: >-
+      Owner instructed full sequential implementation of the
+      remediation program.
+    status: applied
