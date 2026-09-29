@@ -118,7 +118,6 @@ def test_write_gate_progress_and_model_message(store, prompts_dir) -> None:
     tool_results = [e for e in events if e["event"] == "tool-result" and not e["ok"]]
     assert tool_results, "write interception must produce a failed tool-result"
     assert "do NOT repeat" in tool_results[0]["error"]
-    assert "token" not in json.dumps(tool_results[0]["error"].split("do NOT repeat")[0]) or True
     token_line = next(line for line in spy.lines if "'confirm " in line)
     token = token_line.split("'confirm ")[1].split("'")[0]
     assert _CONFIRM_LINE.match(f"confirm {token}")
