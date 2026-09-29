@@ -34,7 +34,8 @@ def test_gate_passes_when_tp_mentions_changed_file(tmp_path, monkeypatch) -> Non
     gate = _load_gate(fake)
     monkeypatch.setattr(gate, "changed_files", lambda: ["src/stockinsider/agent/registry.py"])
     monkeypatch.setattr(gate, "ROOT", fake)
-    monkeypatch.setattr(gate.os, "environ", {"PR_BODY": "Test-Plan: TP-900", "CI_BASE_SHA": "x"})
+    body_900 = "Test-Plan: TP-900" + chr(10) + "Review-Memo: appended"
+    monkeypatch.setattr(gate.os, "environ", {"PR_BODY": body_900, "CI_BASE_SHA": "x"})
     gate.main()  # must not exit
 
 
@@ -71,3 +72,17 @@ def test_this_pr_satisfies_the_heuristic() -> None:
     tp_text = (Path(__file__).resolve().parents[2] / "docs" / "test-plans" / "TP-016.md").read_text(encoding="utf-8")
     assert "testplan_gate" in tp_text
     assert "invariants.md" in tp_text
+
+
+def test_gate_requires_memo_attestation_on_safety_paths(tmp_path, monkeypatch) -> None:
+    """Safety-path diffs without a Review-Memo attestation fail (finding 1)."""
+    fake = _scaffold(tmp_path, "TP-903.md", ["registry.py"])
+    gate = _load_gate(fake)
+    monkeypatch.setattr(gate, "changed_files", lambda: ["src/stockinsider/agent/registry.py"])
+    monkeypatch.setattr(gate, "ROOT", fake)
+    monkeypatch.setattr(gate.os, "environ", {"PR_BODY": "Test-Plan: TP-903", "CI_BASE_SHA": "x"})
+    try:
+        gate.main()
+        raise AssertionError("gate must fail on unattested safety path")
+    except SystemExit as exc:
+        assert "Review-Memo: appended" in str(exc)

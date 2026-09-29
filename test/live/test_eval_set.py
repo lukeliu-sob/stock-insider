@@ -189,7 +189,15 @@ def test_eval_loop_numbers_come_from_tools() -> None:
         provider, "What is my quick budget envelope? Answer with the number."
     )
     normalized = displayed.replace(",", "")  # models may format thousands separators
-    assert "30000" in normalized or "data unavailable" in normalized
+    # Review finding 6: a degraded turn is NOT a pass for this case.
+    # budget.query is deterministic and always answers; a "data
+    # unavailable" here means the pipeline failed and the eval logbook
+    # must record it - the assertion fails loudly instead of silently
+    # counting degradation as faithfulness.
+    assert "30000" in normalized, (
+        f"turn degraded instead of citing the tool number: {displayed!r} "
+        "(record in evaluation-logbook if reproducible)"
+    )
     assert is_english_only(displayed)
 
 

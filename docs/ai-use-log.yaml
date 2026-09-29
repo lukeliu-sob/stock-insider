@@ -2231,3 +2231,39 @@ sessions:
       Owner instructed full sequential implementation of the
       remediation program.
     status: applied
+
+  - id: AILOG-0058
+    date: "2026-09-29"
+    tool: "pi coding agent (LLM session)"
+    role: ai
+    task: >-
+      Remediation PR-epsilon, closing TP-016 (third-party review
+      findings 1 and 6). Review memo: retrospective entries for
+      all 48 merged PRs backfilled (fuller compressed template for
+      the 24 safety-critical changes, one-line verdicts for the
+      rest, preamble stating the retroactive owner approval), and
+      the test-plan gate now requires a Review-Memo: appended body
+      attestation whenever a diff touches guardrail, registry,
+      shared, prompts, or CI workflows - the memo cannot go dark
+      again. Eval gate: the live numbers case no longer counts a
+      degraded turn as passing (fails loudly with a logbook
+      pointer instead); numeric-provenance faithfulness is now
+      measured where it is deterministic - a labeled suite at the
+      post-check (precision 1.00 / recall 1.00; the four residual
+      classes pinned by name, moving only with the owner
+      extraction-semantics decision); E-006 records both numbers
+      and keeps the live conversation-level record (E-005) as the
+      complementary measure.
+    artifacts:
+      - docs/review-memo.md
+      - tools/checks/testplan_gate.py
+      - test/live/test_eval_set.py
+      - test/offline/test_faithfulness_eval.py
+      - docs/architecture/evaluation-logbook.md
+      - docs/test-plans/TP-016.md
+      - docs/ai-use-log.yaml
+    human_decision: >-
+      Owner instructed full sequential implementation of the
+      remediation program; this round's approval doubles as the
+      retrospective review approval for the backfilled entries.
+    status: applied

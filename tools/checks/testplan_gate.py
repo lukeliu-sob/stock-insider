@@ -81,6 +81,26 @@ def main() -> None:
         f"and covers {sorted(mentioned)}"
     )
 
+    # Safety-path memo attestation (review finding 1): changes to
+    # guardrail / registry / shared / prompts / CI workflows require a
+    # review-memo entry in the same change set; the PR body attests it.
+    SAFETY_PREFIXES = (
+        "src/stockinsider/agent/guardrail",
+        "src/stockinsider/agent/registry",
+        "src/stockinsider/shared/",
+        "prompts/",
+        ".github/workflows/",
+    )
+    safety_hits = [f for f in changed if f.startswith(SAFETY_PREFIXES)]
+    if safety_hits and "review-memo: appended" not in body.lower():
+        sys.exit(
+            "FAIL test-plan gate: safety-critical paths touched "
+            f"({safety_hits}) but the PR body lacks 'Review-Memo: appended' "
+            "(docs/review-memo.md entry in the same change set)"
+        )
+    if safety_hits:
+        print("PASS test-plan gate: review-memo attestation present (safety path)")
+
 
 if __name__ == "__main__":
     main()
