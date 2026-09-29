@@ -47,7 +47,24 @@ from stockinsider.shared.tools import (
     ToolSpec,
 )
 
-PROMPT = "stockinsider> "
+PROMPT = "stockinsider> "  # non-TTY default; TTY gets the context prompt below
+
+
+def _context_prompt(data_store: Any) -> str:
+    """Status prompt on a TTY; plain PROMPT otherwise (TP-015 P0-6).
+
+    Tests and pipes see the unchanged plain prompt.
+
+    Implements: REQ-SI-FR-013 (ADR-001)
+    """
+    if not sys.stdin.isatty():
+        return PROMPT
+    try:
+        symbols = data_store.watchlist.list()
+        remaining = data_store.sync_status()["calls"]["remaining"]
+        return f"stockinsider [{len(symbols)} sym | {remaining} calls]> "
+    except Exception:  # noqa: BLE001 — prompt must never crash the loop
+        return PROMPT
 
 #: Commands whose real behavior lands in later test plans; each fails
 #: explicitly, naming its target requirement or design section.
@@ -61,12 +78,38 @@ def _explicit_not_implemented(command: str, target: str, echo: Callable[[str], N
     echo(f"error: /{command} is not implemented yet (target: {target}); refusing to pretend success (INV-003).")
 
 
+_ASCII = str.maketrans(
+    {chr(0x2014): "-", chr(0x2013): "-", chr(0xB7): "|", chr(0x2192): "->"}
+)
+
+
+def chrome(text: str) -> str:
+    """ASCII-degrade REPL chrome strings (mirror of cli.render.chrome).
+
+    The dependency direction forbids agent -> cli, so the mapping
+    lives here too (TP-015 P0-1).
+
+    Implements: REQ-SI-FR-013 (ADR-001)
+    """
+    return text.translate(_ASCII)
+
+
+_COMMAND_GROUPS: tuple[tuple[str, tuple[str, ...]], ...] = (
+    ("session", ("/sessions [symbol]", "/show [id]", "/resume [id]")),
+    ("data", ("/watch [list|add|remove ...]", "/sync [run|status]")),
+    ("tools", ("/tools [name [k=v ...]]",)),
+    ("", ("/exit",)),
+)
+
+
 def _cmd_help(echo: Callable[[str], None]) -> None:
-    echo(
-        "commands: /help /sessions [symbol] /show [id] /resume [id] "
-        "/watch [list|add|remove ...] /sync [run|status] /tools [name [k=v ...]] /exit"
-    )
-    echo("not implemented yet (explicit failure): " + ", ".join(f"/{name}" for name in sorted(_NOT_IMPLEMENTED)))
+    """Grouped command listing; unimplemented commands stay hidden.
+
+    Implements: REQ-SI-FR-013 (TP-015 P0-3)
+    """
+    for group, commands in _COMMAND_GROUPS:
+        prefix = f"{group:8} " if group else " " * 9
+        echo(chrome(prefix + "  ".join(commands)))
 
 
 def _cmd_sessions(store: SessionStore, args: list[str], echo: Callable[[str], None]) -> None:
@@ -424,7 +467,7 @@ def _session_loop(
     engine = _build_engine(store, registry, config)
     while True:
         try:
-            line = input_fn(PROMPT).strip()
+            line = input_fn(_context_prompt(data_store)).strip()
         except EOFError:
             break
         if not line:

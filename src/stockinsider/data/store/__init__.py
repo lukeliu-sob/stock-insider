@@ -9,7 +9,7 @@ Implements: REQ-SI-FR-004, REQ-SI-INV-004 (ADR-003)
 from __future__ import annotations
 
 import sqlite3
-from typing import Any
+from typing import Any, Callable
 
 from stockinsider.data.store.db import SchemaVersionError, open_db
 from stockinsider.data.store.resolver import (
@@ -82,14 +82,17 @@ class DataStore:
             for hit in hits
         ]
 
-    def run_sync(self) -> dict[str, Any]:
+    def run_sync(self, progress: "Callable[[str], None] | None" = None) -> dict[str, Any]:
         """Execute one sync run (plan, budget, gaps, completeness) and report.
+
+        The optional progress callback is pure observability for the
+        CLI surface (TP-015); it never alters execution.
 
         Implements: REQ-SI-FR-001, REQ-SI-QA-003, REQ-SI-INV-003 (ADR-002)
         """
         from stockinsider.data.ingest.sync import SyncService
 
-        return SyncService(self._conn).run().as_dict()
+        return SyncService(self._conn).run(progress=progress).as_dict()
 
     def sync_status(self) -> dict[str, Any]:
         """Read-only sync status (budget, pending gaps, tracked symbols).

@@ -411,6 +411,7 @@ def run_news_sync(
     *,
     now: datetime | None = None,
     sleep_fn: Callable[[float], None] = time.sleep,
+    progress: "Callable[[str], None] | None" = None,
 ) -> dict[str, Any]:
     """Run the news track: queries -> filter -> store -> retention.
 
@@ -448,6 +449,8 @@ def run_news_sync(
             raw_items = adapter.fetch(query, timespan)
         except NewsFetchError as exc:
             results.append({"query": query, "bucket": bucket, "status": exc.kind, "error": str(exc)})
+            if progress is not None:
+                progress(f"news/gdelt {bucket}: {exc.kind}")
             if exc.kind == "throttle":
                 aborted = True
                 for rest_bucket, rest_query, _rest_entry, _rest_group in queries[index + 1 :]:
@@ -460,6 +463,10 @@ def run_news_sync(
             conn, bucket, query, raw_items, entry, group, window_start, now, now
         )
         results.append({"query": query, "bucket": bucket, "status": "ok", **counts})
+        if progress is not None:
+            progress(
+                f"news/gdelt {bucket}: ok new={counts.get('kept_new', 0)} dup={counts.get('dups', 0)}"
+            )
     if not aborted:
         _set_news_cursor(conn, now.date().isoformat(), now)
     retention_cutoff = _iso(now - timedelta(days=RETENTION_DAYS))

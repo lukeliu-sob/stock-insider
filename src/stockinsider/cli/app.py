@@ -23,6 +23,18 @@ from stockinsider.agent.providers import (
     save_config,
     write_env_api_key,
 )
+from time import monotonic
+
+from stockinsider.cli.render import (
+    chrome,
+    day_change_styled,
+    info_lines_chromed,
+    init_output,
+    news_track_lines,
+    sync_notable_lines,
+    sync_summary_line,
+    sync_verbose_lines,
+)
 from stockinsider.agent.repl import render_session, repl, resume_session
 from stockinsider.agent.session import SessionError, SessionStore
 from stockinsider.data import (
@@ -48,55 +60,37 @@ def _stub(command: str, req: str) -> NoReturn:
 
 
 @app.command()
-def sync() -> None:
+def sync(
+    verbose: bool = typer.Option(False, "--verbose", help="Show every plan item, not just failures."),
+) -> None:
     """Ingest daily EOD market data under the call budget (idempotent).
+
+    Progress lines stream during the run; the tail is a compact
+    summary with failures always visible (TP-015 P0).
 
     Implements: REQ-SI-FR-001
     """
+    started = monotonic()
+
+    def _emit(line: str) -> None:
+        print(chrome(line), flush=True)
+
     data_store = open_data_store()
     try:
-        report = data_store.run_sync()
+        report = data_store.run_sync(progress=_emit)
     finally:
         data_store.close()
-    counts = report["counts"]
-    calls = report["calls"]
-    typer.echo(
-        f"sync {report['ran_at']}: {counts['ok']} ok, {counts['failed']} failed, "
-        f"{counts['deferred']} deferred; calls {calls['used']}/{calls['cap']} "
-        f"({calls['remaining']} remaining)"
-    )
-    for item in report["results"]:
-        typer.echo(f"{item['status']:8} {item['symbol']:12} {item['action']:11} {item['detail']}")
-    news = report.get("news")
-    if isinstance(news, dict) and "gdelt" in news:
-        gdelt = news["gdelt"]
-        if isinstance(gdelt, dict) and "queries" in gdelt:
-            typer.echo(
-                f"news/gdelt {gdelt['ran_at']}: timespan {gdelt['timespan']}, "
-                f"cursor {'advanced' if gdelt['cursor_advanced'] else 'held'}"
-            )
-            for query in gdelt["queries"]:
-                detail = query.get("error") or (
-                    f"new={query.get('kept_new', 0)} dup={query.get('dups', 0)} "
-                    f"quarantined={query.get('quarantined', 0)}"
-                )
-                typer.echo(f"{query['status']:8} {query['bucket']:16} {detail}")
-        else:
-            typer.echo(f"news/gdelt failed: {gdelt}")
-    if isinstance(news, dict) and "eodhd" in news:
-        eodhd = news["eodhd"]
-        if isinstance(eodhd, dict) and "queries" in eodhd:
-            typer.echo(f"news/eodhd {eodhd['ran_at']}: calls {eodhd['calls_spent']}")
-            for query in eodhd["queries"]:
-                detail = query.get("error") or (
-                    f"new={query.get('kept_new', 0)} dup={query.get('dups', 0)} "
-                    f"quarantined={query.get('quarantined', 0)} "
-                    f"rejected={query.get('rejected', 0)}"
-                )
-                typer.echo(f"{query['status']:8} {query['bucket']:16} {detail}")
-        else:
-            typer.echo(f"news/eodhd failed: {eodhd}")
-    if counts["failed"]:
+    typer.echo(sync_summary_line(report))
+    if verbose:
+        for line in sync_verbose_lines(report):
+            typer.echo(line)
+    else:
+        for line in sync_notable_lines(report):
+            typer.echo(line)
+    for line in news_track_lines(report):
+        typer.echo(line)
+    typer.echo(f"sync total wall time {monotonic() - started:.1f}s")
+    if report["counts"]["failed"]:
         raise typer.Exit(code=1)
 
 
@@ -221,8 +215,8 @@ def info(symbol: str = typer.Argument(..., help="Canonical symbol, e.g. 0700.HK"
         except Exception as exc:  # noqa: BLE001 — explicit not-found path
             typer.secho(f"error: {exc}", fg=typer.colors.RED, err=True)
             raise typer.Exit(code=1) from exc
-        for line in lines:
-            typer.echo(line)
+        for line in info_lines_chromed(lines):
+            typer.echo(day_change_styled(symbol, line))
     finally:
         data_store.close()
 
@@ -395,6 +389,7 @@ def _root(
     ),
 ) -> None:
     """Local CLI financial analyst for HK + US equities."""
+    init_output()
     if ctx.invoked_subcommand is None:
         repl(SessionStore(), data_store=open_data_store())
 
