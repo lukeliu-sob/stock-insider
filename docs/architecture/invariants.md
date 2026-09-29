@@ -71,6 +71,22 @@ The requirement registry (`REQ-SI-INV-001..004`) is the normative source for inv
   2. If the resolver endpoint is unavailable, `watchlist_add` is **disabled** with an explicit notice; all other features continue unaffected.
   3. A declined or timed-out confirmation adds nothing; the mention is logged as unresolved for future ingestion planning.
 
+### Exemption record (2026-09-27, owner-directed)
+
+Three HK symbols (0700.HK Tencent, 9988.HK Alibaba, 1211.HK BYD) were
+added by the owner's explicit instruction through a direct-recording
+path (`Resolution` dataclass + `add_verified(user_confirmed=True)`),
+because the vendor search endpoint does not index HK listings (BD-017)
+and the direct-symbol verification path did not exist yet. The
+verification substitute in force at the time: a live EOD fetch per
+symbol (5490/1681/5956 bars stored and verified) — existence and data
+integrity proven, name resolution taken from the owner's instruction.
+Evidence chain: AILOG-0048/0049, live verification round 2026-09-27.
+The gap is now closed structurally: canonical-shaped queries take the
+direct-symbol verification path (TP-015 PR-b), which performs the same
+existence proof behind the INV-004 confirmation gate. No further
+exemptions are outstanding.
+
 ---
 
 ## Register discipline

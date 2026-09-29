@@ -59,9 +59,27 @@ def main() -> None:
     tp_file = ROOT / "docs" / "test-plans" / f"{tp_id}.md"
     if not tp_file.exists():
         sys.exit(f"FAIL test-plan gate: {tp_file} does not exist")
-    if not TP_APPROVED.search(tp_file.read_text(encoding="utf-8")):
+    tp_text = tp_file.read_text(encoding="utf-8")
+    if not TP_APPROVED.search(tp_text):
         sys.exit(f"FAIL test-plan gate: {tp_id} is not approved")
-    print(f"PASS test-plan gate: {tp_id} referenced and approved")
+
+    # Coverage heuristic (review finding 4): the referenced plan must
+    # mention at least one changed implementation file by basename —
+    # otherwise the reference is decorative (PR #39 referenced TP-012,
+    # whose text never mentioned news.recent). Amend the TP in the same
+    # change set; amendments are append-only sections.
+    basenames = {pathlib.PurePosixPath(f).name for f in triggers}
+    mentioned = {b for b in basenames if b in tp_text}
+    if not mentioned:
+        sys.exit(
+            "FAIL test-plan gate: "
+            f"{tp_id} mentions none of the changed files ({sorted(basenames)}); "
+            "append an amendment section covering this change before merging"
+        )
+    print(
+        f"PASS test-plan gate: {tp_id} referenced, approved, "
+        f"and covers {sorted(mentioned)}"
+    )
 
 
 if __name__ == "__main__":
