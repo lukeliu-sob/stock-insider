@@ -118,3 +118,39 @@ def test_benchmark_index_add_refused(tmp_path) -> None:
         ds.watchlist.add_verified("HSI.INDX", user_confirmed=True, via="cli")
     assert ds.watchlist.active_count() == 0
     ds.close()
+
+
+def test_reactivation_respects_cap(tmp_path) -> None:
+    """M10: re-adding a removed symbol at a full watchlist is refused."""
+    from stockinsider.data.store.watchlist import ACTIVE_CAP, WatchlistError
+
+    ds = _store(tmp_path, body=None)
+    ds.watchlist._conn.execute("PRAGMA writable_schema = 0")  # noqa: SLF001 — noop guard
+    conn = ds._conn  # noqa: SLF001 — test seam
+    with conn:
+        for i in range(ACTIVE_CAP):
+            sym = f"{i:04d}.HK"
+            conn.execute(
+                "INSERT INTO symbols (canonical_symbol, exchange, official_name, asset_type,"
+                " aliases, verified, source, resolved_at) VALUES (?, 'HK', ?, 'stock',"
+                " '[]', 1, 'test', '2026-09-29')",
+                (sym, f"sym {i}"),
+            )
+            conn.execute(
+                "INSERT INTO watchlist (canonical_symbol, added_at, added_via, status)"
+                " VALUES (?, '2026-09-29T00:00:00+00:00', 'cli', 'active')",
+                (sym,),
+            )
+        # a verified, previously-removed symbol at a full watchlist
+        conn.execute(
+            "INSERT INTO symbols (canonical_symbol, exchange, official_name, asset_type,"
+            " aliases, verified, source, resolved_at) VALUES ('0700.HK', 'HK', 'Tencent',"
+            " 'stock', '[]', 1, 'test', '2026-09-29')"
+        )
+        conn.execute(
+            "INSERT INTO watchlist (canonical_symbol, added_at, added_via, status)"
+            " VALUES ('0700.HK', '2026-09-29T00:00:00+00:00', 'cli', 'removed')"
+        )
+    with pytest.raises(WatchlistError, match="cap"):
+        ds.watchlist.add_verified("0700.HK", user_confirmed=True, via="cli")
+    ds.close()

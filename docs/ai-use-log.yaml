@@ -2375,3 +2375,39 @@ sessions:
       Owner approved the remediation plan including the structural-
       number token-registry direction.
     status: applied
+
+  - id: AILOG-0062
+    date: "2026-09-29"
+    tool: "pi coding agent (LLM session)"
+    role: ai
+    task: >-
+      TP-017 PR-3b (final package): M9 - the model runtime is now
+      egress-whitelist-gated (providers validate every base_url
+      through the same hop as data fetching; the last uncovered
+      outbound path). M10 - the 100-symbol cap covers reactivation
+      (re-adding a removed symbol at a full watchlist no longer
+      bypasses). N2 - the review-memo gate requires the entry to
+      travel in the change set diff, not just a body attestation.
+      registry_version bumped 0.3.2 -> 0.4 with the discipline note
+      for the eleven corrected scope rows. The CI regression job
+      now installs from uv.lock (uv sync --frozen; the lock is
+      load-bearing). QA-001: INV-002 measured on a labeled 10/10
+      suite (precision 1.00 / recall 1.00, deterministic and
+      CI-blocking) and the six-turn audit battery is a replayable
+      live set (EVAL_SET-gated) whose outcomes print for the
+      logbook; E-007 records both.
+    artifacts:
+      - src/stockinsider/data/store/watchlist.py
+      - src/stockinsider/agent/providers.py
+      - tools/checks/testplan_gate.py
+      - docs/req/requirements.yaml
+      - .github/workflows/ci.yml
+      - test/offline/test_inv2_eval.py
+      - test/live/test_battery_simulation.py
+      - docs/architecture/evaluation-logbook.md
+      - docs/test-plans/TP-017.md
+      - docs/review-memo.md
+      - docs/ai-use-log.yaml
+    human_decision: >-
+      Owner approved the remediation plan; this closes TP-017.
+    status: applied

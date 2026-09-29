@@ -321,6 +321,42 @@ EPISTEMIC_PATTERNS: tuple[tuple[str, re.Pattern[str]], ...] = (
             re.IGNORECASE,
         ),
     ),
+    (
+        # M3 (TP-017 PR-3b): four missing classes from the labeled
+        # suite - going-to future, causal connectives, certainty
+        # adverbs, and expectation imperatives - close the recall gap.
+        "going-to-future",
+        re.compile(
+            rf"\bgoing\s+to\s+({_VERBS}|continue|reverse|hold)\b"
+            rf"|\bwill\s+(continue|reverse|hold|repeat)\b",
+            re.IGNORECASE,
+        ),
+    ),
+    (
+        "causal-connective",
+        re.compile(
+            rf"\b(therefore|thus|hence|so\s+it|proves|proof\s+that)\b[^.!?]{{0,60}}?"
+            rf"\b({_CAUSAL_VERBS}|fail(ed|ing)?|rall(y|ied)|jump(s|ed)?)\b",
+            re.IGNORECASE,
+        ),
+    ),
+    (
+        "certainty-adverb",
+        re.compile(
+            r"\b(without\s+doubt|undoubtedly|certainly|definitely)\b[^.!?]{0,60}?"
+            r"\b(price|stock|shares|index|market|it)\b"
+            r"|\b(jumped?|rallied?|surged?|fell|dropped?|climbed?)\b[^.!?]{0,40}?"
+            r"\b(without\s+doubt|undoubtedly|certainly|definitely)\b",
+            re.IGNORECASE,
+        ),
+    ),
+    (
+        "expectation-imperative",
+        re.compile(
+            rf"\bexpect\b[^.!?]{{0,40}}?\bto\s+({_VERBS}|collapse|surge|plummet)\b",
+            re.IGNORECASE,
+        ),
+    ),
 )
 
 _HYPOTHESIS = re.compile(

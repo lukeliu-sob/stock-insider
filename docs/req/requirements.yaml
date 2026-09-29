@@ -15,7 +15,12 @@
 
 meta:
   project: Stock Insider
-  registry_version: 0.3.2
+  # 0.4 (2026-09-29, TP-016-alpha + TP-017): eleven regression_scope rows
+  # corrected (FR-007 to existing suites; nine unimplemented targets to
+  # future/), per the third-party review and the owner-approved remediation
+  # round. Row-text corrections, no acceptance-criterion changes; recorded
+  # in AILOG-0054/0062 - version bump per registry discipline.
+  registry_version: "0.4.0"
   id_prefix: REQ-SI
   classification: type-c-system          # AI-agent-built AND LLM-native (methodology judgment 1)
   markets: [HK, US]

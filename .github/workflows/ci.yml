@@ -64,9 +64,11 @@ jobs:
       - uses: actions/setup-python@v5
         with:
           python-version: "3.13"
-      - run: pip install -e . pytest pytest-cov
-      - name: Full offline suite
-        run: python -m pytest test/offline --cov=src --cov-report=term-missing
+      - run: pip install uv
+      - name: Locked environment install (uv.lock is load-bearing)
+        run: uv sync --frozen --all-extras
+      - name: Full offline suite (locked deps)
+        run: uv run --frozen --all-extras python -m pytest test/offline --cov=src --cov-report=term-missing
 
   # ------------------------------------------------------------------
   # Change-set gates — every PR (D7-6 + parity)

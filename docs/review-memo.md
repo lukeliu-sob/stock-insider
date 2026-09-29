@@ -287,3 +287,11 @@ test-plan gate's safety-path attestation).
 - RM-41 — PR #41: TP-015 PR-a CLI polish; approved.
 - RM-42 — PR #42: TP-015 PR-b watch governance + BD-017; approved.
 - RM-43 — PR #43: TP-015 PR-c errors + sessions; approved.
+
+### RM-53 — PR #53: final package (M9/M10/N2, registry_version, CI lock, INV-002 P/R, battery set)
+
+- Verdict: APPROVE (pre-merge entry; owner-approved remediation round).
+- Spec alignment: REQ-SI-SEC-003 (M9 egress on model runtime), REQ-SI-GOV-004 (M10 cap on reactivation), REQ-SI-GOV-006 (N2 memo-in-diff), registry discipline (version 0.4), QA-001 (INV-002 P/R + battery set, E-007).
+- Architecture: providers gain the same whitelist hop as data fetching; the CI regression job installs from uv.lock (the lock is load-bearing).
+- Test quality: cap-bypass negative, egress-rejection negative, memo-in-diff negative, INV-002 10/10 labeled suite; full prior suites green.
+- Security: model-runtime egress now whitelist-gated (the last uncovered outbound hop).

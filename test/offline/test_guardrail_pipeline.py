@@ -163,7 +163,7 @@ def test_h5_stream_break_wrapped() -> None:
         return SimpleNamespace(chat=SimpleNamespace(completions=SimpleNamespace(create=create)))
 
     config = ProviderConfig(
-        chat_base_url="https://x.example/v1",
+        chat_base_url="https://api.deepseek.com/v1",
         chat_model="m",
         embedding_base_url=None,
         embedding_model="m",

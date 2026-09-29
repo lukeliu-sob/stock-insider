@@ -92,14 +92,22 @@ def main() -> None:
         ".github/workflows/",
     )
     safety_hits = [f for f in changed if f.startswith(SAFETY_PREFIXES)]
-    if safety_hits and "review-memo: appended" not in body.lower():
-        sys.exit(
-            "FAIL test-plan gate: safety-critical paths touched "
-            f"({safety_hits}) but the PR body lacks 'Review-Memo: appended' "
-            "(docs/review-memo.md entry in the same change set)"
-        )
     if safety_hits:
-        print("PASS test-plan gate: review-memo attestation present (safety path)")
+        if "review-memo: appended" not in body.lower():
+            sys.exit(
+                "FAIL test-plan gate: safety-critical paths touched "
+                f"({safety_hits}) but the PR body lacks 'Review-Memo: appended' "
+                "(docs/review-memo.md entry in the same change set)"
+            )
+        # N2 (TP-017): the attestation must be backed by a real diff - an
+        # entry in docs/review-memo.md must travel in the same change set.
+        if not any(f == "docs/review-memo.md" for f in changed):
+            sys.exit(
+                "FAIL test-plan gate: safety-critical paths touched and the "
+                "body attests a review memo, but docs/review-memo.md is NOT "
+                "in this change set - append the entry, do not just claim it"
+            )
+        print("PASS test-plan gate: review-memo present in diff (safety path)")
 
 
 if __name__ == "__main__":
