@@ -65,9 +65,9 @@ def register_data_tools(registry: Registry, data_store: Any) -> None:
             description=(
                 "Resolve a security mention against the symbol map and the "
                 "EODHD search API. Only primary-exchange (HK/US) listings "
-                "verify (ADR-005 Am2); secondary venues persist unverified "
-                "and the watchlist gate refuses them (INV-004). Present "
-                "primary candidates to the user before any watchlist add."
+                "verify; secondary venues persist unverified and the "
+                "watchlist gate refuses them. Present primary candidates "
+                "to the user before any watchlist add."
             ),
             arguments_spec={"query": "str"},
             result_spec="list",

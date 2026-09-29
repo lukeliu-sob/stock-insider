@@ -28,6 +28,17 @@ from stockinsider.shared.language import is_english_only
 
 _NUMBER_TOKEN = re.compile(r"-?\d[\d,]*(?:\.\d+)?")
 
+#: Fourth-audit fix (TP-018b): identifier-shaped codes (GOV-001,
+#: ADR-005, TP-018, INV-001, BD-016, RM-54, PR-2) are references,
+#: not numerics. The extractor used to mine "-005" out of "ADR-005"
+#: and quarantine a sentence for quoting the product's own rule IDs
+#: back at the user. Letters-then-hyphen-then-digits is never a
+#: numeric claim in this product's output classes. The second
+#: alternative covers unhyphenated reference tokens (Am2, Q1, H2,
+#: v5, SP500): a short letter run glued to a digit run is an
+#: identifier, never a cited value.
+_ID_CODE = re.compile(r"\b[A-Za-z]{1,6}-\d+\b|\b[A-Za-z]{1,3}\d{1,4}\b")
+
 #: Line-leading enumeration markers ("1. ", "12) ") are document
 #: structure, not cited numerics (BD-016). A marker is at most three
 #: digits followed by a period/paren and whitespace; genuine values
@@ -36,13 +47,12 @@ _NUMBER_TOKEN = re.compile(r"-?\d[\d,]*(?:\.\d+)?")
 _ENUM_MARKER = re.compile(r"(?m)^\s{0,8}\d{1,3}[.)]\s")
 
 
-#: new-5 (TP-018, ADR-006 Am6): heading ordinals strip only up to TWO
-#: digits. The old three-digit, punctuation-optional form stripped
-#: "## 850 HKD fair value" as if "850" were a section number — a
-#: leading numeric claim in a heading bypassed INV-001 entirely.
-#: Section numbers past 99 are vanishingly rare in this product's
-#: output; a false quarantine there is the accepted price.
-_HEADING_ORDINAL = re.compile(r"(?m)^#{1,6}\s+\d{1,2}[.)]?\s+")
+#: new-5 (TP-018, ADR-006 Am6) + fourth-audit tightening (TP-018b):
+#: only a PUNCTUATED 1-2 digit ordinal ("## 12. Data") or a single
+#: bare digit ("## 6 Summary") is layout. An unpunctuated leading
+#: heading number of two digits or more ("## 85 USD price target")
+#: is a numeric claim and is checked like any other.
+_HEADING_ORDINAL = re.compile(r"(?m)^#{1,6}\s+(?:\d{1,2}[.)]|\d)\s+")
 
 _SYMBOLISH = re.compile(r"\b(\d{1,5})\.[A-Za-z]{2,5}\b")
 
@@ -111,19 +121,34 @@ def _normalize_dates(text: str) -> str:
 #: fails the check. Phase-2 (non-OHLCV semantics) is future work.
 _OHLCV_CANON = {
     "open": "open", "opens": "open", "opened": "open", "opening": "open",
-    "high": "high", "highs": "high",
-    "low": "low", "lows": "low",
+    "open_price": "open", "day_open": "open",
+    "high": "high", "highs": "high", "day_high": "high",
+    "low": "low", "lows": "low", "day_low": "low",
     "close": "close", "closes": "close", "closed": "close",
     "closing": "close", "closings": "close",
-    "volume": "volume", "volumes": "volume",
-    "adjusted_close": "adjusted_close", "adjusted": "adjusted_close",
+    "close_price": "close", "last_close": "close", "prev_close": "close",
+    "previous_close": "close", "adj_close": "adjusted_close",
+    "adjusted": "adjusted_close", "adjusted_close": "adjusted_close",
+    "volume": "volume", "volumes": "volume", "vol": "volume",
 }
 
-_FIELD_WORD = re.compile(
-    r"\b(open|opens|opened|opening|high|highs|low|lows|close|closes|closed|closing"
-    r"|volume|volumes|adjusted)\b",
-    re.IGNORECASE,
-)
+#: Fourth-audit fix (TP-018b): field mentions tokenize as identifiers
+#: so snake_case names ("adjusted_close" in a model-authored table
+#: row) resolve to their field - the word-boundary alternation used
+#: to see nothing inside "adjusted_close" and then mis-attribute the
+#: value to the "close" word two rows up.
+_FIELD_TOKEN = re.compile("[A-Za-z_]+")
+
+
+def _mentioned_fields(window: str) -> "set[str]":
+    """OHLCV fields named (directly or by alias) inside a word window."""
+    return {
+        _OHLCV_CANON[token.lower()]
+        for token in _FIELD_TOKEN.findall(window)
+        if token.lower() in _OHLCV_CANON
+    }
+
+
 
 
 def _typed_ohlcv_pool(snapshot_values: object) -> dict[str, set[str]]:
@@ -171,7 +196,7 @@ def _field_mismatch(stripped_text: str, token: str, stored_fields: set[str]) -> 
     inconsistent = False
     for match in re.finditer(re.escape(token), stripped_text):
         window = stripped_text[max(0, match.start() - 48): match.end() + 48]
-        mentioned = {_OHLCV_CANON[w.lower()] for w in _FIELD_WORD.findall(window)}
+        mentioned = _mentioned_fields(window)
         if not mentioned:
             continue
         if mentioned & stored_fields:
@@ -197,9 +222,16 @@ def _canon_token(token: str) -> str:
 def extract_numbers(text: str) -> list[str]:
     """Extract normalized numeric tokens (thousands separators stripped).
 
-    Implements: REQ-SI-INV-001 (ADR-006)
+    Identifier codes are blanked first (TP-018b): a hyphen between a
+    short letter run and a digit run is a rule/artifact ID, not a
+    negative number.
+
+    Implements: REQ-SI-INV-001 (ADR-006; TP-018b)
     """
-    return [token.replace(",", "") for token in _NUMBER_TOKEN.findall(text)]
+    return [
+        token.replace(",", "")
+        for token in _NUMBER_TOKEN.findall(_ID_CODE.sub(" ", text))
+    ]
 
 
 def _walk(node: object, sink: Callable[[object], None]) -> None:
@@ -459,25 +491,47 @@ EPISTEMIC_PATTERNS: tuple[tuple[str, re.Pattern[str]], ...] = (
         # the audit's adversarial sentences used to slip through.
         "modal-certainty",
         re.compile(
-            rf"\b(likely|set|on track|poised|slated|forecast|positioned|primed)\b"
-            rf"[^.!?]{0,30}?\bto\s+({_VERBS}|collapse|surge|plummet|continue|reverse)\b",
+            rf"\b(likely|set|on track|poised|slated|forecast|positioned|primed|"
+            rf"expected|predicted|projected|anticipated)\b"
+            rf"[^.!?]{0,30}?\bto\s+({_VERBS}|collapse|surge|plummet|continue|reverse|reach|exceed|double|triple)\b",
             re.IGNORECASE,
         ),
     ),
 )
 
-#: M3 false-positive fix (TP-018, ADR-006 Am6): REPORTED speech is
-#: factual reporting, not the product's own prediction. A sentence
-#: carrying an attribution marker ("Management said it will increase
-#: the dividend", "according to the filing, shares will...") is
-#: exempt from the prediction patterns - the claim belongs to the
-#: named source, and stripping it would delete citable evidence.
-_ATTRIBUTION = re.compile(
-    r"\b(said|says|announced|announce|guidance|guided|according to|"
-    r"\breported|reports|stated|notes that|management|company said\b"
-    r"\bceo|cfo|spokesperson|filing|release)\b",
+#: M3 (TP-018, ADR-006 Am6) + fourth-audit narrowing (TP-018b):
+#: REPORTED speech is factual reporting, not the product's own
+#: prediction - but the first cut exempted any sentence carrying
+#: ANY attribution marker, so "According to the chart, the stock
+#: will rise" laundered a prediction through the word "according
+#: to". The exemption now requires BOTH a reporting speech-act
+#: verb AND a named institutional source (or an explicit
+#: "according to the <document/company>" construction). Charts,
+#: patterns and the model's own reading are not sources.
+_REPORTING_VERB = re.compile(
+    r"\b(said|says|announced|announces|stated|states|declared|declares|"
+    r"reported|reports|noted|notes that|guided|indicates|suggests|confirmed)\b",
     re.IGNORECASE,
 )
+_SOURCE_NOUN = re.compile(
+    r"\b(management|company|issuer|ceo|cfo|president|spokesperson|"
+    r"spokesman|filing|release|statement|report|guidance|earnings call|"
+    r"regulator|exchange)\b",
+    re.IGNORECASE,
+)
+_ACCORDING_TO_SOURCE = re.compile(
+    r"according to (the |a )?(filing|report|release|statement|company|"
+    r"management|issuer|regulator|exchange|earnings call)",
+    re.IGNORECASE,
+)
+
+
+def _is_reported_speech(sentence: str) -> bool:
+    """True when the claim is attributed to a named institutional source."""
+    if _ACCORDING_TO_SOURCE.search(sentence):
+        return True
+    return bool(_REPORTING_VERB.search(sentence) and _SOURCE_NOUN.search(sentence))
+
 
 _HYPOTHESIS = re.compile(
     r"hypothesis|speculat|\bmight\b|\bcould\b|\bmay\b|possibly|conceivab",
@@ -514,7 +568,7 @@ def epistemic_filter(candidate: str) -> EpistemicCheck:
     for sentence in _sentences(candidate):
         has_pattern = any(pattern.search(sentence) for _name, pattern in EPISTEMIC_PATTERNS)
         labeled = _HYPOTHESIS.search(sentence) is not None
-        attributed = _ATTRIBUTION.search(sentence) is not None
+        attributed = _is_reported_speech(sentence)
         if has_pattern and not labeled and not attributed:
             violations.append(sentence.strip())
         else:
