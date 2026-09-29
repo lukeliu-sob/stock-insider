@@ -168,7 +168,7 @@ class _FakeClient:
 
 def test_provider_chat_returns_text_and_usage() -> None:
     config = ProviderConfig(
-        chat_base_url="https://x.example/v1",
+        chat_base_url="https://api.deepseek.com/v1",
         chat_model="m",
         embedding_base_url=None,
         embedding_model="m",
@@ -185,7 +185,7 @@ def test_provider_chat_returns_text_and_usage() -> None:
     text, usage = provider.chat([{"role": "user", "content": "hi"}])
     assert text == "hello there"
     assert usage == {"prompt_tokens": 11, "completion_tokens": 7}
-    assert seen["base_url"] == "https://x.example/v1"
+    assert seen["base_url"] == "https://api.deepseek.com/v1"
 
 
 def test_provider_refuses_unconfigured_endpoint() -> None:
@@ -203,7 +203,7 @@ def test_provider_refuses_unconfigured_endpoint() -> None:
 
 def test_provider_refuses_missing_key() -> None:
     config = ProviderConfig(
-        chat_base_url="https://x.example/v1",
+        chat_base_url="https://api.deepseek.com/v1",
         chat_model="m",
         embedding_base_url=None,
         embedding_model="m",

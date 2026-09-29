@@ -52,5 +52,9 @@ def test_extra_allowed_scoped_to_its_domain() -> None:
         validate_egress_url("https://evil.example.com/x", extra_allowed=("api.deepseek.com",))
 
 
-def test_whitelist_contents_are_the_vendor_domains() -> None:
-    assert EGRESS_WHITELIST == frozenset({"eodhd.com", "api.gdeltproject.org"})
+def test_whitelist_contents_are_vendor_plus_model_hosts() -> None:
+    """M9 (TP-017): the model runtime validates through this whitelist,
+    so its hosts are first-class citizens alongside the data vendors."""
+    assert EGRESS_WHITELIST == frozenset(
+        {"eodhd.com", "api.gdeltproject.org", "api.deepseek.com", "api.openai.com"}
+    )

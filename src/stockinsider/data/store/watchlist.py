@@ -89,7 +89,9 @@ class WatchlistService:
         current = self._conn.execute(
             "SELECT status FROM watchlist WHERE canonical_symbol = ?", (canonical_symbol,)
         ).fetchone()
-        if current is None and active >= ACTIVE_CAP:
+        if active >= ACTIVE_CAP and (current is None or current["status"] != "active"):
+            # M10 (TP-017): the cap also covers REACTIVATION - re-adding a
+            # removed symbol at a full watchlist used to bypass the cap.
             raise WatchlistError(
                 f"refused: watchlist cap of {ACTIVE_CAP} active symbols reached (GOV-004); remove a symbol first"
             )

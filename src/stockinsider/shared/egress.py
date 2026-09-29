@@ -21,6 +21,11 @@ EGRESS_WHITELIST: frozenset[str] = frozenset(
     {
         "eodhd.com",
         "api.gdeltproject.org",
+        # Model-runtime hosts (M9, TP-017 PR-3b): the provider layer now
+        # validates through this same whitelist; the chat/embedding
+        # endpoints must be first-class citizens.
+        "api.deepseek.com",
+        "api.openai.com",
     }
 )
 

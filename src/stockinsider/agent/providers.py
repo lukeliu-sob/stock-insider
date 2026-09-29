@@ -291,6 +291,11 @@ class OpenAICompatibleProvider:
         self._client_factory = client_factory
 
     def _client(self, base_url: str) -> Any:
+        # M9 (TP-017): the model runtime is the last hop out - every
+        # provider URL passes the same egress whitelist as data fetching.
+        from stockinsider.shared.egress import validate_egress_url
+
+        validate_egress_url(base_url)
         if self._client_factory is not None:
             return self._client_factory(base_url=base_url, api_key=self._api_key)
         from openai import OpenAI

@@ -99,7 +99,7 @@ def test_real_provider_sets_stream_flag_and_aggregates() -> None:
         _chunk(usage=SimpleNamespace(prompt_tokens=3, completion_tokens=2)),
     ]
     config = ProviderConfig(
-        chat_base_url="https://x.example/v1",
+        chat_base_url="https://api.deepseek.com/v1",
         chat_model="m",
         embedding_base_url=None,
         embedding_model="m",
@@ -120,7 +120,7 @@ def test_real_provider_streams_tool_call_deltas() -> None:
         _chunk(usage=SimpleNamespace(prompt_tokens=5, completion_tokens=1)),
     ]
     config = ProviderConfig(
-        chat_base_url="https://x.example/v1",
+        chat_base_url="https://api.deepseek.com/v1",
         chat_model="m",
         embedding_base_url=None,
         embedding_model="m",

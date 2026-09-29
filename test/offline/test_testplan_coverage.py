@@ -32,7 +32,11 @@ def _scaffold(tmp_path: Path, tp_name: str, mentions: list[str]):
 def test_gate_passes_when_tp_mentions_changed_file(tmp_path, monkeypatch) -> None:
     fake = _scaffold(tmp_path, "TP-900.md", ["registry.py", "other.py"])
     gate = _load_gate(fake)
-    monkeypatch.setattr(gate, "changed_files", lambda: ["src/stockinsider/agent/registry.py"])
+    monkeypatch.setattr(
+        gate,
+        "changed_files",
+        lambda: ["src/stockinsider/agent/registry.py", "docs/review-memo.md"],
+    )
     monkeypatch.setattr(gate, "ROOT", fake)
     body_900 = "Test-Plan: TP-900" + chr(10) + "Review-Memo: appended"
     monkeypatch.setattr(gate.os, "environ", {"PR_BODY": body_900, "CI_BASE_SHA": "x"})
@@ -78,7 +82,11 @@ def test_gate_requires_memo_attestation_on_safety_paths(tmp_path, monkeypatch) -
     """Safety-path diffs without a Review-Memo attestation fail (finding 1)."""
     fake = _scaffold(tmp_path, "TP-903.md", ["registry.py"])
     gate = _load_gate(fake)
-    monkeypatch.setattr(gate, "changed_files", lambda: ["src/stockinsider/agent/registry.py"])
+    monkeypatch.setattr(
+        gate,
+        "changed_files",
+        lambda: ["src/stockinsider/agent/registry.py", "docs/review-memo.md"],
+    )
     monkeypatch.setattr(gate, "ROOT", fake)
     monkeypatch.setattr(gate.os, "environ", {"PR_BODY": "Test-Plan: TP-903", "CI_BASE_SHA": "x"})
     try:
@@ -86,3 +94,19 @@ def test_gate_requires_memo_attestation_on_safety_paths(tmp_path, monkeypatch) -
         raise AssertionError("gate must fail on unattested safety path")
     except SystemExit as exc:
         assert "Review-Memo: appended" in str(exc)
+
+
+def test_gate_requires_memo_file_in_diff_not_just_attestation(tmp_path, monkeypatch) -> None:
+    """N2: an attestation without the memo file riding the diff fails."""
+    fake = _scaffold(tmp_path, "TP-904.md", ["registry.py"])
+    gate = _load_gate(fake)
+    monkeypatch.setattr(gate, "changed_files", lambda: ["src/stockinsider/agent/registry.py"])
+    monkeypatch.setattr(gate, "ROOT", fake)
+    monkeypatch.setattr(
+        gate.os, "environ", {"PR_BODY": "Test-Plan: TP-904" + chr(10) + "Review-Memo: appended", "CI_BASE_SHA": "x"}
+    )
+    try:
+        gate.main()
+        raise AssertionError("gate must fail on attestation without diff")
+    except SystemExit as exc:
+        assert "NOT" in str(exc) and "review-memo.md" in str(exc)
