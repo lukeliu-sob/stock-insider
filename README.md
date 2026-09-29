@@ -42,7 +42,7 @@ python -m pytest test/offline test/live
 python tools/checks/registry_schema.py        # etc., see tools/checks/README.md
 ```
 
-The application itself is not yet implemented (governance baseline complete; implementation sprints follow the test-plan-first process).
+Implemented and live-tested: market/fundamentals/news ingestion (EODHD + GDELT), watchlist with verified-symbol gating, the analysis REPL with numeric-provenance post-checks (identity v4), news retrieval (news.recent; news.search pending an embedding provider), indicator computation, and session replay. Remaining: weekly digest, bulk sync, currency display (explicit-failure stubs per INV-003).
 
 ## Blocking gates (CI design)
 

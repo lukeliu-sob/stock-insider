@@ -314,8 +314,8 @@ def test_hyphenated_non_dates_untouched() -> None:
     # 4-2-2 shape is required; ranges and ids do not fold
     snapshot = {"tool": {"range": 5}}
     check = postcheck_numbers("range 3-7 around value 5", snapshot)
-    assert "3" not in check.failed or True  # extractor behavior for ranges unchanged
-    assert check.passed or "7" in check.failed or True  # smoke: no crash, semantics as before
+    assert set(check.failed) == {"3", "-7"}  # minus sign travels with the token
+    assert not check.passed
 
 
 
