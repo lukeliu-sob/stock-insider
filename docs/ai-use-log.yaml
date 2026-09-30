@@ -2542,3 +2542,71 @@ sessions:
       Owner authorized full-plan execution and PR submission after the
       fourth review (2026-09-29), including prompts/ v6.
     status: applied
+
+  - id: AILOG-0065
+    date: "2026-09-30"
+    agent_task: >-
+      TP-019 fifth-audit remediation under explicit owner authorization
+      ("start the fixes and keep the record per the project documentation").
+      TP-019 committed first (GOV-006 ordering). INV-001: identifier blanking
+      narrowed from any letters-glued-digits shape to a closed reference set
+      (the TP-018b shape let "HKD777"/"USD1200"/"PE35" escape the post-check);
+      natural-language dates fold to YYYYMMDD; the "vol" OHLCV alias removed.
+      INV-002: attribution requires an adjacent institutional speech act
+      preceding the claim in its clause or closing the sentence as a tag;
+      inference verbs and bare generic nouns no longer attribute; modal hedges
+      are clause-local and "may" is lower-case only; recall batch (direction
+      verbs, adverbial prediction, effect-first causal, driver verbs, passive
+      causation, price targets, expectation nouns). Loop: the regeneration
+      request replays identity + history + question with the stripped draft as
+      the assistant's and one harness instruction; empty regeneration refuses;
+      every regeneration/refusal writes an epistemic event; /show renders it;
+      the dead replay branch removed; prelude and final text separated on
+      screen; TurnOutcome carries body/refused and /report stores the body and
+      never a refusal; the report instruction asks for the report only.
+      History: windowed by user/assistant messages, never opening mid-turn,
+      announcing truncation, and replaying quarantined answers as a harness
+      note. shared/: loopback decided by IP-literal parsing (is_loopback) or
+      "localhost"; the language policy checks letters and digits by script
+      (Latin letters + a closed Greek math set, ASCII digits), rejects CJK/
+      fullwidth, controls and bidi format characters, and passes symbols and
+      emoji. Sync: empty backfill/incremental fail with the cursor unchanged;
+      benchmark indices refresh daily at priority 1; detection ends at each
+      symbol's cursor; closed no-data gaps listed by sync_status and
+      /sync status. Static gate: augmented assignment, aggregation calls,
+      comprehension aliases, default-parameter keys; f-string formatting
+      excluded. Governance: ADR-001 Am1, ADR-002 Am1, ADR-004 Am4, ADR-006 Am8,
+      BD-020..BD-024, DE-08..DE-11, E-008 (development-set honesty note),
+      RM-56 (with the RM-55 erratum), TP-019 amendment 1 (live-run findings).
+      Log repair (BD-025): AILOG-0063 and AILOG-0064 had been appended at
+      column 0, which broke this file's YAML structure since PR #54; they are
+      re-indented under sessions (whitespace only - parsed content verified
+      identical), and the AI-use log gate now fails on an unparsable log.
+      Verification: 458 offline tests green (34 new; 30 fail on the pre-fix
+      tree), coverage 88%, ruff + mypy clean, structural gates green, PR-mode
+      gate simulation, live re-run 8/9 (was 6/9).
+    artifacts:
+      - docs/test-plans/TP-019.md
+      - src/stockinsider/agent/guardrail.py
+      - src/stockinsider/agent/loop.py
+      - src/stockinsider/agent/repl.py
+      - src/stockinsider/shared/egress.py
+      - src/stockinsider/shared/language.py
+      - src/stockinsider/data/ingest/sync.py
+      - tools/checks/static_arithmetic.py
+      - tools/checks/aiuse_gate.py
+      - test/offline/test_tp019_fifth_audit.py
+      - docs/architecture/adr/001-runtime-architecture-and-context-engineering.md
+      - docs/architecture/adr/002-data-source-vendor.md
+      - docs/architecture/adr/004-shared-foundation.md
+      - docs/architecture/adr/006-guardrail.md
+      - docs/architecture/evaluation-logbook.md
+      - docs/bug-diary.md
+      - docs/debt-register.md
+      - docs/review-memo.md
+      - docs/ai-use-log.yaml
+    human_decision: >-
+      Owner authorized the fifth-review remediation plan and its documentation
+      in session (2026-09-30). Push and PR submission await a separate owner
+      instruction.
+    status: applied

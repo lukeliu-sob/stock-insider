@@ -127,3 +127,22 @@ projected reach/exceed/double, modal set) but the full held-out number is
 theirs to publish.
 Verdict: pass (bounded) - Notes: regex recall stays inherently bounded;
 phase-2 direction and known open classes recorded in ADR-006 Am7.
+
+
+### E-008 — INV-002 fifth-audit batteries + live precision sanity (TP-019)
+
+Date: 2026-09-30 - Model(s): n/a (filter, unit-level); live sanity on deepseek-flash
+Scores: fifth-review sentence sets, measured after TP-019 - original audit
+set 11/12 violating caught (0/1 clean flagged); fresh set 10/10 (0/5);
+laundering + cross-clause hedge set 10/10 (0/1). Total 31/32 caught, 0/7
+clean flagged. Regression batteries unchanged: E-007 10/10 caught, 0/10
+flagged; E-007a/b and the TP-018/TP-018b attribution tests green. Live
+precision sanity: 12 post-check-passing assistant answers from the
+post-fix live run - 0 sentences flagged.
+Verdict: pass (bounded) - Notes: HONESTY - the same agent that received
+these sentences in the review tuned the TP-019 patterns against them, so
+they are now a DEVELOPMENT set; the numbers are not independent held-out
+evidence (DE-09). The one miss is the recorded residual class (a hedge
+governing another verb in the same clause: "We could see that the price
+will rise sharply"). A freshly authored held-out set, written by someone
+other than the pattern author, is the next measurement.

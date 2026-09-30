@@ -368,3 +368,37 @@ test-plan gate's safety-path attestation).
   gate, loopback; full suite 424 green; ruff/mypy clean.
 - Security: loopback HTTP is scoped to 127/8 + localhost + ::1 only; remote HTTP
   still refused.
+
+
+### RM-56 — TP-019: fifth-audit remediation (INV-001/SEC-003 bypasses, regeneration, history, sync honesty)
+
+- Verdict: APPROVE pending owner merge (owner authorized the remediation and its
+  records in session, 2026-09-30; TP-019 committed before any implementation change).
+- Spec alignment: REQ-SI-INV-001 (closed identifier set - letter-glued numerics are
+  checked again; natural-date folding; "vol" alias removed), REQ-SI-INV-002
+  (speech-act attribution with an adjacent institutional source; clause-local hedges;
+  lower-case modal "may"; recall batch; the regeneration request replays the
+  conversation; every regeneration/refusal recorded), REQ-SI-SEC-003 (loopback is an
+  address, not a hostname prefix), REQ-SI-FR-001 (benchmark indices refresh daily;
+  detection bounded by the cursor), REQ-SI-INV-003 (empty market answers fail with
+  the cursor unchanged; closed no-data gaps visible), REQ-SI-FR-011 (history window
+  counts messages, never opens mid-turn, announces truncation, explains quarantined
+  answers), REQ-SI-FR-014/GOV-001 (language policy by script), REQ-SI-FR-008 (report
+  stores the body; a refusal is never stored), REQ-SI-FR-006 (static gate: augmented
+  assignment, aggregation calls, comprehension aliases, default-parameter keys).
+- Architecture: ADR-001 Am1, ADR-002 Am1, ADR-004 Am4, ADR-006 Am8; no schema change;
+  prompts/ and CI workflows untouched.
+- Test quality: 34 new tests (test/offline/test_tp019_fifth_audit.py); 30 fail on the
+  pre-fix tree (mutation evidence), the other 4 are positive/boundary guards; zero
+  edits to existing tests; full offline suite 458 green, coverage 88%;
+  ruff + mypy clean; structural gates pass; PR-mode simulation of the change-set
+  gates recorded in AILOG-0065. Live re-run (deepseek-flash, same 9-turn script):
+  8/9 turns as expected (was 6/9) - the remaining one is a DE-10 strictness class.
+- Security: the SEC-003 loopback exception now matches 127.0.0.0/8 and ::1 as parsed
+  IP literals plus the name localhost; prefix-shaped hostnames are refused (BD-021).
+- Governance record: docs/ai-use-log.yaml had stopped parsing as YAML since PR #54
+  (AILOG-0063/0064 at column 0, BD-025); re-indented whitespace-only with parsed content
+  verified identical, and the AI-use log gate now fails on an unparsable log.
+- Erratum RM-55: its "Security" line ("loopback HTTP is scoped to 127/8 + localhost +
+  ::1 only") described the ADR decision, not the shipped code, which accepted any
+  hostname starting with "127." (fixed here; ADR-004 Am4).
