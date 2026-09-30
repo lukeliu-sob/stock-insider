@@ -190,3 +190,77 @@ E-007a authorship note: the adversarial battery sentences are
 ADAPTATIONS of the audit's reported violation classes written by the
 remediation author - not verbatim auditor sentences. A truly
 auditor-authored held-out set remains the reviewer's instrument.
+
+## Amendment 8 (2026-09-30, TP-019) — closed identifier set; speech-act attribution; clause-local hedges; a real regeneration request
+
+The fifth audit found that two Am7 corrections opened new holes and
+that the regeneration path never worked as §4 describes. Corrections:
+
+1. Identifier codes: a closed set, not a shape. Am7 blanked any
+   letters-hyphen-digits or 1-3 letters glued to 1-4 digits before
+   extraction, so "closed at HKD777", "USD1200", "PE35", "RMB500" and
+   "YTD-12%" were never checked - an INV-001 bypass. Only these
+   reference shapes are blanked now: `REQ-SI-XX-NNN`; the governance
+   prefixes GOV/ADR/TP/INV/BD/RM/PR/FR/QA/PERF/COST/SEC/AILOG with a
+   hyphenated number; `AmN`, `Q1`-`Q4`, `H1`/`H2`, `FYnn(nn)`, `vN`;
+   and benchmark names whose digits are part of the name (S&P 400/500/
+   600, SP500, Nasdaq-100, COVID-19). Digits glued to anything else are
+   extracted and checked. Boundary: `Q4` is a label, `Q5` is not.
+2. Natural-language calendar dates ("September 23, 2026", "23 Sep
+   2026") fold to the compact YYYYMMDD form, extending BD-018/Am4: a
+   correctly cited date no longer quarantines as "23" and "2026"; a
+   date absent from the ledger still fails.
+3. The OHLCV alias "vol" is removed (Am7 added it): in market prose it
+   abbreviates volatility, and it mis-typed nearby prices as volume.
+4. Attribution is a speech act by an institutional source. Am7
+   accepted any reporting-or-inference verb plus any source noun
+   anywhere in the sentence ("The chart suggests the company will rise
+   20%", "According to the report, the stock will rise" passed). Now
+   the source (management, the company, the issuer, the board, the
+   CEO/CFO/chairman, a spokesperson, the filing, the earnings/press
+   release, the statement/announcement/prospectus, guidance, the
+   regulator, the exchange) must be the ADJACENT subject of a speech
+   verb (said, announced, stated, declared, reported, guided,
+   confirmed, disclosed), and either precede the claim inside the same
+   clause, or close the whole sentence as a tag (", the filing
+   states."). Inference verbs (suggests, indicates, notes, shows) and
+   bare generic nouns (report, chart, analysis) never attribute;
+   "according to" keeps only institutional objects.
+5. Hedges are clause-local. An explicit label ("Hypothesis:",
+   "speculative") still covers its sentence; a modal hedge (might,
+   could, may, possibly, perhaps) covers only its own clause
+   ("Revenue may dip, but the stock will double" is a violation). The
+   modal "may" is matched lower-case only: the month in "In May the
+   stock will rise" is not a hedge.
+6. Recall batch: unambiguous price-direction verbs (double, triple,
+   soar, tumble, crash, plunge, rebound, skyrocket, outperform,
+   underperform) join the base verb set; new classes cover an adverb
+   between "will" and the verb ("will likely rise"), effect-first
+   causal claims ("fell 5% due to"), driver verbs ("drove the price
+   higher"), passive causation ("was caused by"), price targets
+   ("should hit 700", "headed for 800") and expectation nouns ("expect
+   a rebound"). Ambiguous verbs (gain, lose) stay out for precision.
+7. The regeneration request (§4 "one regeneration attempt with a
+   strengthened constraint reminder"). The loop used to send ONLY the
+   stripped draft, as a USER message, with no identity, question or
+   conversation; the live model answered "that looks like my previous
+   answer pasted back" and that text was displayed and recorded as the
+   answer. The request now replays the turn's conversation (identity,
+   history, the user's question; tool-call plumbing omitted - the
+   recheck verifies every number against the session ledger), hands
+   the stripped draft back as the ASSISTANT's message, and adds one
+   harness instruction carrying the reminder. An empty regeneration
+   refuses. Every regeneration writes an `error`/`epistemic` event with
+   the violating original, the violations and the outcome
+   (regenerated / refused / regenerated-quarantined): the session log
+   used to show only the replacement text with post_check "ok". A
+   refusal is not a report: /report stores nothing for it, and stores
+   the answer body without the pre-tool prelude.
+
+Known limits recorded (not claimed fixed): a hedge governing a
+different verb in the same clause ("We could see that the price will
+rise") still labels the claim; a fabricated attribution tag is beyond
+a regex; counts and tickers absent from the ledger ("3 symbols",
+"9988.HK") keep failing by the standing TP-017 PR-3a decision.
+
+Implements: REQ-SI-INV-001, REQ-SI-INV-002, REQ-SI-FR-008, REQ-SI-FR-011.

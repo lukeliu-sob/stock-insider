@@ -28,16 +28,23 @@ from stockinsider.shared.language import is_english_only
 
 _NUMBER_TOKEN = re.compile(r"-?\d[\d,]*(?:\.\d+)?")
 
-#: Fourth-audit fix (TP-018b): identifier-shaped codes (GOV-001,
-#: ADR-005, TP-018, INV-001, BD-016, RM-54, PR-2) are references,
-#: not numerics. The extractor used to mine "-005" out of "ADR-005"
-#: and quarantine a sentence for quoting the product's own rule IDs
-#: back at the user. Letters-then-hyphen-then-digits is never a
-#: numeric claim in this product's output classes. The second
-#: alternative covers unhyphenated reference tokens (Am2, Q1, H2,
-#: v5, SP500): a short letter run glued to a digit run is an
-#: identifier, never a cited value.
-_ID_CODE = re.compile(r"\b[A-Za-z]{1,6}-\d+\b|\b[A-Za-z]{1,3}\d{1,4}\b")
+#: Identifier codes are references, not numerics (TP-018b): the
+#: extractor used to mine "-005" out of "ADR-005" and quarantine a
+#: sentence for quoting the product's own rule IDs back at the user.
+#: Fifth-audit correction (TP-019, ADR-006 Am8): the TP-018b form
+#: blanked ANY short letter run glued to digits, so "closed at
+#: HKD777", "USD1200", "PE35" and "YTD-12%" escaped INV-001 entirely.
+#: Only the closed set of reference shapes below is blanked: the
+#: product's governance IDs, period labels, prompt versions and
+#: benchmark names whose digits are part of the name. Everything else
+#: glued to letters is extracted and checked like any other numeric.
+_ID_CODE = re.compile(
+    r"\bREQ-SI-[A-Z]{2,4}-\d{3}\b"
+    r"|\b(?:GOV|ADR|TP|INV|BD|RM|PR|FR|QA|PERF|COST|SEC|AILOG)-\d{1,4}[a-z]?\b"
+    r"|\bAm\d{1,2}\b|\bQ[1-4]\b|\bH[12]\b|\bFY\d{2}(?:\d{2})?\b|\bv\d{1,2}\b"
+    r"|\bS&P\s?(?:400|500|600)\b|\bSP500\b|\bNasdaq[- ]100\b|\bCOVID-19\b",
+    re.IGNORECASE,
+)
 
 #: Line-leading enumeration markers ("1. ", "12) ") are document
 #: structure, not cited numerics (BD-016). A marker is at most three
@@ -104,11 +111,56 @@ def _collect_symbol_fragments(node: object, out: set[str]) -> None:
 _ISO_DATE = re.compile(r"(?<!\d)(\d{4})-(\d{2})-(\d{2})(?!\d)")
 
 
-def _normalize_dates(text: str) -> str:
-    """Fold ISO calendar dates into the pool's compact form.
+#: Fifth-audit extension of BD-018 (TP-019, ADR-006 Am8): a natural-
+#: language calendar date ("September 23, 2026", "23 Sep 2026") folds
+#: to the same compact form, so a correctly cited date no longer
+#: quarantines a whole answer as the orphans "23" and "2026". A date
+#: absent from the pool still fails: only the rendering is normalized.
+_MONTHS = {
+    name: index
+    for index, names in enumerate(
+        (
+            ("january", "jan"), ("february", "feb"), ("march", "mar"), ("april", "apr"),
+            ("may",), ("june", "jun"), ("july", "jul"), ("august", "aug"),
+            ("september", "sep", "sept"), ("october", "oct"), ("november", "nov"),
+            ("december", "dec"),
+        ),
+        start=1,
+    )
+    for name in names
+}
+_MONTH_ALT = "|".join(sorted(_MONTHS, key=len, reverse=True))
+_MONTH_DAY_YEAR = re.compile(
+    rf"\b({_MONTH_ALT})\.?\s+(\d{{1,2}})(?:st|nd|rd|th)?,?\s+(\d{{4}})\b", re.IGNORECASE
+)
+_DAY_MONTH_YEAR = re.compile(
+    rf"\b(\d{{1,2}})(?:st|nd|rd|th)?\s+({_MONTH_ALT})\.?,?\s+(\d{{4}})\b", re.IGNORECASE
+)
 
-    Implements: REQ-SI-INV-001 (ADR-006, BD-018 amendment)
+
+def _compact_date(year: str, month: int, day: str) -> str | None:
+    if not 1 <= int(day) <= 31:
+        return None
+    return f"{year}{month:02d}{int(day):02d}"
+
+
+def _fold_month_day_year(match: re.Match[str]) -> str:
+    folded = _compact_date(match.group(3), _MONTHS[match.group(1).lower()], match.group(2))
+    return folded if folded is not None else match.group(0)
+
+
+def _fold_day_month_year(match: re.Match[str]) -> str:
+    folded = _compact_date(match.group(3), _MONTHS[match.group(2).lower()], match.group(1))
+    return folded if folded is not None else match.group(0)
+
+
+def _normalize_dates(text: str) -> str:
+    """Fold ISO and natural-language calendar dates into the pool's compact form.
+
+    Implements: REQ-SI-INV-001 (ADR-006, BD-018 amendment; TP-019)
     """
+    text = _MONTH_DAY_YEAR.sub(_fold_month_day_year, text)
+    text = _DAY_MONTH_YEAR.sub(_fold_day_month_year, text)
     return _ISO_DATE.sub(r"\1\2\3", text)
 
 
@@ -129,7 +181,9 @@ _OHLCV_CANON = {
     "close_price": "close", "last_close": "close", "prev_close": "close",
     "previous_close": "close", "adj_close": "adjusted_close",
     "adjusted": "adjusted_close", "adjusted_close": "adjusted_close",
-    "volume": "volume", "volumes": "volume", "vol": "volume",
+    # no "vol" alias (TP-019): in market prose "vol" abbreviates
+    # volatility, and mapping it to volume mis-typed nearby prices
+    "volume": "volume", "volumes": "volume",
 }
 
 #: Fourth-audit fix (TP-018b): field mentions tokenize as identifiers
@@ -222,11 +276,11 @@ def _canon_token(token: str) -> str:
 def extract_numbers(text: str) -> list[str]:
     """Extract normalized numeric tokens (thousands separators stripped).
 
-    Identifier codes are blanked first (TP-018b): a hyphen between a
-    short letter run and a digit run is a rule/artifact ID, not a
-    negative number.
+    Identifier codes are blanked first (TP-018b), but only the closed
+    reference set in ``_ID_CODE`` (TP-019): digits glued to any other
+    letters ("HKD777", "PE35") are extracted and checked.
 
-    Implements: REQ-SI-INV-001 (ADR-006; TP-018b)
+    Implements: REQ-SI-INV-001 (ADR-006; TP-019)
     """
     return [
         token.replace(",", "")
@@ -422,12 +476,20 @@ def postcheck_numbers(candidate: str, snapshot_values: object) -> NumberCheck:
 
 # ---- INV-002: epistemic filter -----------------------------------------------
 
-_VERBS = "rise|fall|drop|climb|surge|plummet|rally|decline|increase|decrease|jump|slide|recover|collapse"
+#: TP-019 recall batch (ADR-006 Am8): unambiguous price-direction verbs
+#: the fifth audit's held-out sentences used ("will double", "will
+#: outperform") joined the base set; ambiguous verbs (gain, lose) stay
+#: out to protect precision.
+_VERBS = (
+    "rise|fall|drop|climb|surge|plummet|rally|decline|increase|decrease|jump|slide|recover|collapse|"
+    "double|triple|soar|tumble|crash|plunge|rebound|skyrocket|outperform|underperform"
+)
 _CAUSAL_VERBS = (
     "rises|falls|drops|climbs|surges|plummets|rallies|declines|increases|"
     "decreases|jumps|slides|recovers|collapses|rose|fell|dropped|jumped|"
     "rallied|surged|plummeted|declined|climbed|slid|recovered|collapsed|"
-    "increased|decreased|will"
+    "increased|decreased|doubled|tripled|soared|tumbled|crashed|plunged|"
+    "rebounded|outperformed|underperformed|will"
 )
 EPISTEMIC_PATTERNS: tuple[tuple[str, re.Pattern[str]], ...] = (
     (
@@ -497,50 +559,156 @@ EPISTEMIC_PATTERNS: tuple[tuple[str, re.Pattern[str]], ...] = (
             re.IGNORECASE,
         ),
     ),
+    # TP-019 recall batch (ADR-006 Am8): the fifth audit's held-out
+    # classes - an adverb between "will" and the verb, effect-first
+    # causal claims, driver verbs, and passive causation.
+    (
+        "adverbial-prediction",
+        re.compile(rf"\bwill\s+[a-z]+ly\s+({_VERBS})\b", re.IGNORECASE),
+    ),
+    (
+        "effect-first-causal",
+        re.compile(
+            rf"\b(price|prices|stock|shares|index|market)\b[^.!?]{{0,40}}?\b({_CAUSAL_VERBS})\b"
+            rf"[^.!?]{{0,40}}?\b(because|due\s+to(?!\s+be\b)|as\s+a\s+result\s+of|"
+            rf"on\s+the\s+back\s+of|driven\s+by)\b",
+            re.IGNORECASE,
+        ),
+    ),
+    (
+        "driver-verb",
+        re.compile(
+            r"\b(drive|drives|drove|send|sends|sent|push|pushes|pushed|lift|lifts|lifted|"
+            r"drag|drags|dragged)\b[^.!?]{0,40}?\b(price|prices|stock|shares|index|market)\b"
+            r"[^.!?]{0,20}?\b(higher|lower|up|down)\b",
+            re.IGNORECASE,
+        ),
+    ),
+    (
+        "passive-causation",
+        re.compile(
+            r"\b(sell-?off|rally|drop|decline|jump|surge|slump|rebound|move)\b[^.!?]{0,20}?"
+            r"\b(was|were|is|are)\s+(caused|driven|triggered|sparked)\s+by\b",
+            re.IGNORECASE,
+        ),
+    ),
+    (
+        # price targets and headed-for framing: a numeric level or a
+        # direction asserted as the outcome ("should hit 700")
+        "price-target",
+        re.compile(
+            r"\b(should|will|going\s+to)\s+(hit|reach|touch|test|top|breach)\s+(?:HK\$|US\$|\$)?\d"
+            r"|\bheaded\s+(?:for|to|toward|towards)\s+(?:HK\$|US\$|\$)?\d"
+            r"|\bheaded\s+(?:higher|lower|up|down)\b",
+            re.IGNORECASE,
+        ),
+    ),
+    (
+        "expectation-noun",
+        re.compile(
+            r"\bexpect\s+(?:a|an)\s+(?:\w+\s+)?(rebound|rally|drop|decline|recovery|correction|"
+            r"breakout|sell-?off|bounce|pullback|crash)\b",
+            re.IGNORECASE,
+        ),
+    ),
 )
 
-#: M3 (TP-018, ADR-006 Am6) + fourth-audit narrowing (TP-018b):
 #: REPORTED speech is factual reporting, not the product's own
-#: prediction - but the first cut exempted any sentence carrying
-#: ANY attribution marker, so "According to the chart, the stock
-#: will rise" laundered a prediction through the word "according
-#: to". The exemption now requires BOTH a reporting speech-act
-#: verb AND a named institutional source (or an explicit
-#: "according to the <document/company>" construction). Charts,
-#: patterns and the model's own reading are not sources.
-_REPORTING_VERB = re.compile(
-    r"\b(said|says|announced|announces|stated|states|declared|declares|"
-    r"reported|reports|noted|notes that|guided|indicates|suggests|confirmed)\b",
-    re.IGNORECASE,
+#: prediction (M3, TP-018). Fifth-audit narrowing (TP-019, ADR-006
+#: Am8): TP-018b exempted a sentence carrying ANY reporting-or-
+#: inference verb plus ANY source noun ANYWHERE, so "The chart
+#: suggests the company will rise 20%" and "According to the report,
+#: the stock will rise" laundered predictions. Attribution is now a
+#: SPEECH ACT by an INSTITUTIONAL SOURCE, adjacent ("management
+#: said", "the filing states"): inference verbs (suggests, indicates,
+#: shows) and bare generic nouns (report, chart, analysis) never
+#: attribute. The speech act must precede the claim inside the same
+#: clause, or close the whole sentence as a tag (", the filing
+#: states."). A fabricated attribution is out of a regex's reach and
+#: is recorded as a known limit (ADR-006 Am8).
+_SOURCE = (
+    r"(?:management|the\s+company|the\s+issuer|the\s+board|"
+    r"(?:the\s+|its\s+)?(?:ceo|cfo|chairman|chairwoman|chief\s+executive|chief\s+financial\s+officer)|"
+    r"(?:a|the)\s+(?:company\s+)?spokes(?:person|man|woman)|"
+    r"the\s+(?:company's\s+)?(?:filing|(?:earnings\s+|press\s+)?release|statement|announcement|prospectus)|"
+    r"(?:(?:the\s+company's|management's|its)\s+)?guidance|the\s+regulator|the\s+exchange)"
 )
-_SOURCE_NOUN = re.compile(
-    r"\b(management|company|issuer|ceo|cfo|president|spokesperson|"
-    r"spokesman|filing|release|statement|report|guidance|earnings call|"
-    r"regulator|exchange)\b",
-    re.IGNORECASE,
+_SPEECH_VERB = (
+    r"(?:has\s+|have\s+|had\s+)?(?:said|says|announced|announces|stated|states|declared|declares|"
+    r"reported|reports|guided|confirmed|confirms|disclosed|discloses)"
+)
+_SPEECH_ACT = re.compile(rf"\b{_SOURCE}\s+{_SPEECH_VERB}\b", re.IGNORECASE)
+_SPEECH_TAG = re.compile(
+    rf",\s*(?:as\s+)?{_SOURCE}\s+{_SPEECH_VERB}\s*[.!?\"')\]]*\s*$", re.IGNORECASE
 )
 _ACCORDING_TO_SOURCE = re.compile(
-    r"according to (the |a )?(filing|report|release|statement|company|"
-    r"management|issuer|regulator|exchange|earnings call)",
+    r"\baccording\s+to\s+(?:the\s+|a\s+)?(?:company|management|issuer|filing|"
+    r"(?:earnings\s+|press\s+)?release|statement|announcement|prospectus|regulator|"
+    r"exchange|earnings\s+call)\b",
     re.IGNORECASE,
 )
 
-
-def _is_reported_speech(sentence: str) -> bool:
-    """True when the claim is attributed to a named institutional source."""
-    if _ACCORDING_TO_SOURCE.search(sentence):
-        return True
-    return bool(_REPORTING_VERB.search(sentence) and _SOURCE_NOUN.search(sentence))
-
-
-_HYPOTHESIS = re.compile(
-    r"hypothesis|speculat|\bmight\b|\bcould\b|\bmay\b|possibly|conceivab",
+#: Hypothesis labels. An explicit label ("Hypothesis:", "(speculative)")
+#: covers its whole sentence. A modal hedge covers only its own clause
+#: (TP-019): "Revenue may dip, but the stock will double" used to pass
+#: because "may" anywhere hedged everything. The modal "may" is matched
+#: lower-case only - the month in "In May the stock will rise" is not a
+#: hedge.
+_EXPLICIT_LABEL = re.compile(r"hypothes[ie]s|speculat", re.IGNORECASE)
+_MODAL_HEDGE = re.compile(
+    r"\b(?:might|could|possibly|perhaps|conceivabl[ey])\b", re.IGNORECASE
+)
+_MODAL_MAY = re.compile(r"(?<![A-Za-z])may\b")
+_CLAUSE_BREAK = re.compile(
+    r";|\s+(?:but|whereas|yet)\s+|,\s*(?:and|so|while|although|though|however|"
+    r"either\s+way|meanwhile|still|nonetheless)\b",
     re.IGNORECASE,
 )
 
 
 def _sentences(text: str) -> list[str]:
     return [s for s in re.split(r"(?<=[.!?])\s+", text.strip()) if s.strip()]
+
+
+def _clause_bounds(sentence: str, position: int) -> tuple[int, int]:
+    """Start/end offsets of the clause that contains ``position``."""
+    start, end = 0, len(sentence)
+    for brk in _CLAUSE_BREAK.finditer(sentence):
+        if brk.end() <= position:
+            start = brk.end()
+        elif brk.start() > position:
+            end = brk.start()
+            break
+    return start, end
+
+
+def _claim_is_excused(sentence: str, claim_start: int) -> bool:
+    """True when a hedge or an adjacent institutional speech act covers the claim.
+
+    Implements: REQ-SI-INV-002 (ADR-006 Am8; TP-019)
+    """
+    start, end = _clause_bounds(sentence, claim_start)
+    clause = sentence[start:end]
+    if _MODAL_HEDGE.search(clause) or _MODAL_MAY.search(clause):
+        return True
+    for attribution in (*_SPEECH_ACT.finditer(sentence), *_ACCORDING_TO_SOURCE.finditer(sentence)):
+        if start <= attribution.start() and attribution.end() <= claim_start:
+            return True
+    return False
+
+
+def _sentence_violates(sentence: str) -> bool:
+    """True when some deterministic claim in the sentence is neither labeled nor attributed.
+
+    Implements: REQ-SI-INV-002 (ADR-006 Am8; TP-019)
+    """
+    if _EXPLICIT_LABEL.search(sentence) or _SPEECH_TAG.search(sentence):
+        return False
+    for _name, pattern in EPISTEMIC_PATTERNS:
+        for claim in pattern.finditer(sentence):
+            if not _claim_is_excused(sentence, claim.start()):
+                return True
+    return False
 
 
 @dataclass(frozen=True)
@@ -558,18 +726,17 @@ class EpistemicCheck:
 def epistemic_filter(candidate: str) -> EpistemicCheck:
     """Strip deterministic claims/predictions; labeled speculation passes.
 
-    A sentence violating a pattern survives only when it carries an
-    explicit hypothesis marker (INV-002's labeling requirement).
+    A sentence violating a pattern survives only when every matched
+    claim carries a hypothesis label (sentence-wide explicit label, or
+    a modal hedge in the claim's own clause) or is reported speech of
+    an institutional source (TP-019, ADR-006 Am8).
 
     Implements: REQ-SI-INV-002 (ADR-006)
     """
     violations: list[str] = []
     kept: list[str] = []
     for sentence in _sentences(candidate):
-        has_pattern = any(pattern.search(sentence) for _name, pattern in EPISTEMIC_PATTERNS)
-        labeled = _HYPOTHESIS.search(sentence) is not None
-        attributed = _is_reported_speech(sentence)
-        if has_pattern and not labeled and not attributed:
+        if _sentence_violates(sentence):
             violations.append(sentence.strip())
         else:
             kept.append(sentence)
