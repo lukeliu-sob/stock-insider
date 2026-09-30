@@ -335,6 +335,12 @@ def _cmd_sync(registry: Registry, args: list[str], echo: Callable[[str], None]) 
         )
         for gap in status["pending_gaps"]:
             echo(f"  gap: {gap['canonical_symbol']} {gap['from_date']}..{gap['to_date']}")
+        # TP-019 (INV-003): confirmed no-data ranges stay visible
+        no_data = status.get("no_data_gaps", [])
+        if no_data:
+            echo(f"confirmed no-data ranges (vendor returned no bars after repeated attempts): {len(no_data)}")
+            for gap in no_data:
+                echo(f"  no-data: {gap['canonical_symbol']} {gap['from_date']}..{gap['to_date']}")
         return
     if action != "run":
         echo(f"error: unknown sync action {action!r} (run | status)")
@@ -730,7 +736,9 @@ def _run_report_turn(
         "first via tools: market.quote, market.indicators, and fundamentals.summary "
         "(plus news.search when it is available). Cite every numeric exactly as "
         "returned by the tools, with its data date or window; keep interpretations "
-        "explicitly labeled as hypotheses (INV-002)."
+        "explicitly labeled as hypotheses (INV-002). Output only the report itself: "
+        "do not acknowledge earlier turns or harness notes in it (TP-019 - the "
+        "stored artifact is the report)."
     )
     outcome = _run_conversational_turn(engine, record, instruction, echo)
     if outcome is None:
@@ -738,7 +746,14 @@ def _run_report_turn(
     if getattr(outcome, "quarantined", False) or getattr(outcome, "aborted", None):
         echo("report not stored: the response failed the post-check (FR-008)")
         return outcome
-    displayed = getattr(outcome, "displayed", "")
+    if getattr(outcome, "refused", False):
+        # TP-019: an INV-002 refusal summary is not a report
+        echo("report not stored: the response was refused by the epistemic filter (INV-002)")
+        return outcome
+    # TP-019: the artifact is the report body - conversational prelude
+    # emitted before the tool calls ("Understood, the watchlist...")
+    # stays in the session log, not in the stored report
+    displayed = getattr(outcome, "body", "") or getattr(outcome, "displayed", "")
     if not displayed.strip():
         echo("report not stored: empty response")
         return outcome
@@ -843,7 +858,13 @@ def render_session(store: SessionStore, session_id: str, echo: Callable[[str], N
             )
         elif kind == "error":
             original = event.get("original")
-            if original:
+            if event.get("kind") == "epistemic":
+                # TP-019: INV-002 record - what was removed and what replaced it
+                echo(
+                    f"  error      epistemic -> {event.get('outcome', '?')} "
+                    f"(violating original: {original!r}; violations: {event.get('violations', [])!r})"
+                )
+            elif original:
                 echo(f"  error      {event.get('kind', '?')} (quarantined original: {original!r})")
             else:
                 echo(f"  error      {event.get('kind', '?')} turn={event.get('turn', '?')}")
