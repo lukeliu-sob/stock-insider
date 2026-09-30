@@ -1,12 +1,15 @@
 """Sync service: plan, execute under budget, report (fail-closed).
 
-Plan priority: (1) benchmark indices missing bars -> 5y backfill;
-(2) the sync_gaps queue (watch-add enqueues land here); (3) active
-watchlist incrementals (cursor -> today). After execution, a
-completeness pass compares stored dates against the index-derived
-calendar and enqueues newly found gaps (repaired by the NEXT sync —
-FR-001 "next sync re-fetches"). Every item ends ok / failed / deferred
-with an explicit detail; budget numbers ride the report (INV-003).
+Plan priority: (1) benchmark indices - missing bars -> 5y backfill,
+otherwise the daily incremental FR-001 requires (TP-019: indices used
+to be backfilled once and never refreshed, freezing the calendar that
+gap detection depends on); (2) the sync_gaps queue (watch-add
+enqueues land here); (3) active watchlist incrementals (cursor ->
+today). After execution, a completeness pass compares stored dates up
+to each symbol's cursor against the index-derived calendar and
+enqueues newly found gaps (repaired by the NEXT sync — FR-001 "next
+sync re-fetches"). Every item ends ok / failed / deferred with an
+explicit detail; budget numbers ride the report (INV-003).
 
 Implements: REQ-SI-FR-001, REQ-SI-QA-003, REQ-SI-INV-003 (ADR-002)
 """
@@ -214,6 +217,19 @@ class SyncService:
             return None
         return max(window_start, earliest)
 
+    def _detection_end(self, symbol: str, today: str) -> str:
+        """Latest date worth gap-detecting for this symbol: its cursor.
+
+        Days after the cursor belong to the next incremental, not to
+        the gap queue (TP-019): with the calendar indices now refreshed
+        daily, a deferred incremental would otherwise also enqueue its
+        own not-yet-fetched days as gaps and pay for them twice.
+
+        Implements: REQ-SI-FR-001 (ADR-002 Am1; TP-019)
+        """
+        cursor = self._cursor(symbol)
+        return min(cursor, today) if cursor is not None else today
+
     def _has_bars(self, symbol: str) -> bool:
         row = self._conn.execute("SELECT 1 FROM market_bars WHERE canonical_symbol = ? LIMIT 1", (symbol,)).fetchone()
         return row is not None
@@ -284,14 +300,23 @@ class SyncService:
                     f"({attempts}/{MAX_EMPTY_ATTEMPTS} attempts, cursor unchanged)",
                 )
             if not rows:
-                # backfill/incremental over a range with no trading data
-                # (weekend, holiday): nothing to store, but the cursor
-                # advances - the completeness pass re-detects genuinely
-                # missing weekdays as explicit gaps (the safety net that
-                # makes cursor advancement honest here).
-                last_date = to_date
-            else:
-                last_date = rows[-1]["date"]
+                # Fifth-audit fix (TP-019): an empty backfill/incremental
+                # proves nothing either. TP-018b advanced the cursor to
+                # to_date and reported "ok · 0 bars stored; data through
+                # <today>" - stale-as-fresh (INV-003) - and a symbol whose
+                # first backfill came back empty never re-planned its
+                # history. The fetch range starts AT the cursor (a stored
+                # bar), so a healthy vendor answer is never empty: the
+                # item fails explicitly, the cursor stays, the next sync
+                # retries.
+                return ItemResult(
+                    symbol,
+                    action,
+                    "failed",
+                    f"0 bars returned for {from_date}..{to_date}; cursor unchanged, "
+                    "retried next sync (INV-003)",
+                )
+            last_date = rows[-1]["date"]
             previous = self._cursor(symbol)
             new_cursor = max(previous, last_date) if previous else last_date  # never regress
             self._set_cursor(symbol, new_cursor)
@@ -356,6 +381,14 @@ class SyncService:
             symbol = entry["canonical_symbol"]
             if not self._has_bars(symbol):
                 plan.append((symbol, "backfill", start, today))
+                continue
+            # TP-019 (FR-001, ADR-002 Am1): indices are ingested DAILY -
+            # they are the exchange calendar every completeness pass
+            # compares against; a once-only backfill froze that calendar
+            # and blinded gap detection after the first sync.
+            cursor = self._cursor(symbol)
+            if cursor is not None and cursor < today:
+                plan.append((symbol, "incremental", cursor, today))
         gap_rows = self._conn.execute(
             "SELECT canonical_symbol, from_date, to_date FROM sync_gaps WHERE resolved_at IS NULL ORDER BY detected_at"
         ).fetchall()
@@ -385,13 +418,16 @@ class SyncService:
             detect_from = self._detection_start(symbol, start)
             if detect_from is None:
                 continue
+            detect_to = self._detection_end(symbol, today)
+            if detect_to < detect_from:
+                continue
             exchange = _calendar_exchange(symbol)
             try:
-                expected = trading_dates(self._conn, exchange, detect_from, today)
+                expected = trading_dates(self._conn, exchange, detect_from, detect_to)
             except CalendarUnavailable as exc:
                 report.results.append(ItemResult(symbol, "completeness", "failed", str(exc)))
                 continue
-            stored = self._stored_in_window(symbol, detect_from, today)
+            stored = self._stored_in_window(symbol, detect_from, detect_to)
             for from_date, to_date in missing_ranges(stored, expected):
                 self._enqueue_gap(symbol, from_date, to_date)
 
@@ -421,11 +457,14 @@ class SyncService:
             detect_from = self._detection_start(symbol, start)
             if detect_from is None:
                 continue
+            detect_to = self._detection_end(symbol, today)
+            if detect_to < detect_from:
+                continue
             try:
-                expected = trading_dates(self._conn, _calendar_exchange(symbol), detect_from, today)
+                expected = trading_dates(self._conn, _calendar_exchange(symbol), detect_from, detect_to)
             except CalendarUnavailable:
                 continue
-            stored = self._stored_in_window(symbol, detect_from, today)
+            stored = self._stored_in_window(symbol, detect_from, detect_to)
             for from_date, to_date in missing_ranges(stored, expected):
                 self._enqueue_gap(symbol, from_date, to_date)
 
@@ -536,6 +575,13 @@ def sync_status(conn: sqlite3.Connection) -> dict[str, Any]:
     pending = conn.execute(
         "SELECT canonical_symbol, from_date, to_date FROM sync_gaps WHERE resolved_at IS NULL"
     ).fetchall()
+    # TP-019 (INV-003): a gap closed as confirmed no-data is a recorded
+    # absence, not a repair - it stays visible instead of vanishing
+    # from every status output the moment it closes.
+    no_data = conn.execute(
+        "SELECT canonical_symbol, from_date, to_date, resolved_at FROM sync_gaps "
+        "WHERE resolution = 'no-data' ORDER BY canonical_symbol, from_date"
+    ).fetchall()
     active = conn.execute("SELECT COUNT(*) AS n FROM watchlist WHERE status = 'active'").fetchone()["n"]
     return {
         "budget": {
@@ -544,6 +590,7 @@ def sync_status(conn: sqlite3.Connection) -> dict[str, Any]:
             "cap": budget.used_today() + budget.remaining(),
         },
         "pending_gaps": [dict(row) for row in pending],
+        "no_data_gaps": [dict(row) for row in no_data],
         "active_symbols": int(active),
         "last_run": _last_run_row(conn),
         "news": news_status(conn),
