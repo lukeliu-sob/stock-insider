@@ -10,6 +10,7 @@ Implements: REQ-SI-SEC-003 (ADR-004)
 
 from __future__ import annotations
 
+import ipaddress
 from urllib.parse import urlparse
 
 #: Static data-vendor domains (ADR-002); the HTTP choke point adopts
@@ -76,6 +77,27 @@ def _domain_allowed(host: str, allowed: frozenset[str]) -> bool:
     return any(lowered == domain or lowered.endswith("." + domain) for domain in allowed)
 
 
+def _is_loopback(host: str) -> bool:
+    """True only for a literal loopback address or the name ``localhost``.
+
+    Fifth-audit fix (TP-019, ADR-004 Am4): TP-018b tested
+    ``host.startswith("127.")``, so DNS names such as
+    ``127.attacker.example`` or ``127.0.0.1.nip.io`` - which resolve
+    anywhere - skipped both the HTTPS rule and the whitelist (the API
+    key would travel in cleartext). Loopback is an address property:
+    127.0.0.0/8 and ::1 parsed as IP literals; any other hostname is
+    remote.
+
+    Implements: REQ-SI-SEC-003 (ADR-004 Am4; TP-019)
+    """
+    if host == "localhost":
+        return True
+    try:
+        return ipaddress.ip_address(host).is_loopback
+    except ValueError:
+        return False
+
+
 def validate_egress_url(url: str, *, extra_allowed: tuple[str, ...] = ()) -> None:
     """Validate an outbound URL: HTTPS required, host must be whitelisted.
 
@@ -87,7 +109,7 @@ def validate_egress_url(url: str, *, extra_allowed: tuple[str, ...] = ()) -> Non
     """
     parsed = urlparse(url)
     host = (parsed.hostname or "").lower().rstrip(".")
-    loopback = host in ("localhost", "::1") or host.startswith("127.")
+    loopback = _is_loopback(host)
     if parsed.scheme != "https" and not (parsed.scheme == "http" and loopback):
         # Fourth-audit fix (TP-018b, ADR-004 Am2): plain HTTP remains
         # refused for everything that can leave the machine - except an
