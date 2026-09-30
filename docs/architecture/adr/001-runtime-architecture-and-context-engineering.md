@@ -102,3 +102,27 @@ Default for **all profiles and all model roles (chat, reasoning, event scoring, 
 ## 7. Traceability
 
 This ADR constrains: FR-011, FR-013, FR-019, FR-020, FR-021, INV-001, COST-001, GOV-005. It is referenced by the trace matrix for those requirements.
+
+## Amendment 1 (2026-09-30, TP-019) — the L4 history window counts messages, and says when it cuts
+
+§6.1 layer L4 (conversation history) was implemented as "the last 20
+session events", and tool calls and tool results are events too: a
+tool-using session kept about three turns of history, and the slice
+could open with an assistant answer whose question had been cut off.
+The fifth audit's live run showed the consequence - asked for "the
+closing price you mentioned at the start", the model denied ever
+having given one (turn 1 had fallen out of its context).
+
+Correction: L4 is the last `HISTORY_WINDOW` (20) user/assistant
+MESSAGES - about ten turns; tool events never consume it. The window
+never opens on an assistant message (its question would be missing).
+When older turns fall outside the window, a harness note tells the
+model so ("say they are not in your context instead of guessing").
+A quarantined answer is replayed to the model as a harness note
+("withheld by the numeric post-check; the user saw only: data
+unavailable for: ...") - read back verbatim, the degraded line made the
+live model tell the user the data itself had been unavailable.
+Compaction (§6.3) is unchanged; the full record stays in
+`session.jsonl` (FR-011).
+
+Implements: REQ-SI-FR-011, REQ-SI-COST-001.

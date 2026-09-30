@@ -109,3 +109,37 @@ rightly flagged):
    still refused exactly as before.
 
 Implements: REQ-SI-FR-014, REQ-SI-GOV-001, REQ-SI-SEC-003.
+
+## Amendment 4 (2026-09-30, TP-019) — loopback is an address; the language policy checks scripts, not symbols
+
+Fifth-audit corrections to Am3:
+
+1. Loopback correction. Am3 decided "localhost, ::1, 127.0.0.0/8";
+   the code shipped `host.startswith("127.")`, a string-prefix test.
+   DNS names such as `127.attacker.example` or `127.0.0.1.nip.io`
+   (which resolve anywhere) therefore skipped BOTH the HTTPS rule and
+   the whitelist, and a provider key would have travelled in cleartext
+   to an arbitrary host. Loopback is now an address property: a host
+   is loopback only when it is the name `localhost` or parses as an IP
+   literal with `is_loopback` (127.0.0.0/8, ::1). Every other hostname
+   is remote and follows the unchanged HTTPS + whitelist rules. The
+   RM-55 statement "loopback HTTP is scoped to 127/8 + localhost + ::1"
+   described the decision, not the shipped code; RM-56 records the
+   erratum.
+2. Language policy by script. Am3's closed character set kept
+   withholding whole correct answers for a checkmark, a triangle, a
+   thin space, a common emoji or a sigma (two consecutive audits). The
+   policy governs LANGUAGE, and language is carried by letters and
+   digits. The runtime check now: accepts letters only from Latin
+   blocks plus a closed set of Greek letters used as finance/math
+   symbols (alpha, beta, gamma, delta, Delta, sigma, Sigma, mu, pi);
+   accepts only ASCII digits; rejects CJK ideographs, CJK punctuation
+   and fullwidth forms, control characters and invisible format
+   characters (bidi overrides could disguise text; the emoji joiners
+   ZWJ/ZWNJ excepted); and accepts everything else (punctuation,
+   symbols, arrows, math and currency signs, emoji, separators).
+   Am3's allowlist remains the fast path. Greek words, Cyrillic,
+   Hangul, Arabic, Hebrew, Devanagari, Thai and non-ASCII digits fail
+   closed (TP-019 negative suite).
+
+Implements: REQ-SI-SEC-003, REQ-SI-FR-014, REQ-SI-GOV-001.

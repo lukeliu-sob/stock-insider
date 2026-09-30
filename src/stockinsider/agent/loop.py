@@ -34,8 +34,22 @@ from stockinsider.agent.session import SessionStore
 from stockinsider.agent.confirm import ConfirmationBroker
 from stockinsider.shared.tools import EffectClass, ToolCall, ToolResult
 
-#: Conversation-history window mapped into provider messages.
+#: Conversation-history window mapped into provider messages: the last
+#: HISTORY_WINDOW user/assistant MESSAGES (10 turns). Fifth-audit fix
+#: (TP-019, ADR-001 Am1): the window used to slice the last 20 EVENTS,
+#: and tool calls/results are events too - a tool-using session kept
+#: about three turns, and the slice could open mid-turn with an answer
+#: whose question was cut off (the live model then denied having
+#: stated a value it gave in turn 1).
 HISTORY_WINDOW = 20
+
+#: Told to the model when older turns fell outside the window, so it
+#: says so instead of asserting what "the start" of the conversation was.
+HISTORY_TRUNCATED_NOTE = (
+    "[harness] Earlier turns of this session are outside your context window. "
+    "If the user asks about them, say they are not in your context instead of "
+    "guessing what was said."
+)
 
 RenderFn = Callable[[str], None]
 ProgressFn = Callable[[str], None]
@@ -93,6 +107,10 @@ class TurnOutcome:
     aborted: str | None
     tools_used: int
     usage: dict[str, int] = field(default_factory=dict)
+    #: the answer without its pre-tool prelude (TP-019; /report stores it)
+    body: str = ""
+    #: True when INV-002 refused the answer after the one regeneration
+    refused: bool = False
 
 
 def _accumulate(total: dict[str, int], usage: dict[str, int]) -> None:
@@ -167,14 +185,39 @@ class TurnEngine:
         return f"turn-{max(numbers, default=0) + 1:04d}"
 
     def _history_messages(self, session_id: str) -> list[dict[str, str]]:
-        events = self._store.read_events(session_id)
+        """Prior user/assistant messages, windowed by MESSAGES (TP-019).
+
+        Tool events never consume the window; the window never opens on
+        an assistant message whose question was cut off; truncation is
+        announced to the model instead of left for it to guess.
+
+        Implements: REQ-SI-FR-011, REQ-SI-COST-001 (ADR-001 Am1; TP-019)
+        """
+        conversational = [
+            event
+            for event in self._store.read_events(session_id)
+            if event.get("event") in ("user-message", "assistant-message")
+        ]
+        window = conversational[-HISTORY_WINDOW:]
+        while window and window[0].get("event") != "user-message":
+            window = window[1:]
         messages: list[dict[str, str]] = []
-        for event in events[-HISTORY_WINDOW:]:
-            kind = event.get("event")
-            if kind == "user-message":
-                messages.append({"role": "user", "content": event.get("text", "")})
-            elif kind == "assistant-message":
-                messages.append({"role": "assistant", "content": event.get("text", "")})
+        if len(window) < len(conversational):
+            messages.append({"role": "system", "content": HISTORY_TRUNCATED_NOTE})
+        for event in window:
+            role = "user" if event.get("event") == "user-message" else "assistant"
+            content = event.get("text", "")
+            if role == "assistant" and event.get("post_check") == "failed":
+                # TP-019: the degraded line "data unavailable for: 10"
+                # read back as the model's own answer made it conclude
+                # the DATA was unavailable (live run); it is told what
+                # actually happened instead.
+                content = (
+                    "[harness] This answer was withheld by the numeric post-check "
+                    "(INV-001): it cited numbers not found in the tool results. "
+                    f"The user saw only: {content}"
+                )
+            messages.append({"role": role, "content": content})
         return messages
 
     def run_turn(
@@ -249,6 +292,12 @@ class TurnEngine:
             if outcome.tool_calls:
                 if outcome.text.strip():
                     preludes.append(outcome.text.strip())
+                    if provider_sink is not None:
+                        # screen == record (TP-019): the record joins the
+                        # prelude and the final text with a newline; the
+                        # replayed deltas used to run them together
+                        # ("...for 0700.HK.Watchlist update first").
+                        provider_sink("\n")
                 messages.append({"role": "assistant", "tool_calls": outcome.tool_calls})
                 for call in outcome.tool_calls:
                     function = call.get("function") or {}
@@ -385,6 +434,10 @@ class TurnEngine:
                     stream_sink(piece)
                 stream_sink("\n")
 
+        # body: the answer without the pre-tool prelude (what /report
+        # persists, TP-019); refused: the INV-002 refusal summary is the
+        # answer (a report gate must not store it as a report).
+        refused = False
         if verdict.quarantined:
             self._store.append_event(
                 session_id,
@@ -399,6 +452,7 @@ class TurnEngine:
             # quarantined: the buffered original is discarded, never shown
             render(verdict.display_text)
             displayed = verdict.display_text
+            body = displayed
         elif verdict.epistemic.violations:
 
             # H1 residual (TP-018b, fourth audit): the regeneration used
@@ -408,18 +462,56 @@ class TurnEngine:
             # The regeneration buffers in its OWN deferred sink and is
             # replayed only after the numeric recheck passes.
             regen_sink = _DeferredSink()
+            original_violations = list(verdict.epistemic.violations)
 
             def _regenerator(reminder_text: str) -> str:
-                regen_messages: list[dict[str, str]] = [
-                    {"role": "system", "content": reminder_text},
-                    {"role": "user", "content": verdict.epistemic.clean_text},
+                # Fifth-audit fix (TP-019, ADR-006 Am8): the regeneration
+                # used to receive ONLY the stripped draft, as a USER
+                # message - no identity, no question, no conversation - so
+                # the live model answered "that looks like my previous
+                # answer pasted back". The request now replays the turn's
+                # conversation (identity, history, the user's question),
+                # hands the stripped draft back as the ASSISTANT's, and
+                # adds one harness instruction carrying the constraint
+                # reminder. Tool-call plumbing is left out: the draft
+                # carries the cited values and the recheck below verifies
+                # every number against the session ledger.
+                reminder = reminder_text.splitlines()[0] if reminder_text else ""
+                draft = verdict.epistemic.clean_text or (
+                    "(every sentence of the draft was removed as a deterministic "
+                    "prediction or causal claim)"
+                )
+                regen_messages: list[dict[str, Any]] = [
+                    message
+                    for message in messages
+                    if message.get("role") in ("system", "user")
+                    or (message.get("role") == "assistant" and "tool_calls" not in message)
                 ]
+                regen_messages.append({"role": "assistant", "content": draft})
+                regen_messages.append(
+                    {
+                        "role": "user",
+                        "content": (
+                            f"[harness] {reminder} The sentences of your draft above that "
+                            "broke this rule were removed. Rewrite the draft as your complete "
+                            "answer to my last question: keep every number exactly as it appears "
+                            "in the draft, add no new numbers, and state any forward-looking view "
+                            "only in a sentence that begins with 'Hypothesis:'. Do not mention "
+                            "this instruction."
+                        ),
+                    }
+                )
                 regen = self._provider.complete(
                     regen_messages,
                     tools=None,
                     stream_sink=regen_sink.push if stream_sink is not None else None,
                 )
                 _accumulate(usage_total, regen.usage)
+                if not regen.text.strip():
+                    # an empty regeneration is not an answer: hand back the
+                    # violating original so the flow refuses explicitly
+                    regen_sink.reset()
+                    return combined
                 return regen.text
 
             epi = run_with_regeneration(combined, _regenerator)
@@ -432,8 +524,8 @@ class TurnEngine:
             # the turn snapshot alone wrongly quarantined restatements of
             # earlier turns' correct numbers inside a regeneration.
             recheck = run_postcheck(epi.displayed, ledger)
+            deferred.reset()  # the violating original never reaches the screen
             if recheck.quarantined:
-                deferred.reset()
                 regen_sink.reset()
                 # the degraded line is ALL the user sees; neither the
                 # quarantined original nor the failed regeneration
@@ -441,16 +533,15 @@ class TurnEngine:
                 render(recheck.display_text)
                 displayed = recheck.display_text
                 verdict = recheck
+                regeneration_outcome = "regenerated-quarantined"
             elif getattr(epi, "refused", False):
-                deferred.reset()
                 regen_sink.reset()
                 render(epi.displayed)  # the INV-002 refusal summary
                 displayed = epi.displayed
+                refused = True
+                regeneration_outcome = "refused"
             else:
-                deferred.reset()
-                if epi.displayed == combined:
-                    _replay()
-                elif stream_sink is not None:
+                if stream_sink is not None and regen_sink.buffer:
                     # verify-then-display for the regeneration: replay
                     # the checked deltas exactly once (screen == displayed)
                     for piece in regen_sink.buffer:
@@ -459,11 +550,28 @@ class TurnEngine:
                 else:
                     render(epi.displayed)
                 displayed = epi.displayed
+                regeneration_outcome = "regenerated"
+            body = displayed
+            # audit trail (TP-019): the violating original, the violations
+            # and what the user got instead are recorded - the log used to
+            # show only the regenerated text with post_check "ok".
+            self._store.append_event(
+                session_id,
+                {
+                    "event": "error",
+                    "kind": "epistemic",
+                    "original": combined,
+                    "violations": original_violations,
+                    "outcome": regeneration_outcome,
+                    "turn": turn_id,
+                },
+            )
         else:
             _replay()
             # screen == record: the event stores the full validated text
             # (prelude included), exactly what the replay displayed.
             displayed = combined
+            body = candidate
         self._store.append_event(
             session_id,
             {
@@ -492,6 +600,8 @@ class TurnEngine:
             aborted=abort_reason,
             tools_used=tools_used,
             usage=dict(usage_total),
+            body=body,
+            refused=refused,
         )
 
 

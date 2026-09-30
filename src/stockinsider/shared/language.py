@@ -8,19 +8,31 @@ symbol map) is enforced at the symbol layer, not here.
 M4 (TP-018) + fourth-audit widening (TP-018b): "English only" is a
 positive allowlist, not a CJK blocklist - the old CJK-only check
 passed Cyrillic, Greek, Hangul and every other non-Latin script as
-"English". A response is English-only when every character is
-ASCII, Latin-1/Latin Extended-A letters and punctuation, or a
-member of a small closed set of typographic marks, arrows,
-comparison signs and report emoji common in financial prose (the
-first cut was too narrow: a model date-range arrow or a checkmark
-withheld a whole correct answer). Fail closed on anything else.
+"English".
 
-Implements: REQ-SI-FR-014, REQ-SI-GOV-001 (ADR-004; TP-018)
+Fifth-audit redesign (TP-019, ADR-004 Am4): the policy governs
+LANGUAGE, and language lives in letters and digits. The closed
+character list of TP-018b kept withholding whole correct answers for
+a checkmark, a triangle, a thin space or a chart emoji. Now:
+
+- letters must be Latin script (any Latin block), plus a closed set
+  of Greek letters used as math/finance symbols (alpha, beta, gamma,
+  delta, sigma, mu, pi); any other letter fails closed;
+- digits must be ASCII (Arabic-Indic, Devanagari and other script
+  digits fail closed);
+- CJK ideographs, CJK punctuation and fullwidth forms fail closed;
+- control and invisible format characters fail closed (bidi
+  overrides could disguise text), except the emoji joiners;
+- everything else - punctuation, symbols, arrows, math signs,
+  currency, emoji, spaces - is not language and passes.
+
+Implements: REQ-SI-FR-014, REQ-SI-GOV-001 (ADR-004; TP-018, TP-019)
 """
 
 from __future__ import annotations
 
 import re
+import unicodedata
 
 #: The allowlist, as one character class:
 #:  - printable ASCII (letters, digits, punctuation, space)
@@ -58,9 +70,39 @@ class LanguagePolicyError(RuntimeError):
     """
 
 
+#: Greek letters that finance/math prose uses as symbols (TP-019).
+_MATH_GREEK = frozenset("αβγδΔσΣμπ")
+
+#: Invisible format characters that may appear in well-formed emoji
+#: sequences (zero-width joiner/non-joiner). Every other format
+#: character - bidi overrides, isolates, marks - fails closed.
+_ALLOWED_FORMAT = frozenset("‌‍")
+
+
+def _char_allowed(char: str) -> bool:
+    """One character against the script-based policy (TP-019).
+
+    Implements: REQ-SI-GOV-001 (ADR-004 Am4; TP-019)
+    """
+    if ENGLISH_ONLY.fullmatch(char):
+        return True  # the TP-018b allowlist stays a fast path
+    if CJK_PATTERN.match(char):
+        return False
+    category = unicodedata.category(char)
+    if category.startswith("L"):
+        return unicodedata.name(char, "").startswith("LATIN ") or char in _MATH_GREEK
+    if category == "Nd":
+        return False  # non-ASCII digits: ASCII ones took the fast path
+    if category == "Cf":
+        return char in _ALLOWED_FORMAT
+    if category in ("Cc", "Cs", "Co", "Cn"):
+        return False
+    return True  # punctuation, symbols, marks, separators, other numbers
+
+
 def _first_disallowed(text: str) -> "str | None":
     for char in text:
-        if not ENGLISH_ONLY.fullmatch(char):
+        if not _char_allowed(char):
             return char
     return None
 

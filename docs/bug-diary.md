@@ -184,3 +184,46 @@ Invariant/process gap exposed → what changed:
 - **Classification**: implementation bug in the INV-001 enforcement point (the worst kind: the invariant's checker was losing evidence).
 - **Fix**: snapshot keys carry a per-call sequence (`market.quote#1`, `#2`, ...); the pool walker is key-agnostic so verification semantics are unchanged. Regression tests pin both-call citability and the fabricated-value negative.
 - **Gap exposed -> change**: found only by simulation with same-tool repeat calls — added to the standing battery pattern.
+
+## BD-020 — Identifier blanking swallowed letter-glued numerics (INV-001 bypass)
+- **Date / discovered by**: 2026-09-30 / fifth external review.
+- **Symptom**: "Tencent closed at HKD777." passed the post-check against a 630.5 close; so did "USD1200", "PE35", "RMB500 billion", "YTD-12%".
+- **Investigation**: the TP-018b identifier rule blanked every 1-3 letters glued to 1-4 digits (and every letters-hyphen-digits run) BEFORE extraction, to stop "ADR-005" being read as -005; the fix for a false positive became a bypass of the invariant it served.
+- **Classification**: enforcement-point defect introduced by a remediation (worst class: the checker stopped seeing numbers).
+- **Fix**: closed set of reference shapes (governance prefixes, AmN, Q1-Q4, H1/H2, FYnn, vN, benchmark names); everything else glued to letters is checked (TP-019, ADR-006 Am8).
+- **Gap exposed -> change**: remediation tests asserted only the false-positive direction; TP-019 pins the bypass direction for every blanking rule.
+
+## BD-021 — Loopback exception matched a hostname prefix (SEC-003 bypass)
+- **Date / discovered by**: 2026-09-30 / fifth external review.
+- **Symptom**: `http://127.attacker.example/v1` and `https://127.0.0.1.nip.io/v1` passed egress validation, skipping both the HTTPS rule and the whitelist.
+- **Classification**: security-control defect; the ADR text (127.0.0.0/8) and the review memo described the intent, the code implemented a string test.
+- **Fix**: loopback = the name `localhost` or an IP literal with `is_loopback` (TP-019, ADR-004 Am4).
+- **Gap exposed -> change**: the loopback test had only positive cases; TP-019 adds prefix-shaped hostnames as negatives.
+
+## BD-022 — Regeneration request carried no question (meta-answer shown)
+- **Date / discovered by**: 2026-09-30 / fifth review live run.
+- **Symptom**: "Will 0700.HK go up next month?" displayed "Looks like that was my previous answer pasted back without a new question attached..." with post_check ok; the next turns referred back to that confusion.
+- **Investigation**: the INV-002 regeneration sent only the stripped draft, as a USER message, with no identity prompt, question or history; nothing in session.jsonl recorded that a regeneration had happened.
+- **Classification**: fallback-path defect (INV-002 §2) present since the loop landed; masked while the regeneration also streamed twice.
+- **Fix**: the request replays the turn conversation, returns the draft as the assistant's, adds one harness instruction; every regeneration is recorded as an `epistemic` event (TP-019, ADR-006 Am8).
+
+## BD-023 — History window counted events, not messages (context amnesia)
+- **Date / discovered by**: 2026-09-30 / fifth review live run.
+- **Symptom**: at turn 6 the model stated "no closing price appeared at the start of this conversation" although turn 1 had given 644.63.
+- **Investigation**: `HISTORY_WINDOW = 20` sliced the last 20 events; with tool calls and results each turn is 5-7 events, so about three turns survived and the slice could open mid-turn.
+- **Classification**: context-engineering defect (ADR-001 §6 L4).
+- **Fix**: the window counts user/assistant messages, never opens on an answer without its question, and announces truncation (TP-019, ADR-001 Am1).
+
+## BD-024 — Empty market answers reported as fresh; benchmark calendar frozen
+- **Date / discovered by**: 2026-09-30 / fifth external review (offline probes).
+- **Symptom**: an empty backfill reported "ok · 0 bars stored; data through <today>" and never re-planned the history; a vendor hole after the first sync was never detected.
+- **Investigation**: TP-018b advanced the cursor on empty backfill/incremental answers; benchmark indices were backfilled once and never refreshed, so the calendar the completeness pass relies on stopped at the first sync.
+- **Classification**: INV-003 honesty defect + FR-001 requirement gap (indices must be ingested daily).
+- **Fix**: empty answers fail with the cursor unchanged; indices refresh daily at priority 1; detection stops at each symbol's cursor; closed no-data gaps stay visible (TP-019, ADR-002 Am1).
+
+## BD-025 — AI-use log stopped being valid YAML (PR #54)
+- **Date / discovered by**: 2026-09-30 / TP-019 implementation (appending AILOG-0065).
+- **Symptom**: `docs/ai-use-log.yaml` no longer parsed: "expected <block end>, but found '-'" at AILOG-0063.
+- **Investigation**: every entry up to AILOG-0062 is a list item indented under `sessions:`; TP-018 appended AILOG-0063/0064 at column 0. The AI-use log gate only checks that the file is in the change set, so the mandatory audit record silently became unreadable by machines.
+- **Classification**: governance-record defect; gate blind spot.
+- **Fix**: the two entries re-indented (whitespace only; parsed content verified identical); the gate now fails when the log does not parse or an entry id is malformed or duplicated (TP-019).

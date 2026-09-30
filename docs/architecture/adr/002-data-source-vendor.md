@@ -38,3 +38,35 @@
 ## 5. Registry Note
 
 FR-015 remains **Should**: GDELT alone satisfies FR-003 (Must). The crawler is the extension path, with an explicitly documented future role of Chinese-media support (FR-024). Recorded in the FR-015 `notes` field.
+
+## Amendment 1 (2026-09-30, TP-019) — sync honesty: empty answers fail, benchmark indices refresh daily, detection stops at the cursor
+
+Fifth-audit corrections to the EODHD sync semantics (data/ingest/sync.py):
+
+1. An empty vendor answer proves nothing, for every market action. A
+   backfill or incremental that returns 0 bars now fails explicitly and
+   leaves the cursor where it was (retried next sync). TP-018b had
+   advanced the cursor to the requested end date and reported
+   "ok · 0 bars stored; data through <today>" - stale-as-fresh
+   (INV-003) - and a symbol whose first backfill came back empty never
+   re-planned its history. Because an incremental starts AT the cursor
+   (a stored bar), a healthy answer is never empty. Gap-repair keeps
+   its TP-018b terminal state (three empty attempts close the gap with
+   resolution='no-data').
+2. Benchmark indices are ingested daily (REQ-SI-FR-001): an index with
+   bars gets an incremental at plan priority 1. They used to be
+   backfilled once and never refreshed, which froze the exchange
+   calendar derived from them - every completeness pass after the first
+   sync was blind to later holes. Cost: one call per index per day.
+3. Gap detection for a symbol ends at its cursor: days after the
+   cursor are the next incremental's job. With a live calendar, a
+   deferred or failed incremental would otherwise enqueue its own
+   not-yet-fetched days as gaps and pay for them twice.
+4. Closed no-data gaps stay visible: `sync_status` lists them
+   (`no_data_gaps`) and `/sync status` prints them, instead of the
+   range vanishing from every output the moment it closed.
+
+Residuals recorded as debt (DE-08): empty-attempt counting and the
+gap-repair budget share are per run, not per day.
+
+Implements: REQ-SI-FR-001, REQ-SI-INV-003.

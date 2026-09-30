@@ -2412,133 +2412,201 @@ sessions:
       Owner approved the remediation plan; this closes TP-017.
     status: applied
 
-- id: AILOG-0063
-  date: "2026-09-29"
-  agent_task: >-
-    TP-018 third-audit remediation, executed under explicit owner
-    authorization (session approval of the full plan). P0: H3 token
-    flow redesigned per the non-relay principle (REPL renders pending
-    write + letter token via progress chrome; model result carries no
-    token; 8-letter alphabet; bound-content echo; confirmation outcome
-    written back into model history as a [harness] user-message;
-    expire_turns at every turn start; strict confirm-line routing;
-    resolver verifies only PRIMARY_EXCHANGES candidates). H1 residual
-    closed: per-iteration prelude accumulates and the post-check
-    validates prelude+candidate as one string; assistant events store
-    the full displayed text. new-4 closed: EgressViolationError wraps
-    into ProviderError at the provider, config set validates endpoint
-    URLs at write time (EGRESS_EXTRA_HOSTS extension surface),
-    REPL catches RuntimeError as defense in depth. H2b: regeneration
-    recheck runs against the session ledger. P1: snapshot keys are
-    turn-scoped (turn-NNNN/tool#seq, M5 residual); abort persists as
-    session status "aborted" with close() non-downgrading and resume()
-    refusing; memo gate safety check runs before the no-implementation
-    early return and requires an added "### RM-" heading (new-7);
-    heading ordinals strip only up to 2 digits (new-5); zero-bar
-    gap-repair keeps the gap open and the cursor unchanged (low-4).
-    P2: info.py day-change/largest-move/vs-20 price the
-    COALESCE(adjusted_close, close) series (M7 residual);
-    fundamentals_summary returns coverage + stored rows + explicit
-    unavailable reason (M8); language policy is a positive Latin
-    allowlist (M4); malformed tool arguments fail explicitly (low-1);
-    append_event validates the shared event schema (low-2, which also
-    retired the schema-invalid user-confirmation kind); identity
-    prompt resolves from the package root (low-3); OHLCV typed
-    provenance phase 1 (open-quoted-as-close fails, doji passes, M2);
-    INV-002 reported-speech exemption + modal-certainty classes with
-    an author-separated auditor-sourced battery (E-007a, P/R 1.00/1.00
-    on 14 + 20 sentences) (M3). Governance: ADR-004 Am2 / ADR-005
-    Am2+Am3 / ADR-006 Am5+Am6 written; invariants.md INV-001 wording
-    updated to the session-ledger semantics; RM-51/RM-52 backfilled
-    honestly; ci.yml --frozen -> --locked; workspace rollback reverted
-    (ci.yml + requirements.yaml restored to HEAD 13f4933); one
-    environment-coupled offline test made hermetic via monkeypatch.
-  artifacts:
-    - src/stockinsider/agent/confirm.py
-    - src/stockinsider/agent/loop.py
-    - src/stockinsider/agent/repl.py
-    - src/stockinsider/agent/providers.py
-    - src/stockinsider/agent/session.py
-    - src/stockinsider/agent/registry.py
-    - src/stockinsider/agent/guardrail.py
-    - src/stockinsider/shared/egress.py
-    - src/stockinsider/shared/language.py
-    - src/stockinsider/data/store/resolver.py
-    - src/stockinsider/data/store/info.py
-    - src/stockinsider/data/store/__init__.py
-    - src/stockinsider/data/ingest/sync.py
-    - src/stockinsider/cli/app.py
-    - tools/checks/testplan_gate.py
-    - .github/workflows/ci.yml
-    - docs/req/requirements.yaml
-    - docs/test-plans/TP-018.md
-    - docs/architecture/adr/004-shared-foundation.md
-    - docs/architecture/adr/005-tool-registry.md
-    - docs/architecture/adr/006-guardrail.md
-    - docs/architecture/invariants.md
-    - docs/architecture/evaluation-logbook.md
-    - docs/review-memo.md
-    - test/offline/test_tp018_remediation.py
-    - test/offline/test_agent_loop.py
-    - test/offline/test_provider_config.py
-    - test/offline/test_testplan_coverage.py
-    - test/offline/test_watch_governance.py
-    - docs/ai-use-log.yaml
-  human_decision: >-
-    Owner authorized the full remediation plan in session (2026-09-29),
-    including the docs/ADR/memo/CI writes this entry records.
-  status: applied
+  - id: AILOG-0063
+    date: "2026-09-29"
+    agent_task: >-
+      TP-018 third-audit remediation, executed under explicit owner
+      authorization (session approval of the full plan). P0: H3 token
+      flow redesigned per the non-relay principle (REPL renders pending
+      write + letter token via progress chrome; model result carries no
+      token; 8-letter alphabet; bound-content echo; confirmation outcome
+      written back into model history as a [harness] user-message;
+      expire_turns at every turn start; strict confirm-line routing;
+      resolver verifies only PRIMARY_EXCHANGES candidates). H1 residual
+      closed: per-iteration prelude accumulates and the post-check
+      validates prelude+candidate as one string; assistant events store
+      the full displayed text. new-4 closed: EgressViolationError wraps
+      into ProviderError at the provider, config set validates endpoint
+      URLs at write time (EGRESS_EXTRA_HOSTS extension surface),
+      REPL catches RuntimeError as defense in depth. H2b: regeneration
+      recheck runs against the session ledger. P1: snapshot keys are
+      turn-scoped (turn-NNNN/tool#seq, M5 residual); abort persists as
+      session status "aborted" with close() non-downgrading and resume()
+      refusing; memo gate safety check runs before the no-implementation
+      early return and requires an added "### RM-" heading (new-7);
+      heading ordinals strip only up to 2 digits (new-5); zero-bar
+      gap-repair keeps the gap open and the cursor unchanged (low-4).
+      P2: info.py day-change/largest-move/vs-20 price the
+      COALESCE(adjusted_close, close) series (M7 residual);
+      fundamentals_summary returns coverage + stored rows + explicit
+      unavailable reason (M8); language policy is a positive Latin
+      allowlist (M4); malformed tool arguments fail explicitly (low-1);
+      append_event validates the shared event schema (low-2, which also
+      retired the schema-invalid user-confirmation kind); identity
+      prompt resolves from the package root (low-3); OHLCV typed
+      provenance phase 1 (open-quoted-as-close fails, doji passes, M2);
+      INV-002 reported-speech exemption + modal-certainty classes with
+      an author-separated auditor-sourced battery (E-007a, P/R 1.00/1.00
+      on 14 + 20 sentences) (M3). Governance: ADR-004 Am2 / ADR-005
+      Am2+Am3 / ADR-006 Am5+Am6 written; invariants.md INV-001 wording
+      updated to the session-ledger semantics; RM-51/RM-52 backfilled
+      honestly; ci.yml --frozen -> --locked; workspace rollback reverted
+      (ci.yml + requirements.yaml restored to HEAD 13f4933); one
+      environment-coupled offline test made hermetic via monkeypatch.
+    artifacts:
+      - src/stockinsider/agent/confirm.py
+      - src/stockinsider/agent/loop.py
+      - src/stockinsider/agent/repl.py
+      - src/stockinsider/agent/providers.py
+      - src/stockinsider/agent/session.py
+      - src/stockinsider/agent/registry.py
+      - src/stockinsider/agent/guardrail.py
+      - src/stockinsider/shared/egress.py
+      - src/stockinsider/shared/language.py
+      - src/stockinsider/data/store/resolver.py
+      - src/stockinsider/data/store/info.py
+      - src/stockinsider/data/store/__init__.py
+      - src/stockinsider/data/ingest/sync.py
+      - src/stockinsider/cli/app.py
+      - tools/checks/testplan_gate.py
+      - .github/workflows/ci.yml
+      - docs/req/requirements.yaml
+      - docs/test-plans/TP-018.md
+      - docs/architecture/adr/004-shared-foundation.md
+      - docs/architecture/adr/005-tool-registry.md
+      - docs/architecture/adr/006-guardrail.md
+      - docs/architecture/invariants.md
+      - docs/architecture/evaluation-logbook.md
+      - docs/review-memo.md
+      - test/offline/test_tp018_remediation.py
+      - test/offline/test_agent_loop.py
+      - test/offline/test_provider_config.py
+      - test/offline/test_testplan_coverage.py
+      - test/offline/test_watch_governance.py
+      - docs/ai-use-log.yaml
+    human_decision: >-
+      Owner authorized the full remediation plan in session (2026-09-29),
+      including the docs/ADR/memo/CI writes this entry records.
+    status: applied
 
-- id: AILOG-0064
-  date: "2026-09-29"
-  agent_task: >-
-    TP-018b fourth-audit remediation under explicit owner authorization
-    ("modify, confirm, then submit PR"). High finding: sync budget
-    starvation closed three ways - gap detection clips to the symbol's
-    earliest stored bar (pre-listing dates never enqueue), gap-repair
-    consumes at most half the daily cap per run with explicit deferrals,
-    and a zero-bar gap closes after 3 attempts with resolution=no-data
-    (migration v6 also demotes stale verified=1 secondary-exchange rows).
-    Guardrail: snake_case field tokens resolve (adjusted_close et al.);
-    identifier codes (GOV-001/ADR-005/Am2/Q1/SP500) blanked before
-    extraction; internal numbering removed from symbol.search's
-    description; heading ordinals tightened to punctuated 1-2 digit or
-    single bare digit; attribution exemption requires verb+source (or
-    "according to the <doc>") closing the chart-laundering hole;
-    expected/predicted/projected + reach/exceed/double/triple added;
-    regeneration buffers in its own deferred sink (verify-then-display,
-    single display). Language allowlist widened to arrows/bullets/
-    comparison/narrow-space/Latin Ext-A/closed emoji set (ADR-004 Am3);
-    loopback-only HTTP exception. Gate: empty PR_BODY in PR context
-    fails; RM heading must contain digits; static arithmetic gate now
-    detects .get(field), variable keys, and one-level direct-read
-    aliases. prompts/identity.md v6 (non-relay token rules, no
-    user_confirmed). REPL /resume peeks at the target before closing
-    the live session. ADR-004 Am3 + ADR-006 Am7 written (Am7 also
-    reconciles Am6 claims with code and records phase-2 known
-    limitations honestly); E-007a authorship corrected, E-007b added;
-    RM-55; TP-018 amendment 1.
-  artifacts:
-    - src/stockinsider/data/ingest/sync.py
-    - src/stockinsider/data/store/schema.py
-    - src/stockinsider/agent/guardrail.py
-    - src/stockinsider/agent/loop.py
-    - src/stockinsider/agent/repl.py
-    - src/stockinsider/agent/registry.py
-    - src/stockinsider/shared/language.py
-    - src/stockinsider/shared/egress.py
-    - prompts/identity.md
-    - tools/checks/static_arithmetic.py
-    - tools/checks/testplan_gate.py
-    - docs/test-plans/TP-018.md
-    - docs/architecture/adr/004-shared-foundation.md
-    - docs/architecture/adr/006-guardrail.md
-    - docs/architecture/evaluation-logbook.md
-    - docs/review-memo.md
-    - test/offline/test_tp018b_fourth_audit.py
-    - test/offline/test_tp018_remediation.py
-    - docs/ai-use-log.yaml
-  human_decision: >-
-    Owner authorized full-plan execution and PR submission after the
-    fourth review (2026-09-29), including prompts/ v6.
-  status: applied
+  - id: AILOG-0064
+    date: "2026-09-29"
+    agent_task: >-
+      TP-018b fourth-audit remediation under explicit owner authorization
+      ("modify, confirm, then submit PR"). High finding: sync budget
+      starvation closed three ways - gap detection clips to the symbol's
+      earliest stored bar (pre-listing dates never enqueue), gap-repair
+      consumes at most half the daily cap per run with explicit deferrals,
+      and a zero-bar gap closes after 3 attempts with resolution=no-data
+      (migration v6 also demotes stale verified=1 secondary-exchange rows).
+      Guardrail: snake_case field tokens resolve (adjusted_close et al.);
+      identifier codes (GOV-001/ADR-005/Am2/Q1/SP500) blanked before
+      extraction; internal numbering removed from symbol.search's
+      description; heading ordinals tightened to punctuated 1-2 digit or
+      single bare digit; attribution exemption requires verb+source (or
+      "according to the <doc>") closing the chart-laundering hole;
+      expected/predicted/projected + reach/exceed/double/triple added;
+      regeneration buffers in its own deferred sink (verify-then-display,
+      single display). Language allowlist widened to arrows/bullets/
+      comparison/narrow-space/Latin Ext-A/closed emoji set (ADR-004 Am3);
+      loopback-only HTTP exception. Gate: empty PR_BODY in PR context
+      fails; RM heading must contain digits; static arithmetic gate now
+      detects .get(field), variable keys, and one-level direct-read
+      aliases. prompts/identity.md v6 (non-relay token rules, no
+      user_confirmed). REPL /resume peeks at the target before closing
+      the live session. ADR-004 Am3 + ADR-006 Am7 written (Am7 also
+      reconciles Am6 claims with code and records phase-2 known
+      limitations honestly); E-007a authorship corrected, E-007b added;
+      RM-55; TP-018 amendment 1.
+    artifacts:
+      - src/stockinsider/data/ingest/sync.py
+      - src/stockinsider/data/store/schema.py
+      - src/stockinsider/agent/guardrail.py
+      - src/stockinsider/agent/loop.py
+      - src/stockinsider/agent/repl.py
+      - src/stockinsider/agent/registry.py
+      - src/stockinsider/shared/language.py
+      - src/stockinsider/shared/egress.py
+      - prompts/identity.md
+      - tools/checks/static_arithmetic.py
+      - tools/checks/testplan_gate.py
+      - docs/test-plans/TP-018.md
+      - docs/architecture/adr/004-shared-foundation.md
+      - docs/architecture/adr/006-guardrail.md
+      - docs/architecture/evaluation-logbook.md
+      - docs/review-memo.md
+      - test/offline/test_tp018b_fourth_audit.py
+      - test/offline/test_tp018_remediation.py
+      - docs/ai-use-log.yaml
+    human_decision: >-
+      Owner authorized full-plan execution and PR submission after the
+      fourth review (2026-09-29), including prompts/ v6.
+    status: applied
+
+  - id: AILOG-0065
+    date: "2026-09-30"
+    agent_task: >-
+      TP-019 fifth-audit remediation under explicit owner authorization
+      ("start the fixes and keep the record per the project documentation").
+      TP-019 committed first (GOV-006 ordering). INV-001: identifier blanking
+      narrowed from any letters-glued-digits shape to a closed reference set
+      (the TP-018b shape let "HKD777"/"USD1200"/"PE35" escape the post-check);
+      natural-language dates fold to YYYYMMDD; the "vol" OHLCV alias removed.
+      INV-002: attribution requires an adjacent institutional speech act
+      preceding the claim in its clause or closing the sentence as a tag;
+      inference verbs and bare generic nouns no longer attribute; modal hedges
+      are clause-local and "may" is lower-case only; recall batch (direction
+      verbs, adverbial prediction, effect-first causal, driver verbs, passive
+      causation, price targets, expectation nouns). Loop: the regeneration
+      request replays identity + history + question with the stripped draft as
+      the assistant's and one harness instruction; empty regeneration refuses;
+      every regeneration/refusal writes an epistemic event; /show renders it;
+      the dead replay branch removed; prelude and final text separated on
+      screen; TurnOutcome carries body/refused and /report stores the body and
+      never a refusal; the report instruction asks for the report only.
+      History: windowed by user/assistant messages, never opening mid-turn,
+      announcing truncation, and replaying quarantined answers as a harness
+      note. shared/: loopback decided by IP-literal parsing (is_loopback) or
+      "localhost"; the language policy checks letters and digits by script
+      (Latin letters + a closed Greek math set, ASCII digits), rejects CJK/
+      fullwidth, controls and bidi format characters, and passes symbols and
+      emoji. Sync: empty backfill/incremental fail with the cursor unchanged;
+      benchmark indices refresh daily at priority 1; detection ends at each
+      symbol's cursor; closed no-data gaps listed by sync_status and
+      /sync status. Static gate: augmented assignment, aggregation calls,
+      comprehension aliases, default-parameter keys; f-string formatting
+      excluded. Governance: ADR-001 Am1, ADR-002 Am1, ADR-004 Am4, ADR-006 Am8,
+      BD-020..BD-024, DE-08..DE-11, E-008 (development-set honesty note),
+      RM-56 (with the RM-55 erratum), TP-019 amendment 1 (live-run findings).
+      Log repair (BD-025): AILOG-0063 and AILOG-0064 had been appended at
+      column 0, which broke this file's YAML structure since PR #54; they are
+      re-indented under sessions (whitespace only - parsed content verified
+      identical), and the AI-use log gate now fails on an unparsable log.
+      Verification: 458 offline tests green (34 new; 30 fail on the pre-fix
+      tree), coverage 88%, ruff + mypy clean, structural gates green, PR-mode
+      gate simulation, live re-run 8/9 (was 6/9).
+    artifacts:
+      - docs/test-plans/TP-019.md
+      - src/stockinsider/agent/guardrail.py
+      - src/stockinsider/agent/loop.py
+      - src/stockinsider/agent/repl.py
+      - src/stockinsider/shared/egress.py
+      - src/stockinsider/shared/language.py
+      - src/stockinsider/data/ingest/sync.py
+      - tools/checks/static_arithmetic.py
+      - tools/checks/aiuse_gate.py
+      - test/offline/test_tp019_fifth_audit.py
+      - docs/architecture/adr/001-runtime-architecture-and-context-engineering.md
+      - docs/architecture/adr/002-data-source-vendor.md
+      - docs/architecture/adr/004-shared-foundation.md
+      - docs/architecture/adr/006-guardrail.md
+      - docs/architecture/evaluation-logbook.md
+      - docs/bug-diary.md
+      - docs/debt-register.md
+      - docs/review-memo.md
+      - docs/ai-use-log.yaml
+    human_decision: >-
+      Owner authorized the fifth-review remediation plan and its documentation
+      in session (2026-09-30). Push and PR submission await a separate owner
+      instruction.
+    status: applied
