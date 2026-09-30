@@ -15,7 +15,7 @@
 | Hidden dependencies | 0 |
 | Agent-induced bloat | 0 |
 | Evaluation debt | 2 (DE-01, DE-09) |
-| Guardrail debt | 5 |
+| Guardrail debt | 6 |
 | Human/cognitive debt | 1 |
 
 Categories at zero have no current entries; the category opens the moment its first entry appears — do not pre-register speculative debt.
@@ -88,4 +88,10 @@ Categories at zero have no current entries; the category opens the moment its fi
 - **Category**: guardrail debt
 - **Description**: migration v6 demoted pre-ADR-005-Am2 secondary-exchange rows to verified=0, but a symbol already ACTIVE on the watchlist stays active and keeps syncing; no report lists such entries.
 - **Repayment trigger**: the first owner database found to hold one (a `watch list` warning or a one-off report), or the next INV-004 change set.
+- **Status**: open (2026-09-30)
+
+### DE-12 — INV-001 typed provenance is field-level, not symbol-level
+- **Category**: guardrail debt
+- **Description**: the M2 phase-1 typed pool checks WHICH FIELD a cited value belongs to (close vs open), not WHICH SYMBOL. In the TP-019 final-code live run the model put 0700.HK's close (644.63) into the 9988.HK column of a comparison table, then corrected the cell inline; the post-check passed because 644.63 is a real "close" in the ledger. A cross-symbol misattribution without a self-correction would reach the user unflagged.
+- **Repayment trigger**: the M2 phase-2 test plan (ADR-006 Am7) → type pool values by (symbol, field) and check table columns/rows and sentence subjects against the symbol a value was returned for.
 - **Status**: open (2026-09-30)

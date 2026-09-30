@@ -402,3 +402,8 @@ test-plan gate's safety-path attestation).
 - Erratum RM-55: its "Security" line ("loopback HTTP is scoped to 127/8 + localhost +
   ::1 only") described the ADR decision, not the shipped code, which accepted any
   hostname starting with "127." (fixed here; ADR-004 Am4).
+- Addendum (final-code live re-run, same script): 9/9 turns passed the post-check; turn 2
+  refused the direction call with factual context, turn 6 recalled the turn-1 close, and
+  the stored report holds only the report. Turn 5 showed a self-corrected cross-symbol
+  table cell (0700.HK's close placed in the 9988.HK column) that the field-level typed
+  pool cannot see - recorded as DE-12 for the M2 phase-2 plan.
