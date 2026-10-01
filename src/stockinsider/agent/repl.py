@@ -8,8 +8,13 @@ full agent pipeline (streaming, tool loop, guardrail) when the
 provider is configured; otherwise they fail explicitly with
 remediation guidance (INV-003: refuse to pretend success).
 
+The loop talks to the user only through the ReplIO port (ADR-007):
+PlainIO is the line REPL, byte for byte; the terminal UI (agent/tui)
+is a second implementation over the same dispatch. SLASH_COMMANDS is
+the one command table behind /help and the UI's completion.
+
 Implements: REQ-SI-FR-013, REQ-SI-FR-022, REQ-SI-FR-023,
-REQ-SI-INV-003 (ADR-001, ADR-005)
+REQ-SI-FR-026, REQ-SI-INV-003 (ADR-001, ADR-005, ADR-007)
 """
 
 from __future__ import annotations
@@ -18,7 +23,10 @@ import json
 import re
 import sys
 import uuid
+from abc import ABC, abstractmethod
 from collections.abc import Callable
+from dataclasses import dataclass
+from functools import partial
 
 from typing import Any
 
@@ -55,6 +63,153 @@ PROMPT = "stockinsider> "  # non-TTY default; TTY gets the context prompt below
 #: merely start with "confirm" — is a normal conversational turn and
 #: reaches the model (the old prefix match swallowed them).
 _CONFIRM_LINE = re.compile(r"^confirm\s+([a-z]{8})$")
+
+
+class ReplIO(ABC):
+    """The REPL's user-facing I/O port: one dispatch, two front-ends.
+
+    The dispatch loop never writes to the terminal itself (ADR-007).
+    progress and render default to echo; the remaining hooks are
+    no-ops a front-end may override. Model text arrives only through
+    render (final, changed text) and stream (post-check-gated replay).
+
+    Implements: REQ-SI-FR-013, REQ-SI-FR-026 (ADR-007)
+    """
+
+    @abstractmethod
+    def ask(self, prompt: str, *, main: bool) -> str:
+        """Read one line; main=True is the command prompt (EOFError ends the loop).
+
+        Implements: REQ-SI-FR-013, REQ-SI-FR-026 (ADR-007)
+        """
+
+    @abstractmethod
+    def echo(self, line: str) -> None:
+        """Show one line of command output or a notice.
+
+        Implements: REQ-SI-FR-013, REQ-SI-FR-026 (ADR-007)
+        """
+
+    @abstractmethod
+    def stream(self, piece: str) -> None:
+        """Receive one post-check-gated replay delta of a verified answer.
+
+        Implements: REQ-SI-FR-019, REQ-SI-INV-001 (ADR-007)
+        """
+
+    def progress(self, line: str) -> None:
+        """Show one engine progress line (tool lines, footer, pending write).
+
+        Implements: REQ-SI-FR-019, REQ-SI-FR-026 (ADR-007)
+        """
+        self.echo(line)
+
+    def render(self, text: str) -> None:
+        """Show the engine's final text when it differs from the replay.
+
+        Implements: REQ-SI-FR-008, REQ-SI-INV-001 (ADR-007)
+        """
+        self.echo(text)
+
+    def status(self, snapshot: Callable[[], dict[str, Any]]) -> None:
+        """Offer harness counters before the command prompt (lazy; plain ignores).
+
+        Implements: REQ-SI-FR-026 (ADR-007)
+        """
+
+    def turn_started(self) -> None:
+        """A conversational turn begins.
+
+        Implements: REQ-SI-FR-019, REQ-SI-FR-026 (ADR-007)
+        """
+
+    def turn_finished(self, outcome: Any | None) -> None:
+        """A conversational turn ended (None: interrupted or failed).
+
+        Implements: REQ-SI-FR-019, REQ-SI-FR-026 (ADR-007)
+        """
+
+    def phase(self, name: str, detail: str) -> None:
+        """The turn engine entered a phase (model, tool, verifying, revising).
+
+        Implements: REQ-SI-FR-019, REQ-SI-FR-026 (ADR-007)
+        """
+
+    def pending_write(self, token: str, tool: str, arguments: Any) -> None:
+        """The model proposed a write; its one-time token awaits the human.
+
+        Implements: REQ-SI-INV-004, REQ-SI-FR-026 (ADR-005 Am3, ADR-007)
+        """
+
+
+class PlainIO(ReplIO):
+    """The line REPL behind the port: input(), print(), raw stdout replay.
+
+    Reproduces the pre-port behavior byte for byte (ADR-007; golden
+    transcript test).
+
+    Implements: REQ-SI-FR-013 (ADR-001, ADR-007)
+    """
+
+    def __init__(
+        self,
+        input_fn: Callable[[str], str] = input,
+        echo: Callable[[str], None] = print,
+    ) -> None:
+        """Bind the line reader and writer (tests inject both)."""
+        self._input_fn = input_fn
+        self._echo = echo
+
+    def ask(self, prompt: str, *, main: bool) -> str:
+        """Read one line with the given prompt.
+
+        Implements: REQ-SI-FR-013 (ADR-007)
+        """
+        return self._input_fn(prompt)
+
+    def echo(self, line: str) -> None:
+        """Write one line.
+
+        Implements: REQ-SI-FR-013 (ADR-007)
+        """
+        self._echo(line)
+
+    def stream(self, piece: str) -> None:
+        """Write a replay delta straight to stdout, as the REPL always did.
+
+        Implements: REQ-SI-FR-019 (ADR-007)
+        """
+        sys.stdout.write(piece)
+        sys.stdout.flush()
+
+
+@dataclass(frozen=True)
+class SlashCommand:
+    """One slash command: the single source for /help and UI completion.
+
+    Implements: REQ-SI-FR-013, REQ-SI-FR-026 (ADR-007)
+    """
+
+    name: str
+    usage: str
+    group: str
+    in_help: bool = True
+
+
+#: Every dispatched slash command, in /help order (ADR-007: completion
+#: reads this table too, so the UI can never grow a verb of its own).
+#: Unimplemented commands (_NOT_IMPLEMENTED) stay out of it.
+SLASH_COMMANDS: tuple[SlashCommand, ...] = (
+    SlashCommand("sessions", "/sessions [symbol] [page]", "session"),
+    SlashCommand("show", "/show [id]", "session"),
+    SlashCommand("resume", "/resume [id]", "session"),
+    SlashCommand("report", "/report <canonical-symbol>", "analysis"),
+    SlashCommand("watch", "/watch [list|add|remove ...]", "data"),
+    SlashCommand("sync", "/sync [run|status]", "data"),
+    SlashCommand("tools", "/tools [name [k=v ...]]", "tools"),
+    SlashCommand("help", "/help", "", in_help=False),
+    SlashCommand("exit", "/exit", ""),
+)
 
 
 def _context_prompt(data_store: Any) -> str:
@@ -100,22 +255,18 @@ def chrome(text: str) -> str:
     return text.translate(_ASCII)
 
 
-_COMMAND_GROUPS: tuple[tuple[str, tuple[str, ...]], ...] = (
-    ("session", ("/sessions [symbol] [page]", "/show [id]", "/resume [id]")),
-    ("data", ("/watch [list|add|remove ...]", "/sync [run|status]")),
-    ("tools", ("/tools [name [k=v ...]]",)),
-    ("", ("/exit",)),
-)
-
-
 def _cmd_help(echo: Callable[[str], None]) -> None:
-    """Grouped command listing; unimplemented commands stay hidden.
+    """Grouped command listing from SLASH_COMMANDS; unimplemented commands stay hidden.
 
-    Implements: REQ-SI-FR-013 (TP-015 P0-3)
+    Implements: REQ-SI-FR-013 (TP-015 P0-3; ADR-007)
     """
-    for group, commands in _COMMAND_GROUPS:
+    groups: dict[str, list[str]] = {}
+    for command in SLASH_COMMANDS:
+        if command.in_help:
+            groups.setdefault(command.group, []).append(command.usage)
+    for group, usages in groups.items():
         prefix = f"{group:8} " if group else " " * 9
-        echo(chrome(prefix + "  ".join(commands)))
+        echo(chrome(prefix + "  ".join(usages)))
 
 
 PAGE_SIZE = 10
@@ -396,6 +547,7 @@ def repl(
     data_store: Any = None,
     input_fn: Callable[[str], str] = input,
     echo: Callable[[str], None] = print,
+    io: ReplIO | None = None,
 ) -> None:
     """Start a NEW session and run the interactive loop (legacy entry).
 
@@ -408,6 +560,7 @@ def repl(
         data_store=data_store,
         input_fn=input_fn,
         echo=echo,
+        io=io,
     )
 
 
@@ -419,15 +572,18 @@ def start_new_session(
     data_store: Any = None,
     input_fn: Callable[[str], str] = input,
     echo: Callable[[str], None] = print,
+    io: ReplIO | None = None,
 ) -> None:
     """Create a session, stamp provenance, and run the interactive loop.
 
     The provider configuration is resolved once at session start and
     stamped into the session record (GOV-005); mid-session config
-    changes do not affect an open session.
+    changes do not affect an open session. Without an explicit io the
+    plain front-end runs over input_fn/echo (ADR-007).
 
-    Implements: REQ-SI-FR-013, REQ-SI-GOV-005 (ADR-001)
+    Implements: REQ-SI-FR-013, REQ-SI-GOV-005, REQ-SI-FR-026 (ADR-001, ADR-007)
     """
+    out = io if io is not None else PlainIO(input_fn, echo)
     config = resolve_config(data_root)
     apply_budget_overrides(config.budgets)
     prompt_version, _identity = load_identity_prompt()
@@ -437,13 +593,13 @@ def start_new_session(
         "prompt_version": prompt_version,
     }
     record = store.create(profile=profile, provenance=stamp)
-    echo(
+    out.echo(
         f"session {record['session_id']} opened (profile: {record['profile']}); type /help for commands, /exit to leave"
     )
-    record = _session_loop(store, record, data_root=data_root, data_store=data_store, input_fn=input_fn, echo=echo)
+    record = _session_loop(store, record, data_root=data_root, data_store=data_store, io=out)
     store.close(record["session_id"])
-    echo(f"session {record['session_id']} closed")
-    echo(f"resume with: stockinsider resume {record['session_id']}")
+    out.echo(f"session {record['session_id']} closed")
+    out.echo(f"resume with: stockinsider resume {record['session_id']}")
 
 
 def _most_recent(store: SessionStore, *, closed_only: bool) -> dict:
@@ -465,6 +621,7 @@ def resume_session(
     data_store: Any = None,
     input_fn: Callable[[str], str] = input,
     echo: Callable[[str], None] = print,
+    io: ReplIO | None = None,
 ) -> None:
     """Resume a closed session (default: the most recent) and continue the loop.
 
@@ -473,19 +630,78 @@ def resume_session(
     TP-018): resume() refuses them — the abort verdict survives
     process restarts. The profile lock is validated on resume.
 
-    Implements: REQ-SI-FR-023 (ADR-001)
+    Implements: REQ-SI-FR-023, REQ-SI-FR-026 (ADR-001, ADR-007)
     """
+    out = io if io is not None else PlainIO(input_fn, echo)
     target = session_id or _most_recent(store, closed_only=True)["session_id"]
     record = store.resume(target, profile=profile)
     restored = len(store.read_events(record["session_id"]))
-    echo(
+    out.echo(
         f"session {record['session_id']} resumed (profile: {record['profile']}; "
         f"{restored} events restored); type /help for commands, /exit to leave"
     )
-    record = _session_loop(store, record, data_root=data_root, data_store=data_store, input_fn=input_fn, echo=echo)
+    record = _session_loop(store, record, data_root=data_root, data_store=data_store, io=out)
     store.close(record["session_id"])
-    echo(f"session {record['session_id']} closed")
-    echo(f"resume with: stockinsider resume {record['session_id']}")
+    out.echo(f"session {record['session_id']} closed")
+    out.echo(f"resume with: stockinsider resume {record['session_id']}")
+
+
+def _close_after_failure(store: SessionStore, record: dict) -> None:
+    """Close the bound session when the loop dies; the original error still propagates.
+
+    A crashed front-end used to leave the session "active" (ADR-007
+    §1.9). A failing close must not mask the error that ended the loop.
+    """
+    try:
+        store.close(record["session_id"])
+    except Exception:  # noqa: BLE001 - the exception being propagated is the one to report
+        pass
+
+
+def _status_snapshot(store: SessionStore, record: dict, data_store: Any) -> dict[str, Any]:
+    """Harness counters for a front-end status line (ADR-007 §1.6c).
+
+    Session id, profile, model, token usage against the profile
+    envelope, the last post-check verdict, watchlist size and the call
+    budget. Never market data. A counter that cannot be read stays None
+    (shown as unknown, never as a default value - INV-003).
+    """
+    snapshot: dict[str, Any] = {
+        "session_id": record.get("session_id"),
+        "profile": record.get("profile"),
+        "model": (record.get("provenance") or {}).get("model_id"),
+        "budget_tokens": None,
+        "session_tokens": None,
+        "last_verdict": None,
+        "watchlist": None,
+        "calls_remaining": None,
+    }
+    try:
+        snapshot["budget_tokens"] = envelope_for(record["profile"]).max_session_tokens
+    except (KeyError, ValueError):
+        pass
+    try:
+        used = 0
+        verdict = "none"
+        for event in store.read_events(record["session_id"]):
+            if event.get("event") == "assistant-message":
+                usage = event.get("usage") or {}
+                used += int(usage.get("prompt_tokens", 0)) + int(usage.get("completion_tokens", 0))
+                verdict = "pass" if event.get("post_check") == "ok" else "failed"
+        snapshot["session_tokens"] = used
+        snapshot["last_verdict"] = verdict
+    except (SessionError, OSError, ValueError, TypeError):
+        pass
+    if data_store is not None:
+        try:
+            snapshot["watchlist"] = len(data_store.watchlist.list())
+        except Exception:  # noqa: BLE001 - a status line must never crash the loop
+            pass
+        try:
+            snapshot["calls_remaining"] = data_store.sync_status()["budget"]["remaining"]
+        except Exception:  # noqa: BLE001 - a status line must never crash the loop
+            pass
+    return snapshot
 
 
 def _session_loop(
@@ -496,22 +712,49 @@ def _session_loop(
     data_store: Any = None,
     input_fn: Callable[[str], str] = input,
     echo: Callable[[str], None] = print,
+    io: ReplIO | None = None,
 ) -> dict:
     """Run the interactive loop; returns the FINAL bound record.
 
     /resume may switch the binding mid-loop; the returned record is
-    the session the entry must close.
+    the session the entry must close. If the loop dies on an exception,
+    the session bound at that moment is closed before the exception
+    propagates (ADR-007 §1.9).
 
-    Implements: REQ-SI-FR-013, REQ-SI-FR-023 (ADR-001)
+    Implements: REQ-SI-FR-013, REQ-SI-FR-023, REQ-SI-FR-026 (ADR-001, ADR-007)
     """
+    out = io if io is not None else PlainIO(input_fn, echo)
+    binding = [record]  # the session bound right now; /resume rebinds it
+    try:
+        return _dispatch_loop(store, binding, data_root=data_root, data_store=data_store, out=out)
+    except BaseException:
+        _close_after_failure(store, binding[0])
+        raise
+
+
+def _dispatch_loop(
+    store: SessionStore,
+    binding: list[dict],
+    *,
+    data_root: "str | None",
+    data_store: Any,
+    out: ReplIO,
+) -> dict:
+    """The slash-command and conversational dispatch behind _session_loop."""
+    record = binding[0]
     config = resolve_config(data_root)
     apply_budget_overrides(config.budgets)
     embed_provider = _build_embed_provider(config)
     registry = build_registry(store, data_store, embed_provider)
     engine = _build_engine(store, registry, config)
+
+    def _ask_sub(prompt: str) -> str:
+        return out.ask(prompt, main=False)
+
     while True:
+        out.status(partial(_status_snapshot, store, record, data_store))
         try:
-            line = input_fn(_context_prompt(data_store)).strip()
+            line = out.ask(_context_prompt(data_store), main=True).strip()
         except EOFError:
             break
         if not line:
@@ -527,7 +770,7 @@ def _session_loop(
             token = confirm_match.group(1)
             pending = engine.confirmations.consume(token)
             if pending is None:
-                echo("unknown or already-used token; nothing executed (INV-004)")
+                out.echo("unknown or already-used token; nothing executed (INV-004)")
                 continue
             confirmed_result = engine.registry.execute(
                 ToolCall(
@@ -573,51 +816,51 @@ def _session_loop(
                 },
             )
             if confirmed_result.ok:
-                echo(f"confirmed: {bound} executed (single-use token consumed)")
+                out.echo(f"confirmed: {bound} executed (single-use token consumed)")
             else:
-                echo(f"confirmed but failed: {bound} -> {confirmed_result.error}")
+                out.echo(f"confirmed but failed: {bound} -> {confirmed_result.error}")
             continue
         if line.startswith("/"):
             parts = line[1:].split()
             if not parts:  # H5: bare "/" never crashes the loop
-                echo("unknown command: '/' (type /help for the command list)")
+                out.echo("unknown command: '/' (type /help for the command list)")
                 continue
             name, *args = parts
             if name == "help":
-                _cmd_help(echo)
+                _cmd_help(out.echo)
             elif name == "sessions":
-                _cmd_sessions(store, args, echo)
+                _cmd_sessions(store, args, out.echo)
             elif name == "tools":
-                _cmd_tools(registry, args, echo)
+                _cmd_tools(registry, args, out.echo)
             elif name == "show":
                 target = args[0] if args else record["session_id"]
                 try:
-                    render_session(store, target, echo)
+                    render_session(store, target, out.echo)
                 except SessionError as exc:
-                    echo(f"error: {exc}")
+                    out.echo(f"error: {exc}")
             elif name == "report":
                 if not args:
-                    echo("usage: /report <canonical-symbol>")
+                    out.echo("usage: /report <canonical-symbol>")
                     continue
                 if engine is None:
-                    echo(
+                    out.echo(
                         "report requires a configured provider "
                         f"(set {API_KEY_ENV} and the chat base_url); nothing generated"
                     )
                     continue
                 try:
-                    _run_report_turn(engine, store, record, args[0], echo)
+                    _run_report_turn(engine, store, record, args[0], out.echo, io=out)
                 except SessionError as exc:
-                    echo(f"error: {exc}")
+                    out.echo(f"error: {exc}")
             elif name == "watch":
                 _cmd_watch(
                     registry,
                     args,
-                    input_fn=input_fn,
-                    echo=echo,
+                    input_fn=_ask_sub,
+                    echo=out.echo,
                 )
             elif name == "sync":
-                _cmd_sync(registry, args, echo)
+                _cmd_sync(registry, args, out.echo)
             elif name == "resume":
                 try:
                     if args:
@@ -628,22 +871,22 @@ def _session_loop(
                             _most_recent(store, closed_only=True)  # raises the canonical error
                             continue
                         closed.reverse()  # most recent first (index order is oldest-first)
-                        echo("closed sessions (most recent first):")
+                        out.echo("closed sessions (most recent first):")
                         for i, row in enumerate(closed, start=1):
                             symbols = ",".join(row["subject_symbols"]) or "-"
-                            echo(f"  {i}) {row['session_id']}  {row['created']}  {row['profile']}  {symbols}")
-                        choice = input_fn(f"select 1-{len(closed)} (enter=1, q=cancel): ").strip()
+                            out.echo(f"  {i}) {row['session_id']}  {row['created']}  {row['profile']}  {symbols}")
+                        choice = _ask_sub(f"select 1-{len(closed)} (enter=1, q=cancel): ").strip()
                         if choice.lower() == "q":
-                            echo("resume cancelled")
+                            out.echo("resume cancelled")
                             continue
                         if choice == "":
                             choice = "1"
                         if not choice.isdigit() or not 1 <= int(choice) <= len(closed):
-                            echo(f"error: invalid selection {choice!r}; resume cancelled")
+                            out.echo(f"error: invalid selection {choice!r}; resume cancelled")
                             continue
                         resolved = closed[int(choice) - 1]["session_id"]
                     if resolved == record["session_id"]:
-                        echo("error: already in this session; /resume switches to a different closed session")
+                        out.echo("error: already in this session; /resume switches to a different closed session")
                         continue
                     # Fourth-audit fix (TP-018b): peek at the target BEFORE
                     # closing the current session. Resuming an aborted
@@ -653,38 +896,39 @@ def _session_loop(
                         (row for row in store.list_sessions() if row["session_id"] == resolved), None
                     )
                     if target_row is not None and target_row.get("status") == "aborted":
-                        echo(
+                        out.echo(
                             f"error: session {resolved} was aborted by the guardrail; "
                             "aborted sessions are terminal — start a new session (INV-003)"
                         )
                         continue
                     store.close(record["session_id"])
-                    echo(f"session {record['session_id']} closed (switching)")
+                    out.echo(f"session {record['session_id']} closed (switching)")
                     record = store.resume(resolved)
+                    binding[0] = record
                     engine = _build_engine(store, registry, config)
-                    echo(
+                    out.echo(
                         f"session {record['session_id']} resumed "
                         f"(profile: {record['profile']}; aborted sessions are refused)"
                     )
                 except SessionError as exc:
-                    echo(f"error: {exc}")
+                    out.echo(f"error: {exc}")
             elif name in _NOT_IMPLEMENTED:
-                _explicit_not_implemented(name, _NOT_IMPLEMENTED[name], echo)
+                _explicit_not_implemented(name, _NOT_IMPLEMENTED[name], out.echo)
             else:
-                echo(f"error: unknown command /{name}; /help lists available commands")
+                out.echo(f"error: unknown command /{name}; /help lists available commands")
         else:
             if engine is None:
-                echo(
+                out.echo(
                     "error: provider unconfigured — run `stockinsider config set "
                     "--chat-base-url ...` and `--api-key` (or set PROVIDER_BASE_URL / "
                     f"{API_KEY_ENV}); slash commands remain available"
                 )
             else:
-                outcome = _run_conversational_turn(engine, record, line, echo)
+                outcome = _run_conversational_turn(engine, record, line, out)
                 if outcome is not None and getattr(outcome, "aborted", None):
                     # H4: the abort threshold is sticky — leave the loop
                     # instead of accepting further turns on an aborted session.
-                    echo("closing the session (abort threshold reached)")
+                    out.echo("closing the session (abort threshold reached)")
                     break
     return record
 
@@ -721,16 +965,20 @@ def _run_report_turn(
     record: dict,
     symbol: str,
     echo: Callable[[str], None],
+    *,
+    io: ReplIO | None = None,
 ) -> "Any | None":
     """Compose and run the analysis-report turn; persist on pass (FR-008).
 
     The report instruction gathers deterministic facts first; the
     engine's post-check runs as always. A passing response is stored
     as a never-overwritten artifact with the session's provenance
-    stamp; a failing response degrades and NOTHING is stored.
+    stamp; a failing response degrades and NOTHING is stored. Without
+    an explicit io the plain front-end writes through echo (ADR-007).
 
-    Implements: REQ-SI-FR-008, REQ-SI-INV-001 (ADR-001)
+    Implements: REQ-SI-FR-008, REQ-SI-INV-001 (ADR-001, ADR-007)
     """
+    out = io if io is not None else PlainIO(echo=echo)
     instruction = (
         f"Produce an analysis report for {symbol}. Gather the deterministic facts "
         "first via tools: market.quote, market.indicators, and fundamentals.summary "
@@ -740,22 +988,22 @@ def _run_report_turn(
         "do not acknowledge earlier turns or harness notes in it (TP-019 - the "
         "stored artifact is the report)."
     )
-    outcome = _run_conversational_turn(engine, record, instruction, echo)
+    outcome = _run_conversational_turn(engine, record, instruction, out)
     if outcome is None:
         return None
     if getattr(outcome, "quarantined", False) or getattr(outcome, "aborted", None):
-        echo("report not stored: the response failed the post-check (FR-008)")
+        out.echo("report not stored: the response failed the post-check (FR-008)")
         return outcome
     if getattr(outcome, "refused", False):
         # TP-019: an INV-002 refusal summary is not a report
-        echo("report not stored: the response was refused by the epistemic filter (INV-002)")
+        out.echo("report not stored: the response was refused by the epistemic filter (INV-002)")
         return outcome
     # TP-019: the artifact is the report body - conversational prelude
     # emitted before the tool calls ("Understood, the watchlist...")
     # stays in the session log, not in the stored report
     displayed = getattr(outcome, "body", "") or getattr(outcome, "displayed", "")
     if not displayed.strip():
-        echo("report not stored: empty response")
+        out.echo("report not stored: empty response")
         return outcome
     safe_symbol = symbol.replace(".", "_").replace(":", "_")
     artifacts = store._require(record["session_id"]) / "artifacts"  # noqa: SLF001
@@ -773,43 +1021,52 @@ def _run_report_turn(
         f"report-{safe_symbol}-{existing + 1:03d}.md",
         header + displayed + "\n",
     )
-    echo(f"report stored: {path.name}")
+    out.echo(f"report stored: {path.name}")
     return outcome
 
 
-def _run_conversational_turn(engine: TurnEngine, record: dict, line: str, echo: Callable[[str], None]) -> "Any | None":
+def _run_conversational_turn(engine: TurnEngine, record: dict, line: str, out: ReplIO) -> "Any | None":
     """Run one free-text turn with streaming render and explicit failures.
 
-    Returns the engine's TurnOutcome (or None when interrupted).
+    Returns the engine's TurnOutcome (or None when interrupted). The
+    front-end hears turn start and finish on every path, so an activity
+    indicator can never outlive its turn (ADR-007).
 
-    Implements: REQ-SI-FR-008, REQ-SI-FR-019 (ADR-001)
+    Implements: REQ-SI-FR-008, REQ-SI-FR-019, REQ-SI-FR-026 (ADR-001, ADR-007)
     """
-
-    def _sink(piece: str) -> None:
-        sys.stdout.write(piece)
-        sys.stdout.flush()
-
+    out.turn_started()
     try:
-        return engine.run_turn(
+        outcome = engine.run_turn(
             record["session_id"],
             line,
             profile=record["profile"],
-            render=echo,
-            progress=echo,
-            stream_sink=_sink,
+            render=out.render,
+            progress=out.progress,
+            stream_sink=out.stream,
+            on_phase=out.phase,
+            on_pending_write=out.pending_write,
         )
     except KeyboardInterrupt:
-        echo("\nturn interrupted")
+        out.turn_finished(None)
+        out.echo("\nturn interrupted")
         return None
     except ProviderError as exc:
-        echo(f"error: {exc}")
+        out.turn_finished(None)
+        out.echo(f"error: {exc}")
+        return None
     except RuntimeError as exc:
         # Defense in depth (ADR-004 Am2, TP-018): an egress policy
         # rejection (or any guard-adjacent RuntimeError) degrades to an
         # explicit error line — a policy rejection must never crash the
         # REPL into a stuck "active" session.
-        echo(f"error: {type(exc).__name__}: {exc}")
-    return None
+        out.turn_finished(None)
+        out.echo(f"error: {type(exc).__name__}: {exc}")
+        return None
+    except BaseException:
+        out.turn_finished(None)
+        raise
+    out.turn_finished(outcome)
+    return outcome
 
 
 def render_session(store: SessionStore, session_id: str, echo: Callable[[str], None]) -> None:

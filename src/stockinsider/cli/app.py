@@ -4,11 +4,14 @@ Six subcommands remain explicit-failure stubs (English error naming
 the target requirement, non-zero exit — INV-003 semantics); `sessions`
 lists from the sessions index (FR-012), `analyze` and bare invocation
 enter the REPL (FR-013), and `config` shows/updates the layered
-provider configuration (FR-021, SEC-001).
+provider configuration (FR-021, SEC-001). `--ui tui` selects the opt-in
+terminal UI for the interactive entries (FR-026, ADR-007); plain stays
+the default.
 
-Implements: REQ-SI-FR-013, REQ-SI-INV-003 (ADR-001)
+Implements: REQ-SI-FR-013, REQ-SI-FR-026, REQ-SI-INV-003 (ADR-001, ADR-007)
 """
 
+from enum import Enum
 from typing import NoReturn, Optional
 
 import typer
@@ -58,6 +61,55 @@ app = typer.Typer(
 )
 
 _STUB_NOTE = "error: '{command}' is not implemented yet (target: {req}); refusing to pretend success (INV-003)."
+
+
+class UIMode(str, Enum):
+    """Interactive front-end: the plain REPL (default) or the terminal UI.
+
+    Implements: REQ-SI-FR-026 (ADR-007)
+    """
+
+    plain = "plain"
+    tui = "tui"
+
+
+_UI_ENV = "STOCKINSIDER_UI"
+_UI_HELP = "Interactive front-end: plain (default) or tui (inline terminal UI; needs an interactive terminal)."
+
+
+def _ui_for(ctx: typer.Context, ui: Optional[UIMode]) -> UIMode:
+    """A subcommand's own --ui wins; otherwise the root option's value applies."""
+    if ui is not None:
+        return ui
+    inherited = (ctx.obj or {}).get("ui") if isinstance(ctx.obj, dict) else None
+    return inherited if isinstance(inherited, UIMode) else UIMode.plain
+
+
+def _interactive(ui: UIMode, *, resume: bool = False, session_id: Optional[str] = None) -> None:
+    """Run the REPL under the selected front-end (ADR-007).
+
+    The terminal UI checks its terminal, console and dependency before
+    any session opens. An unusable terminal falls back to the plain
+    REPL with an explicit notice; a missing dependency is an explicit
+    error (INV-003).
+    """
+    store = SessionStore()
+    data_store = open_data_store()
+    if ui is UIMode.tui:
+        from stockinsider.agent.tui import TuiDependencyMissing, TuiUnavailable, run_tui
+
+        try:
+            run_tui(store, data_store=data_store, resume=resume, session_id=session_id)
+            return
+        except TuiDependencyMissing as exc:
+            typer.secho(render_error(str(exc)), fg=typer.colors.RED, err=True)
+            raise typer.Exit(code=2) from exc
+        except TuiUnavailable as exc:
+            typer.echo(f"note: terminal UI unavailable ({exc}); using the plain REPL", err=True)
+    if resume:
+        resume_session(store, session_id, data_store=data_store)
+    else:
+        repl(store, data_store=data_store)
 
 
 def _stub(command: str, req: str) -> NoReturn:
@@ -258,24 +310,29 @@ def info(symbol: str = typer.Argument(..., help="Canonical symbol, e.g. 0700.HK"
 
 
 @app.command()
-def analyze() -> None:
+def analyze(
+    ctx: typer.Context,
+    ui: Optional[UIMode] = typer.Option(None, "--ui", envvar=_UI_ENV, case_sensitive=False, help=_UI_HELP),
+) -> None:
     """Enter an interactive analysis REPL session (interactive only).
 
-    Implements: REQ-SI-FR-013
+    Implements: REQ-SI-FR-013, REQ-SI-FR-026
     """
-    repl(SessionStore(), data_store=open_data_store())
+    _interactive(_ui_for(ctx, ui))
 
 
 @app.command()
 def resume(
+    ctx: typer.Context,
     session_id: str = typer.Argument(None, help="Session to resume (default: the most recent closed)."),
+    ui: Optional[UIMode] = typer.Option(None, "--ui", envvar=_UI_ENV, case_sensitive=False, help=_UI_HELP),
 ) -> None:
     """Resume a closed session and continue the conversation.
 
-    Implements: REQ-SI-FR-023
+    Implements: REQ-SI-FR-023, REQ-SI-FR-026
     """
     try:
-        resume_session(SessionStore(), session_id, data_store=open_data_store())
+        _interactive(_ui_for(ctx, ui), resume=True, session_id=session_id)
     except SessionError as exc:
         typer.secho(render_error(str(exc)), fg=typer.colors.RED, err=True)
         raise typer.Exit(code=2) from None
@@ -450,11 +507,13 @@ def _root(
         callback=_print_version,
         is_eager=True,
     ),
+    ui: UIMode = typer.Option(UIMode.plain, "--ui", envvar=_UI_ENV, case_sensitive=False, help=_UI_HELP),
 ) -> None:
     """Local CLI financial analyst for HK + US equities."""
     init_output()
+    ctx.obj = {"ui": ui}
     if ctx.invoked_subcommand is None:
-        repl(SessionStore(), data_store=open_data_store())
+        _interactive(ui)
 
 
 def main() -> None:
