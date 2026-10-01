@@ -164,6 +164,156 @@ def _normalize_dates(text: str) -> str:
     return _ISO_DATE.sub(r"\1\2\3", text)
 
 
+#: TP-020 (ADR-006 Am9, BD-026): partial dates. A live BYD turn was
+#: quarantined as "data unavailable for: 2025": the model wrote the
+#: volatility window's start at month precision ("since September
+#: 2025"), and the evidence carries dates only as full dates
+#: (20250925), never as a bare 2025. A month-year or a bare year
+#: written as a time reference is now checked at the precision it is
+#: written: it passes when a date in the evidence falls in that month
+#: or year, and only then leaves the numeric check. A reference the
+#: evidence does not support stays in the text and fails there exactly
+#: as before. Full dates fold first, so "26 September 2025" keeps its
+#: day precision.
+_YEAR = r"(?:19|20)\d{2}"
+_MONTH_YEAR = re.compile(rf"\b({_MONTH_ALT})\.?,?\s+({_YEAR})(?!\d|[.,]\d)", re.IGNORECASE)
+_ISO_YEAR_MONTH = re.compile(rf"(?<![\w.,-])({_YEAR})-(0[1-9]|1[0-2])(?![\w%-]|[.,]\d)")
+_COMPACT_STAMP = re.compile(r"(?<!\d)(\d{4})(\d{2})(\d{2})T\d{2}")
+
+#: A bare four-digit number is a year only inside a temporal frame: a
+#: cue right before it ("in", "since", "late", "mid-", "end of", "Q4"),
+#: a cue right after it ("'s", "peak", "high", "results", "Q4"), or a
+#: range link to a framed year or a month-year ("late 2025 to 2026").
+#: Value frames never qualify - "closed at 2026", "2026 shares",
+#: "HKD2026", "2026%", the ticker code "2020.HK", a bare table cell -
+#: and a value word after any member of a range cancels the range.
+#: Fail-closed: a frame not listed here leaves the number a numeric
+#: claim, since pool membership alone would let any fabricated value
+#: equal to an evidence year pass (the BD-020 class).
+_BARE_YEAR = re.compile(rf"(?<![\w$.,£¥€])({_YEAR})(?![\w%]|[.,]\d|\.[A-Za-z])")
+_YEAR_CUE_BEFORE = re.compile(
+    r"\b(?:in|since|during|throughout|until|till|before|after|early|mid|late|"
+    r"(?:end|start|beginning|middle|rest|half)\s+of|as\s+of|the\s+year|year-end|"
+    r"fiscal|calendar|full[- ]year|FY|Q[1-4]|H[12]|spring|summer|autumn|winter)"
+    r"(?:\s+|\s*-\s*)\Z",
+    re.IGNORECASE,
+)
+_YEAR_CUE_AFTER = re.compile(
+    r"['’]s\b|(?:\s+|\s*-\s*)(?:Q[1-4]|H[12]|peaks?|troughs?|highs?|lows?|levels?|"
+    r"window|period|results|report|annual|interim|earnings|guidance|year-end|full[- ]year)\b",
+    re.IGNORECASE,
+)
+_YEAR_VALUE_AFTER = re.compile(
+    r"\s*(?:%|percent\b|pct\b|bps?\b|x\b|times\b|k\b|mn\b|bn\b|thousand\b|million\b|"
+    r"billion\b|trillion\b|shares\b|units\b|points?\b|pts\b|dollars?\b|yuan\b|"
+    r"HKD\b|USD\b|RMB\b|CNY\b|CNH\b|EUR\b|GBP\b|JPY\b)",
+    re.IGNORECASE,
+)
+_RANGE_LINK = re.compile(r"\s*(?:-|–|—|/|&|to|through|thru|and)\s*", re.IGNORECASE)
+
+
+def _dates_in(text: str) -> list[tuple[str, int]]:
+    """(year, month) of every date-shaped run in an evidence string.
+
+    Implements: REQ-SI-INV-001 (ADR-006 Am9; TP-020)
+    """
+    found: list[tuple[str, int]] = []
+    for pattern in (_ISO_DATE, _COMPACT_STAMP):
+        for match in pattern.finditer(text):
+            if 1 <= int(match.group(2)) <= 12 and 1 <= int(match.group(3)) <= 31:
+                found.append((match.group(1), int(match.group(2))))
+    for match in _MONTH_DAY_YEAR.finditer(text):
+        month = _MONTHS[match.group(1).lower()]
+        if _compact_date(match.group(3), month, match.group(2)) is not None:
+            found.append((match.group(3), month))
+    for match in _DAY_MONTH_YEAR.finditer(text):
+        month = _MONTHS[match.group(2).lower()]
+        if _compact_date(match.group(3), month, match.group(1)) is not None:
+            found.append((match.group(3), month))
+    found.extend((match.group(2), _MONTHS[match.group(1).lower()]) for match in _MONTH_YEAR.finditer(text))
+    found.extend((match.group(1), int(match.group(2))) for match in _ISO_YEAR_MONTH.finditer(text))
+    return found
+
+
+def _evidence_calendar(snapshot_values: object) -> set[str]:
+    """Calendar keys (YYYY and YYYYMM) of every date the evidence carries.
+
+    Only date-shaped strings count, never a bare number: a volume of
+    202509 makes no month citable.
+
+    Implements: REQ-SI-INV-001 (ADR-006 Am9; TP-020)
+    """
+    keys: set[str] = set()
+
+    def _sink(value: object) -> None:
+        if isinstance(value, str):
+            for year, month in _dates_in(value):
+                keys.update((year, f"{year}{month:02d}"))
+
+    _walk(snapshot_values, _sink)
+    return keys
+
+
+def _calendar_references(text: str) -> list[tuple[int, int, str]]:
+    """Partial-date references in a response: (start, end, calendar key).
+
+    Month-years key as YYYYMM, framed bare years as YYYY. Runs on text
+    whose full dates are already folded (_normalize_dates).
+
+    Implements: REQ-SI-INV-001 (ADR-006 Am9; TP-020)
+    """
+    months = [
+        (match.start(), match.end(), f"{match.group(2)}{_MONTHS[match.group(1).lower()]:02d}")
+        for match in _MONTH_YEAR.finditer(text)
+    ]
+    months.extend(
+        (match.start(), match.end(), match.group(1) + match.group(2)) for match in _ISO_YEAR_MONTH.finditer(text)
+    )
+    # (start, end, key, frame): True framed, False unframed, None value frame
+    items: list[tuple[int, int, str, bool | None]] = [(start, end, key, True) for start, end, key in months]
+    for match in _BARE_YEAR.finditer(text):
+        if any(start <= match.start() < end for start, end, _key in months):
+            continue  # the year of a month-year is checked at month precision
+        frame: bool | None = None
+        if not _YEAR_VALUE_AFTER.match(text, match.end()):
+            frame = bool(
+                _YEAR_CUE_BEFORE.search(text, max(0, match.start() - 32), match.start())
+                or _YEAR_CUE_AFTER.match(text, match.end())
+            )
+        items.append((match.start(), match.end(), match.group(1), frame))
+    groups: list[list[tuple[int, int, str, bool | None]]] = []
+    for item in sorted(items):
+        if groups and _RANGE_LINK.fullmatch(text, groups[-1][-1][1], item[0]):
+            groups[-1].append(item)
+        else:
+            groups.append([item])
+    refs = list(months)
+    for group in groups:
+        frames = [frame for _start, _end, _key, frame in group]
+        if None not in frames and any(frames):
+            # month-year members are already in refs; add the bare years
+            refs.extend((start, end, key) for start, end, key, _frame in group if len(key) == 4)
+    return refs
+
+
+def _strip_verified_calendar(text: str, evidence: set[str]) -> tuple[str, list[str]]:
+    """Blank the partial-date references the evidence calendar supports.
+
+    A verified reference leaves the numeric check and is listed for
+    audit; an unsupported one stays in the text and is checked - and
+    fails - like any other numeric. Blanking keeps offsets stable.
+
+    Implements: REQ-SI-INV-001 (ADR-006 Am9; TP-020)
+    """
+    verified = sorted((start, end) for start, end, key in _calendar_references(text) if key in evidence)
+    if not verified:
+        return text, []
+    chars = list(text)
+    for start, end in verified:
+        chars[start:end] = " " * (end - start)
+    return "".join(chars), [text[start:end] for start, end in verified]
+
+
 #: M2 phase 1 (TP-018, ADR-006 Am6): typed numeric provenance for the
 #: OHLCV field class. A pool hit used to pass regardless of WHICH
 #: field the sentence claimed - quoting the open as the close passed
@@ -419,6 +569,8 @@ class NumberCheck:
     rounded: list[str] = field(default_factory=list)
     structural: list[str] = field(default_factory=list)
     field_mismatch: list[str] = field(default_factory=list)
+    #: partial dates verified against the evidence calendar (TP-020)
+    calendar: list[str] = field(default_factory=list)
 
 
 def postcheck_numbers(candidate: str, snapshot_values: object) -> NumberCheck:
@@ -427,8 +579,11 @@ def postcheck_numbers(candidate: str, snapshot_values: object) -> NumberCheck:
     Exact match after normalization; a token that is a standard display
     rounding (2-4 decimals) of a pool value also matches, tracked as
     `rounded` for audit. Integer-scale deviations still fail (BD-012).
+    Month-years and framed bare years the evidence calendar supports
+    are verified at their written precision first, tracked as
+    `calendar` (TP-020).
 
-    Implements: REQ-SI-INV-001 (ADR-006, BD-012 amendment)
+    Implements: REQ-SI-INV-001 (ADR-006, BD-012 amendment; ADR-006 Am9)
     """
     pool = _values_pool(snapshot_values)
     floats = _pool_floats(snapshot_values)
@@ -440,14 +595,15 @@ def postcheck_numbers(candidate: str, snapshot_values: object) -> NumberCheck:
     structural_hits: list[str] = []
     mismatches: list[str] = []
     stripped = _normalize_dates(_strip_enumeration(candidate))
-    for token in extract_numbers(stripped):
+    checked, calendar = _strip_verified_calendar(stripped, _evidence_calendar(snapshot_values))
+    for token in extract_numbers(checked):
         canon = _canon_token(token)
         if canon in structural:
             structural_hits.append(token)
             continue
         if canon in pool:
             stored_fields = typed.get(canon)
-            if stored_fields and _field_mismatch(stripped, token, stored_fields):
+            if stored_fields and _field_mismatch(checked, token, stored_fields):
                 # M2 phase 1: numerically present, semantically wrong
                 # (open quoted as close) - quarantined like any fabrication.
                 mismatches.append(token)
@@ -471,6 +627,7 @@ def postcheck_numbers(candidate: str, snapshot_values: object) -> NumberCheck:
         rounded=rounded,
         structural=structural_hits,
         field_mismatch=mismatches,
+        calendar=calendar,
     )
 
 
