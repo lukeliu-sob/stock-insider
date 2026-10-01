@@ -16,15 +16,17 @@ from collections.abc import Iterable, Mapping, Sequence
 from typing import Any
 
 from prompt_toolkit import PromptSession
-from prompt_toolkit.application import Application
+from prompt_toolkit.application import Application, get_app
 from prompt_toolkit.completion import CompleteEvent, Completer, Completion
 from prompt_toolkit.document import Document
+from prompt_toolkit.filters import to_filter
 from prompt_toolkit.formatted_text import StyleAndTextTuples
 from prompt_toolkit.history import InMemoryHistory
 from prompt_toolkit.key_binding import KeyBindings, KeyPressEvent
 from prompt_toolkit.keys import Keys
 from prompt_toolkit.layout import HSplit, Layout, Window
-from prompt_toolkit.layout.controls import FormattedTextControl
+from prompt_toolkit.layout.controls import BufferControl, FormattedTextControl
+from prompt_toolkit.layout.dimension import Dimension
 from prompt_toolkit.styles import Style
 from prompt_toolkit.widgets import Frame
 
@@ -87,13 +89,41 @@ def toolbar_text(status: Mapping[str, Any]) -> str:
         value = status.get(key)
         return "?" if value is None else str(value)
 
+    # Counters only: key hints live in the welcome panel and the placeholder,
+    # so a 120-column terminal still shows every counter.
     return (
         f" {_show('session_id')} · {_show('profile')} · {_show('model')}"
         f" · tokens {_show('session_tokens')}/{_show('budget_tokens')}"
         f" · post-check {_show('last_verdict')}"
-        f" · watchlist {_show('watchlist')} · calls left {_show('calls_remaining')}"
-        "   / commands · ctrl+c clears · ctrl+d exits "
+        f" · watchlist {_show('watchlist')} · calls left {_show('calls_remaining')} "
     )
+
+
+def fit_to_content(session: PromptSession[str], reserve_for_menu: int = 0) -> None:
+    """Size a framed prompt to its input, never to the terminal.
+
+    In a real console, prompt_toolkit 3.0.53 gives a non-full-screen prompt
+    every row below the cursor, and the input window absorbs them, so
+    show_frame draws its box down to the last row (the bottom toolbar
+    is pinned under it). It also reserves completion-menu rows whenever
+    complete-while-typing is on. Here the input window never extends, and
+    the menu rows are reserved only while a menu is open (the menu is a
+    float and can draw only inside the frame).
+
+    Implements: REQ-SI-FR-026 (ADR-007)
+    """
+    buffer = session.default_buffer
+
+    def _height() -> Dimension:
+        if reserve_for_menu and buffer.complete_state is not None and not get_app().is_done:
+            return Dimension(min=reserve_for_menu)
+        return Dimension()
+
+    for window in session.layout.find_all_windows():
+        content = window.content
+        if isinstance(content, BufferControl) and content.buffer is buffer:
+            window.height = _height
+            window.dont_extend_height = to_filter(True)
 
 
 def _main_bindings() -> KeyBindings:
@@ -223,6 +253,8 @@ class PromptUI:
             erase_when_done=True,
             style=STYLE,
         )
+        fit_to_content(self._main, reserve_for_menu=len(commands) + 1)
+        fit_to_content(self._sub)
 
     def _toolbar(self) -> str:
         return toolbar_text(self._status)

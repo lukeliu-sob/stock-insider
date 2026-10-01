@@ -8,9 +8,14 @@ from __future__ import annotations
 import ast
 import io
 from pathlib import Path
+from typing import Any
 
-from prompt_toolkit.completion import CompleteEvent
+from prompt_toolkit.application import create_app_session
+from prompt_toolkit.buffer import CompletionState
+from prompt_toolkit.completion import CompleteEvent, Completion
 from prompt_toolkit.document import Document
+from prompt_toolkit.input import create_pipe_input
+from prompt_toolkit.output import DummyOutput
 from rich.console import Console
 from rich.markdown import Markdown
 
@@ -19,7 +24,7 @@ from stockinsider.agent.profiles import envelope_for
 from stockinsider.agent.repl import _NOT_IMPLEMENTED, SLASH_COMMANDS, _cmd_help, _status_snapshot
 from stockinsider.agent.session import SessionStore
 from stockinsider.agent.tui.fidelity import answer_renderable, digit_sequences, rendered_text
-from stockinsider.agent.tui.prompt import SlashCompleter, toolbar_text
+from stockinsider.agent.tui.prompt import PromptUI, SlashCompleter, toolbar_text
 from stockinsider.agent.tui.render import Activity, Screen, phase_label
 
 
@@ -177,6 +182,58 @@ def test_status_line_shows_harness_counters_only(tmp_path) -> None:
     )
     after = toolbar_text(_status_snapshot(store, record, None))
     assert f"tokens 10/{budget}" in after and "post-check failed" in after and "watchlist ?" in after
+
+
+def _frames(session: Any) -> list[tuple[int, str]]:
+    """Record (frame height, the row right under the frame) at every render of a prompt.
+
+    DummyOutput reports 40 rows below the cursor, as a real console does,
+    so the layout is free to stretch into them.
+    """
+    seen: list[tuple[int, str]] = []
+
+    def _measure(app: Any) -> None:
+        screen = app.renderer._last_screen  # test-only look at the rendered rows
+        if screen is None:
+            return
+        column = [screen.data_buffer[y][0].char for y in range(screen.height + 1)]
+        if "┌" in column and "└" in column:
+            top, bottom = column.index("┌"), column.index("└")
+            below = "".join(screen.data_buffer[bottom + 1][x].char for x in range(80))
+            seen.append((bottom - top + 1, below))
+
+    session.app.after_render += _measure
+    return seen
+
+
+def test_framed_prompts_stay_compact() -> None:
+    reserve = len(SLASH_COMMANDS) + 1
+    heights: dict[str, Any] = {}
+    with create_pipe_input() as pipe:
+        pipe.send_text("/exit\r2\r")
+        pipe.close()
+        with create_app_session(input=pipe, output=DummyOutput()):
+            ui = PromptUI(SLASH_COMMANDS)
+            buffer = ui._main.default_buffer
+            window = next(w for w in ui._main.layout.find_all_windows() if getattr(w.content, "buffer", None) is buffer)
+
+            def _probe() -> None:  # runs inside the prompt's event loop, before the first render
+                heights["closed"] = window.preferred_height(80, 40)
+                buffer.complete_state = CompletionState(Document("/"), [Completion("/watch")])
+                heights["open"] = window.preferred_height(80, 40)
+                buffer.complete_state = None
+
+            main_frames = _frames(ui._main)
+            assert ui._main.prompt(pre_run=_probe) == "/exit"
+            sub_frames = _frames(ui._sub)
+            assert ui.read_sub("select 1-2: ") == "2"
+    assert heights["closed"].max == 1  # the input never stretches
+    assert heights["open"].preferred == heights["open"].max == reserve  # menu room only while it is open
+    assert main_frames and sub_frames
+    assert main_frames[0][0] == 3  # one input row inside the frame, not the rows below the cursor
+    assert all(height <= reserve + 2 for height, _below in main_frames)
+    assert "post-check" in main_frames[0][1]  # the status line sits right under the box
+    assert all(height == 3 for height, _below in sub_frames)
 
 
 def test_activity_indicator_labels() -> None:
