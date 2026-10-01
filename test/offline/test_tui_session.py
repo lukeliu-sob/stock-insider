@@ -265,6 +265,7 @@ def test_ctrl_c_at_prompt(store) -> None:
     screen = run_ui(store, "hello" + CTRL_C + "/exit" + ENTER)
     assert "❯ hello" not in screen
     assert "provider unconfigured" not in screen
+    assert "press ctrl+c again" not in screen  # cleared, not treated as an exit attempt
     assert "❯ /exit" in screen
     # empty prompt: the first press hints, a second within 2 s exits (boundary: 1.9 s)
     screen = run_ui(store, CTRL_C + CTRL_C, clock=FakeClock([10.0, 11.9]))
@@ -351,12 +352,16 @@ def test_resume_under_tui(store) -> None:
     assert [row["status"] for row in store.list_sessions()] == ["closed"]
 
 
+_SGR = re.compile(r"\x1b\[[0-9;]*m")
+
+
 def test_ui_option_surface(isolated, monkeypatch) -> None:
     runner = CliRunner()
     for args in (["--help"], ["analyze", "--help"], ["resume", "--help"]):
         result = runner.invoke(app, args)
         assert result.exit_code == 0, args
-        assert "--ui" in result.stdout, args
+        # a developer shell may force color (FORCE_COLOR): Rich then styles "-" and "-ui" apart
+        assert "--ui" in _SGR.sub("", result.stdout), args
     assert runner.invoke(app, ["--ui", "fancy"], input="/exit\n").exit_code == 2
     monkeypatch.setenv("STOCKINSIDER_UI", "tui")
     result = runner.invoke(app, ["analyze"], input="/exit\n")

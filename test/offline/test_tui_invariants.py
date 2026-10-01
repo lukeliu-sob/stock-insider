@@ -16,6 +16,7 @@ from typing import Any
 import pytest
 from typer.testing import CliRunner
 
+from stockinsider.agent import tui as tui_package
 from stockinsider.agent.providers import ChatOutcome
 from stockinsider.agent.session import SessionStore
 from stockinsider.agent.tui import TuiDependencyMissing, TuiUnavailable, run_tui
@@ -32,6 +33,7 @@ from test_tui_session import (
     GOLDEN_SCRIPT,
     golden_text,
     isolate,
+    keyboard,
     normalize,
     recording_console,
     run_ui,
@@ -279,7 +281,21 @@ def test_plain_output_byte_identical(isolated) -> None:
     assert normalize(result.stdout) == golden_text()
 
 
-def test_tui_without_terminal_falls_back_explicitly(isolated) -> None:
+class _Stream:
+    def __init__(self, tty: bool) -> None:
+        self._tty = tty
+
+    def isatty(self) -> bool:
+        return self._tty
+
+
+class _Sys:
+    def __init__(self, stdin_tty: bool, stdout_tty: bool) -> None:
+        self.stdin = _Stream(stdin_tty)
+        self.stdout = _Stream(stdout_tty)
+
+
+def test_tui_without_terminal_falls_back_explicitly(isolated, monkeypatch) -> None:
     result = CliRunner().invoke(app, ["--ui", "tui"], input=GOLDEN_SCRIPT)
     assert result.exit_code == 0
     assert (
@@ -287,6 +303,19 @@ def test_tui_without_terminal_falls_back_explicitly(isolated) -> None:
         "using the plain REPL"
     ) in result.stderr
     assert normalize(result.stdout) == golden_text()
+    # boundary: the UI starts only when BOTH streams are terminals
+    store = SessionStore()
+    for stdin_tty, stdout_tty in ((True, False), (False, True), (False, False)):
+        monkeypatch.setattr(tui_package, "sys", _Sys(stdin_tty, stdout_tty))
+        with pytest.raises(TuiUnavailable, match="interactive terminal"):
+            run_tui(store, console=recording_console())
+    assert len(store.list_sessions()) == 1  # only the plain run above opened one
+    monkeypatch.setattr(tui_package, "sys", _Sys(True, True))
+    console = recording_console()
+    with keyboard("/exit" + ENTER):
+        run_tui(store, console=console)
+    assert "Stock Insider" in console.file.getvalue()  # the UI ran: welcome panel shown
+    assert len(store.list_sessions()) == 2
 
 
 def test_console_unavailable_falls_back_explicitly(isolated, monkeypatch) -> None:
