@@ -2652,3 +2652,70 @@ sessions:
       verification were presented. Push and PR submission await a separate owner
       instruction.
     status: applied
+
+  - id: AILOG-0067
+    date: "2026-10-01"
+    agent_task: >-
+      TP-021 opt-in terminal UI, phase 1 (REQ-SI-FR-026, ADR-007), planned and
+      built under owner direction after the owner asked for a Claude-Code-style
+      UI and took decisions 1-7 in session. Planning surveyed the REPL and
+      turn-engine seams, the gates and the thread model (the data store's SQLite
+      connection is thread-bound), probed Rich 15.0.0 Markdown rendering
+      (ordered lists renumbered, link targets hidden, HTML comments dropped - the
+      render-fidelity evidence) and checked prompt_toolkit 3.0.53 (framed
+      prompt, toolbar, choice prompts) and Textual's Windows inline-mode limit.
+      Records first (TP-021, then ADR-007, registry 0.5.0 with FR-026, trace,
+      glossary, blueprint, option ledger, R-13..R-15, AGENTS.md module map,
+      DE-14), then the plain-REPL golden transcript captured from the pre-change
+      tree, then code: agent/repl gains the ReplIO port (PlainIO byte-identical),
+      SLASH_COMMANDS (/help now lists /report), a lazy status snapshot and
+      close-on-exception for the bound session; agent/loop gains optional
+      on_phase/on_pending_write hooks; agent/tui (prompt_toolkit input, Rich
+      output, render-fidelity check, default-decline write confirmation that
+      ignores every key except arrows/Tab/Enter/Esc/Ctrl+C/Ctrl+D); cli --ui
+      plain|tui. A probe of prompt_toolkit's ChoiceInput showed typed-ahead text
+      could move its selection (letter jump, j/k), so the confirmation is a
+      dedicated two-option app instead. Verification: 29 new tests (render 8,
+      session 8, invariants 13); full offline suite 499 green with zero edits to
+      existing tests; the golden transcript re-captured after the change is
+      byte-identical; seven injected mutations (fidelity off, hyperlinks on,
+      auto-accept, no close on failure, stale pending kept, plain drift, unknown
+      counters as 0) each fail at least one new test; ruff, mypy and every
+      structural gate green on a clean clone. Not verifiable offline: rendering
+      in a real Windows Terminal (glyph widths, spinner, frame) - owner check.
+    artifacts:
+      - docs/test-plans/TP-021.md
+      - docs/architecture/adr/007-terminal-ui.md
+      - docs/req/requirements.yaml
+      - docs/architecture/trace-matrix.md
+      - docs/req/glossary.md
+      - architecture-blueprint.md
+      - docs/architecture/option-ledger.md
+      - docs/architecture/risk-list.md
+      - AGENTS.md
+      - docs/debt-register.md
+      - test/offline/fixtures/plain_repl_golden.txt
+      - src/stockinsider/agent/repl.py
+      - src/stockinsider/agent/loop.py
+      - src/stockinsider/agent/tui/__init__.py
+      - src/stockinsider/agent/tui/adapter.py
+      - src/stockinsider/agent/tui/fidelity.py
+      - src/stockinsider/agent/tui/prompt.py
+      - src/stockinsider/agent/tui/render.py
+      - src/stockinsider/cli/app.py
+      - pyproject.toml
+      - uv.lock
+      - test/offline/test_tui_render.py
+      - test/offline/test_tui_session.py
+      - test/offline/test_tui_invariants.py
+      - docs/review-memo.md
+      - docs/ai-use-log.yaml
+    human_decision: >-
+      Owner decisions in session 2026-10-01: inline Claude-Code style (not
+      full-screen); prompt_toolkit dependency accepted; placement agent/tui;
+      opt-in first (plain stays the default); Markdown answers; Unicode chrome
+      allowed inside the UI; the UI is a new requirement. The owner approved the
+      drafted ADR-007, TP-021 and governance edits in session ("approve",
+      translated), which also settled /help listing /report and recording DE-14.
+      Push and PR submission await a separate owner instruction.
+    status: applied

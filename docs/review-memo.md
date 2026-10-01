@@ -428,3 +428,30 @@ test-plan gate's safety-path attestation).
   remaining false quarantine (DE-13), not an escape. Accepted consequence (owner,
   2026-10-01): a remembered year in a framed sentence passes when an evidence date falls
   in that year; every other number in the sentence is still checked.
+
+### RM-58 — TP-021: opt-in terminal UI, phase 1 (FR-026)
+
+- Verdict: APPROVE pending owner review and a hands-on run in Windows Terminal (owner
+  approved TP-021 with ADR-007 in session, 2026-10-01; TP-021 committed before any
+  implementation change, GOV-006 ordering; the golden transcript was captured from the
+  pre-change tree before any code change).
+- Spec alignment: REQ-SI-FR-026 (a)-(e) each pinned by named tests (TP-021 fit-criteria
+  mapping). REQ-SI-FR-013: plain stays the default and is byte-identical (golden test,
+  plain and `--ui tui` without a terminal). REQ-SI-INV-001: model text reaches the screen
+  only through render() and the post-check-gated replay; Markdown only under render
+  fidelity. REQ-SI-INV-004: the write confirmation defaults to decline and ignores every
+  key but arrows/Tab/Enter/Esc/Ctrl+C/Ctrl+D; accept submits `confirm <token>` to the
+  unchanged path.
+- Architecture: ADR-007; new module agent/tui (agent tier, no data import; import gate
+  unchanged); agent/repl keeps the only dispatcher behind the ReplIO port; agent/loop
+  gains two optional hooks that carry phases and proposals, never provider text. No
+  safety-critical path touched (guardrail, registry, shared/, prompts/, workflows).
+  One dependency added (prompt-toolkit, with wcwidth), owner-approved; uv.lock updated.
+- Test quality: 29 new tests, 20 of them with negative or adversarial cases; boundary cases for the
+  Ctrl+C window (1.9 s / 2.1 s) and fidelity (1/2 kept, 1/5 and 1/3 fall back). Seven
+  injected mutations each fail at least one new test. Zero edits to existing tests; full
+  offline suite 499 green; ruff, mypy and structural gates pass on a clean clone.
+- Risk: real-terminal rendering (Windows Terminal glyph widths, the spinner, the frame)
+  cannot be verified offline - owner check before any default switch. Ctrl+C at the UI
+  prompt clears input instead of ending the process (plain unchanged). DE-14 (interrupted
+  turns are not marked incomplete) becomes more visible under the UI; it predates TP-021.
