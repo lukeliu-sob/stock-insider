@@ -2610,3 +2610,45 @@ sessions:
       in session (2026-09-30). Push and PR submission await a separate owner
       instruction.
     status: applied
+
+  - id: AILOG-0066
+    date: "2026-10-01"
+    agent_task: >-
+      TP-020 partial-date citations (BD-026), drafted under owner direction in
+      session ("yes, draft TP-020 and the fix, allow bare years") after the owner
+      reported a live BYD turn that displayed only "data unavailable for: 2025".
+      Diagnosis reproduced offline (the quarantined original in sessions/ was not
+      read - outside the agent access map): the market.indicators risk windows
+      start in 2025, the model wrote the date at month or year precision, and the
+      post-check folded only full dates. INV-001: after the Am4/Am8 full-date
+      folds, month-years ("September 2025", "Sep. 2025", "2025-09") and bare years
+      inside a temporal frame (a cue before or after, or a range link to a framed
+      year or a month-year) are verified against the evidence calendar - the year
+      and month of every date-shaped evidence string; numbers never contribute -
+      at their written precision, and leave the numeric check (audited as
+      NumberCheck.calendar). Value frames (currency, percent, units, multipliers,
+      glued letters or symbols, ticker codes, unframed table cells) stay numeric
+      claims; unsupported references fail exactly as before. Records: TP-020
+      (committed first), ADR-006 Am9, BD-026, DE-13, E-009, RM-57. Verification: 12 new
+      tests (25 must-pass and 23 must-fail labeled cases, one end-to-end turn each
+      way over the real market.indicators tool); against the pre-fix guardrail 7
+      fail on the bug, 1 only on the new audit attribute, 4 hold (guards); full
+      offline suite 470 green with zero edits to existing tests; ruff + mypy clean;
+      structural gates green on a clean clone.
+    artifacts:
+      - docs/test-plans/TP-020.md
+      - src/stockinsider/agent/guardrail.py
+      - test/offline/test_tp020_partial_dates.py
+      - docs/architecture/adr/006-guardrail.md
+      - docs/architecture/evaluation-logbook.md
+      - docs/bug-diary.md
+      - docs/debt-register.md
+      - docs/review-memo.md
+      - docs/ai-use-log.yaml
+    human_decision: >-
+      Owner decided the open extraction-semantics question for prose years in
+      session (2026-10-01: allow bare years), directed the drafting of TP-020 and
+      the fix, and approved TP-020 in session ("approve") after the draft and its
+      verification were presented. Push and PR submission await a separate owner
+      instruction.
+    status: applied

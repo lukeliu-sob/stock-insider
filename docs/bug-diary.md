@@ -227,3 +227,11 @@ Invariant/process gap exposed → what changed:
 - **Investigation**: every entry up to AILOG-0062 is a list item indented under `sessions:`; TP-018 appended AILOG-0063/0064 at column 0. The AI-use log gate only checks that the file is in the change set, so the mandatory audit record silently became unreadable by machines.
 - **Classification**: governance-record defect; gate blind spot.
 - **Fix**: the two entries re-indented (whitespace only; parsed content verified identical); the gate now fails when the log does not parse or an entry id is malformed or duplicated (TP-019).
+
+## BD-026 — Month-year and bare-year citations quarantined (prose years)
+- **Date / discovered by**: 2026-10-01 / owner live session (deepseek-flash, profile standard).
+- **Symptom**: "give me info about BYD" ran six tools, all ok (quote, indicators, fundamentals, news); the user saw only `data unavailable for: 2025` (post-check: failed). The whole answer was withheld, and two more such turns would have aborted the session (INV-001 three-strike rule).
+- **Investigation**: `market.indicators` computes volatility and max drawdown over the last 260 stored bars, so with a year of history the window start and the drawdown peak are 2025 dates. The model rendered such a date at month or year precision ("since September 2025", "late 2025"). ADR-006 Am4/Am8 fold only FULL dates: the ledger holds 2025-09-25 as 20250925, never as a bare 2025, so the year matched nothing. Reproduced offline (TP-020 Driver table). The quarantined original is in `sessions/`, outside the agent access map, and was not read; `/show` in that session displays it.
+- **Classification**: rendering-convention mismatch (BD-012/015/016/018 family). The class was already recorded as the "prose years" residual (E-005/E-006), parked for the owner extraction-semantics decision, and kept quarantining real answers meanwhile.
+- **Fix**: month-years and bare years in a temporal frame are verified against the evidence calendar at their written precision; value frames stay numeric claims; unsupported references fail exactly as before (TP-020, ADR-006 Am9).
+- **Gap exposed -> change**: the labeled faithfulness cases cited full dates only. TP-020 pins the live shape end to end (real `market.indicators` output through the turn engine) and pins the bypass direction (values that equal an evidence year).

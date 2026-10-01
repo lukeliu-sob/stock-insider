@@ -407,3 +407,24 @@ test-plan gate's safety-path attestation).
   the stored report holds only the report. Turn 5 showed a self-corrected cross-symbol
   table cell (0700.HK's close placed in the 9988.HK column) that the field-level typed
   pool cannot see - recorded as DE-12 for the M2 phase-2 plan.
+
+### RM-57 — TP-020: partial-date citations (BD-026)
+
+- Verdict: APPROVE pending owner merge (owner approved TP-020 in session, 2026-10-01, after
+  the drafted plan, fix and verification were presented; TP-020 committed before any
+  implementation change, GOV-006 ordering).
+- Spec alignment: REQ-SI-INV-001 - correctly cited month-years and framed bare years pass
+  at their written precision; unsupported references fail exactly as before; a value equal
+  to an evidence year in a value frame stays a numeric claim; full dates keep day
+  precision. REQ-SI-QA-001 - E-009 records the labeled cases; the E-006 suite is unchanged.
+- Architecture: ADR-006 Am9; no schema change; NumberCheck gains a defaulted audit list
+  (`calendar`); the degraded text, prompts/ and CI workflows untouched.
+- Test quality: 12 new tests (test/offline/test_tp020_partial_dates.py) holding 25
+  must-pass and 23 must-fail labeled cases, one end-to-end turn each way over the real
+  market.indicators tool. Against the pre-fix guardrail 7 fail on the bug, 1 fails only on
+  the new audit attribute, 4 are guards that hold on both trees. Zero edits to existing
+  tests; full offline suite 470 green; ruff + mypy clean; structural gates pass.
+- Risk: the bare-year rule is an allow-list of temporal frames, so its failure mode is a
+  remaining false quarantine (DE-13), not an escape. Accepted consequence (owner,
+  2026-10-01): a remembered year in a framed sentence passes when an evidence date falls
+  in that year; every other number in the sentence is still checked.
