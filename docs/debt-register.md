@@ -95,3 +95,9 @@ Categories at zero have no current entries; the category opens the moment its fi
 - **Description**: the M2 phase-1 typed pool checks WHICH FIELD a cited value belongs to (close vs open), not WHICH SYMBOL. In the TP-019 final-code live run the model put 0700.HK's close (644.63) into the 9988.HK column of a comparison table, then corrected the cell inline; the post-check passed because 644.63 is a real "close" in the ledger. A cross-symbol misattribution without a self-correction would reach the user unflagged.
 - **Repayment trigger**: the M2 phase-2 test plan (ADR-006 Am7) → type pool values by (symbol, field) and check table columns/rows and sentence subjects against the symbol a value was returned for.
 - **Status**: open (2026-09-30)
+
+### DE-13 — Partial-date residuals after TP-020
+- **Category**: guardrail debt
+- **Description**: TP-020 (ADR-006 Am9) checks month-years and framed bare years against the evidence calendar. Still quarantining: an unframed year ("2025 was volatile", a table cell "| Year | 2025 |"), "from 2025 to 2026" (from/to/between frame values as often as times), and a month inside an evidence window that is not the month of any evidence date ("October 2025" for a window 2025-09-25..2026-09-29 with no October date). Passing by design: a remembered year in a framed sentence ("in 2025 BYD overtook Tesla") whenever an evidence date falls in that year (owner-accepted, 2026-10-01), and a value equal to an evidence year in a temporal frame whose unit word is outside the value list.
+- **Repayment trigger**: a live quarantine traced to one of these classes → extend the frame list together with its bypass test, or (owner decision) let a month inside a returned window count - that is range membership, not a registered value.
+- **Status**: open (2026-10-01)

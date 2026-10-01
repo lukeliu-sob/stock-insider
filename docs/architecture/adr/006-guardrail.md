@@ -264,3 +264,66 @@ a regex; counts and tickers absent from the ledger ("3 symbols",
 "9988.HK") keep failing by the standing TP-017 PR-3a decision.
 
 Implements: REQ-SI-INV-001, REQ-SI-INV-002, REQ-SI-FR-008, REQ-SI-FR-011.
+
+## Amendment 9 (2026-10-01, TP-020) — partial dates are checked at their written precision
+
+A live BYD turn (six tools, all ok) displayed only "data unavailable
+for: 2025". `market.indicators` computes risk over the last 260 stored
+bars, so the volatility window start and the drawdown peak are 2025
+dates, and the model wrote one of them at month or year precision
+("since September 2025", "late 2025"). The ledger carries evidence
+dates only in the compact form Am4/Am8 fold full dates into
+(20250925), never as a bare 2025, so the year was an orphan that
+matched nothing and the whole answer was quarantined (BD-026). This is
+the "prose years" residual class of E-005/E-006, now decided by the
+owner (2026-10-01): bare years are allowed.
+
+Decision. After the Am4/Am8 full-date folds, the post-check finds the
+partial-date references in the response and checks each one against
+the evidence calendar at the precision it is written:
+
+1. Evidence calendar: the year (YYYY) and month (YYYYMM) of every
+   date-shaped string in the session ledger - ISO dates and datetimes,
+   compact seendate stamps, natural full dates, month-years, ISO
+   year-months. Numbers never contribute: a numeric 202509 makes no
+   month citable.
+2. Month-years ("September 2025", "Sep. 2025", "2025-09") key as YYYYMM.
+3. A bare 19xx/20xx is a year only inside a temporal frame: a cue right
+   before it (in, since, during, throughout, until, before, after,
+   early, mid, late, end/start/beginning/middle/rest/half of, as of, the
+   year, year-end, fiscal, calendar, full-year, FY, Q1-Q4, H1/H2, the
+   seasons), a cue right after it ('s, Q1-Q4, H1/H2, peak, trough, high,
+   low, level, window, period, results, report, annual, interim,
+   earnings, guidance, year-end, full-year), or a range link (-, en/em
+   dash, /, &, to, through, and) to a framed year or a month-year. A
+   value word right after any member of a range (%, percent, bps, x,
+   k/mn/bn, thousand/million/billion, shares, units, points, dollars,
+   yuan, HKD/USD/RMB/CNY/CNH/EUR/GBP/JPY) cancels the frame. A number
+   glued to letters, digits, currency symbols or separators, or shaped
+   like a ticker code (2020.HK), is never a year.
+4. A supported reference leaves the numeric check and is audited as
+   `NumberCheck.calendar`; an unsupported one stays in the text and
+   fails in the numeric check exactly as before, under the unchanged
+   degraded line.
+
+Why a frame and not pool membership alone: a bare four-digit number is
+ambiguous. With a year of price history the evidence spans two
+calendar years in nearly every session, so allowing any token equal to
+an evidence year would let a fabricated value that happens to equal one
+("closed at 2026", "2026 shares", "HKD2026", a table cell) pass INV-001
+- the BD-020 class Am8 closed. The frames are an allow-list: an
+unlisted phrasing stays a numeric claim (fail-closed). Like Am4/Am8
+this aligns a rendering convention and adds no tolerance: every
+comparison is exact at the written precision, and full dates keep day
+precision ("26 September 2025" against 2025-09-25 still fails).
+
+Accepted consequence (owner, 2026-10-01): a year from the model's
+memory in a framed sentence ("in 2025 BYD overtook Tesla") passes when
+an evidence date falls in that year; every other number in the sentence
+is still checked. Known limits recorded (DE-13): an unframed year
+("2025 was volatile", a bare table cell) and "from 2025 to 2026" still
+quarantine; a month inside an evidence window that is not the month of
+an evidence date still quarantines; a value equal to an evidence year
+in a temporal frame, followed by a unit word outside the list, passes.
+
+Implements: REQ-SI-INV-001.

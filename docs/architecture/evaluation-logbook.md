@@ -146,3 +146,22 @@ evidence (DE-09). The one miss is the recorded residual class (a hedge
 governing another verb in the same clause: "We could see that the price
 will rise sharply"). A freshly authored held-out set, written by someone
 other than the pattern author, is the next measurement.
+
+### E-009 — INV-001 partial-date semantics (TP-020)
+
+Date: 2026-10-01 - Model(s): n/a (checker, unit-level); live trigger on deepseek-flash
+Scores: TP-020 labeled cases (test/offline/test_tp020_partial_dates.py) -
+correctly cited partial dates (month-years, ISO year-months, framed bare
+years, framed ranges, the live BYD shape end to end): 25/25 pass;
+fabricated or unsupported references (absent months and years, a wrong
+day, values equal to an evidence year in value frames, numbers shaped
+like months): 21/21 quarantined, 0 escapes; fail-closed residual pins
+(unframed years): 2/2 still quarantine. The E-006 suite is unchanged:
+precision 7/7, recall 6/6, and its "prose year" residual ("between
+October 2025 and June 2026") still quarantines - correctly, since
+neither month is in that suite's evidence.
+Verdict: pass - Notes: the "prose years" class of E-005/E-006 moves to
+the passing set where the evidence supports the date, by owner decision
+(2026-10-01: bare years allowed); the remaining partial-date residuals
+are DE-13. Not yet re-measured live: the next live session should
+replay the BYD question.
