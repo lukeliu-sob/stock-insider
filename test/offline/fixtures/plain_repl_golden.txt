@@ -1,0 +1,24 @@
+session <SID> opened (profile: standard); type /help for commands, /exit to leave
+stockinsider> <SID>  <TS>  active  -  standard
+stockinsider> budget.query [compute] Context budget envelope for an analysis profile.
+context.estimate [compute] Conservative token estimate for a text string.
+fundamentals.summary [read] Fundamentals for a symbol: coverage ratio, gap list, AND the actually stored rows (up to 4 latest) with an explicit stored_unavailable_reason when the feed has never been ingested; do not claim stored fundamentals when the reason is set.
+market.indicators [read] Deterministic indicator snapshot for a symbol: profitability (ROE, margins), growth (revenue YoY) and risk (annualized volatility, max drawdown) with data windows; unavailable sections are explicit. The LLM interprets, never computes.
+market.quote [read] Latest stored EOD bar for a canonical symbol: date, OHLC, adjusted close, volume, currency. Deterministic; data date included.
+news.recent [read] Latest stored news headlines for a watchlist symbol (most recent first): sanitized title, source URL, domain, publication timestamp, source (gdelt/eodhd), and the vendor sentiment reading. Deterministic; no embedding. A citable news source (FR-007).
+session.list [read] List sessions from the local authoritative store.
+symbol.search [read] Resolve a security mention against the symbol map and the EODHD search API. Only primary-exchange (HK/US) listings verify; secondary venues persist unverified and the watchlist gate refuses them. Present primary candidates to the user before any watchlist add.
+sync.run [write] Run one market-data sync (indices first, gap queue, incrementals) under the daily call budget. The report lists per-symbol outcomes and deferred items.
+sync.status [read] Budget usage, pending gap queue, and tracked-symbol counts.
+watchlist.add [write] Add a verified symbol to the watchlist. Requires a prior symbol.search whose candidate the user explicitly confirmed; propose the addition; the harness collects the human's one-time confirmation token — you never confirm on their behalf.
+watchlist.list [read] List active watchlist symbols with names and exchanges.
+watchlist.remove [write] Remove a symbol from the watchlist; propose it and show the user what will be removed — the harness collects their one-time confirmation token.
+stockinsider> ok: {'profile': 'quick', 'max_session_tokens': 30000} (provenance: computed @ <TS>)
+stockinsider> error: unknown tool 'nope.tool'; registered: ['budget.query', 'context.estimate', 'fundamentals.summary', 'market.indicators', 'market.quote', 'news.recent', 'session.list', 'symbol.search', 'sync.run', 'sync.status', 'watchlist.add', 'watchlist.list', 'watchlist.remove']
+stockinsider> error: unknown command /bogus; /help lists available commands
+stockinsider> unknown command: '/' (type /help for the command list)
+stockinsider> error: provider unconfigured — run `stockinsider config set --chat-base-url ...` and `--api-key` (or set PROVIDER_BASE_URL / PROVIDER_API_KEY); slash commands remain available
+stockinsider> budget: 0/20 calls used, 20 remaining; active symbols: 0; pending gaps: 0
+stockinsider> watchlist is empty
+stockinsider> session <SID> closed
+resume with: stockinsider resume <SID>

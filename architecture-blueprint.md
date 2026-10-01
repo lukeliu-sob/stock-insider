@@ -96,7 +96,8 @@ src/stockinsider/
 │   ├── context.py      # context assembly, compaction, re-injection
 │   ├── guardrail.py    # post-check, epistemic filter, fail-safe
 │   ├── registry.py     # tool registration, schema/permission gate
-│   └── providers.py    # chat/embedding config, version stamping, usage
+│   ├── providers.py    # chat/embedding config, version stamping, usage
+│   └── tui/            # opt-in inline terminal UI over the REPL dispatch (ADR-007)
 ├── data/         # authoritative side
 │   ├── ingest/         # source adapters, gap detection, backfill, filters
 │   ├── store/          # SQLite schema, vector store, symbol map, watchlist
@@ -108,12 +109,13 @@ src/stockinsider/
 
 | Module | Responsibility | Requirements | Authority |
 |---|---|---|---|
-| `agent/repl` | REPL loop, slash-command dispatch, streaming render, interactive follow-up after reports | FR-013, FR-014, FR-019 | advisory surface |
+| `agent/repl` | REPL loop, slash-command dispatch, streaming render, interactive follow-up after reports; the I/O port and command table shared by the plain REPL and the terminal UI (ADR-007) | FR-013, FR-014, FR-019, FR-026 | advisory surface |
 | `agent/session` | Session lifecycle (open → active → closed → resumed), persistence of `session.jsonl` / `artifacts/` / `context/`, sessions index | FR-011, FR-012, FR-023, GOV-005 | authoritative |
 | `agent/context` | Layered context assembly, budgeting, compaction, critical-constraint re-injection | §8; FR-020, COST-001 | authoritative (deterministic) |
 | `agent/guardrail` | Numeric post-check (values-as-seen comparison), epistemic filter, fail-safe enforcement | INV-001, INV-002, INV-003, QA-004 | authoritative — final verdict |
 | `agent/registry` | Tool registration, schema validation, effect-class permission gate, provenance stamping | §4.1, §9.1; SEC-002 | authoritative |
 | `agent/providers` | OpenAI-compatible endpoints, configuration, version stamping, usage accounting | FR-021, GOV-005, COST-002 | authoritative |
+| `agent/tui` | Opt-in inline terminal UI: framed input, slash completion, status line, activity indicator, Markdown answers under render fidelity, choice prompts for write confirmations; presentation only, over the `agent/repl` dispatch (ADR-007) | FR-026 (FR-013, FR-019, INV-001, INV-004) | advisory surface |
 | `data/ingest` | Adapters (market, fundamentals, news, FX), schema validation, gap detection, backfill, relevance filter, dedup, retention | FR-001, FR-002, FR-003, FR-018, QA-003 | authoritative |
 | `data/store` | SQLite + vector store schemas, symbol map, watchlist, provenance fields | FR-004, GOV-004 | authoritative |
 | `data/compute` | Deterministic indicators, event study, retained-data statistics | FR-006, FR-010 | authoritative |
@@ -165,6 +167,8 @@ user input
           INV-002 epistemic filter; fail → degrade per INV-003)
         → persist: session.jsonl append, snapshot write, usage accounting
         → render (degraded or full)
+          (front-end: plain REPL or terminal UI, ADR-007; both receive
+          only post-check-gated text)
 ```
 
 Every stage has an explicit failure path; none has a default value (INV-003).
@@ -180,7 +184,7 @@ Every stage has an explicit failure path; none has a default value (INV-003).
 | `/compact` | — | manual context compaction (§7.4) | §8; COST-001 |
 | `/tools [name [args]]` | — | list registry; direct-invoke deterministic read/compute tools | §4.1, §9.1 |
 
-Slash commands and CLI subcommands are two entries to one verb set; a third verb set is forbidden.
+Slash commands and CLI subcommands are two entries to one verb set; a third verb set is forbidden. The terminal UI's completion menu and choice prompts are views of this table, never additional verbs (ADR-007).
 
 ### 7.4 Compaction flow
 

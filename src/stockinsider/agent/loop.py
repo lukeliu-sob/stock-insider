@@ -54,6 +54,11 @@ HISTORY_TRUNCATED_NOTE = (
 RenderFn = Callable[[str], None]
 ProgressFn = Callable[[str], None]
 SinkFn = Callable[[str], None]
+#: Display hooks (ADR-007): a phase name ("model", "tool", "verifying",
+#: "revising") with its detail (the tool name), and a proposed write's
+#: (token, tool, arguments). They never carry provider text.
+PhaseFn = Callable[[str, str], None]
+PendingWriteFn = Callable[[str, str, Any], None]
 
 
 def _default_prompts_dir() -> Path:
@@ -229,11 +234,19 @@ class TurnEngine:
         render: RenderFn,
         progress: ProgressFn,
         stream_sink: SinkFn | None = None,
+        on_phase: PhaseFn | None = None,
+        on_pending_write: PendingWriteFn | None = None,
     ) -> TurnOutcome:
         """Run one full turn; content failures degrade, never crash (INV-003).
 
+        on_phase and on_pending_write are optional display hooks
+        (ADR-007): they report the phase the turn is in and a write
+        proposal awaiting the human. Absent, behavior is unchanged;
+        present, they alter neither the buffering, the post-check, nor
+        what reaches render and stream_sink.
+
         Implements: REQ-SI-FR-008, REQ-SI-FR-019, REQ-SI-COST-002,
-        REQ-SI-INV-001, REQ-SI-INV-002 (ADR-001)
+        REQ-SI-INV-001, REQ-SI-INV-002, REQ-SI-FR-026 (ADR-001, ADR-007)
         """
         if getattr(self, "_aborted", None):
             refusal = (
@@ -287,6 +300,8 @@ class TurnEngine:
         deferred = _DeferredSink()
         provider_sink = deferred.push if stream_sink is not None else None
         for _iteration in range(limit):
+            if on_phase is not None:
+                on_phase("model", "")
             outcome = self._provider.complete(messages, tools=tool_specs, stream_sink=provider_sink)
             _accumulate(usage_total, outcome.usage)
             if outcome.tool_calls:
@@ -339,6 +354,8 @@ class TurnEngine:
                                 f"{json.dumps(arguments, sort_keys=True)} -- reply "
                                 f"'confirm {token}' to execute, anything else to ignore"
                             )
+                            if on_pending_write is not None:
+                                on_pending_write(token, name, arguments)
                             result = ToolResult(
                                 call_id=call.get("id") or turn_id,
                                 ok=False,
@@ -350,6 +367,8 @@ class TurnEngine:
                                 ),
                             )
                         else:
+                            if on_phase is not None:
+                                on_phase("tool", name)
                             result = self._registry.execute(
                                 ToolCall(tool=name, arguments=arguments, call_id=call.get("id") or turn_id),
                                 allow_write=False,
@@ -426,6 +445,8 @@ class TurnEngine:
         # the final candidate. Fabricated numbers in opening prose used to
         # stream through unvalidated (and never entered session.jsonl).
         combined = "\n".join([*preludes, candidate]) if preludes else candidate
+        if on_phase is not None:
+            on_phase("verifying", "")
         verdict = run_postcheck(combined, ledger)
 
         def _replay() -> None:
@@ -501,6 +522,8 @@ class TurnEngine:
                         ),
                     }
                 )
+                if on_phase is not None:
+                    on_phase("revising", "")
                 regen = self._provider.complete(
                     regen_messages,
                     tools=None,
@@ -515,6 +538,8 @@ class TurnEngine:
                 return regen.text
 
             epi = run_with_regeneration(combined, _regenerator)
+            if on_phase is not None:
+                on_phase("verifying", "")
             # H2 (2026-09-29 audit): regenerated text is NOT trusted — it
             # goes through the same numeric post-check as the primary
             # candidate. A fabricated number in a regeneration degrades

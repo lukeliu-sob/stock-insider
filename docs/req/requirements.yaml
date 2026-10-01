@@ -20,7 +20,9 @@ meta:
   # future/), per the third-party review and the owner-approved remediation
   # round. Row-text corrections, no acceptance-criterion changes; recorded
   # in AILOG-0054/0062 - version bump per registry discipline.
-  registry_version: "0.4.0"
+  # 0.5 (2026-10-01, TP-021): REQ-SI-FR-026 appended (opt-in terminal UI,
+  # ADR-007). New row only; no existing row changed - recorded in AILOG-0067.
+  registry_version: "0.5.0"
   id_prefix: REQ-SI
   classification: type-c-system          # AI-agent-built AND LLM-native (methodology judgment 1)
   markets: [HK, US]
@@ -644,6 +646,47 @@ requirements:
     notes: >-
       Distinct from LLM/embedding providers, which remain API-only
       (REQ-SI-FR-021); see glossary term Quant Model.
+
+  - id: REQ-SI-FR-026
+    type: functional
+    statement: >-
+      On an interactive terminal, the REPL can run under an opt-in
+      terminal UI in inline style: a framed input with slash-command
+      completion, a status line, an activity indicator during turns,
+      Markdown rendering of answers, and write confirmations as explicit
+      choices. The terminal UI is a presentation layer over the same
+      dispatch as the plain REPL: it adds no verbs, displays model text
+      only after the post-check verdict, and shows every digit sequence
+      of the verified text exactly. Without the opt-in, or without an
+      interactive terminal, the plain REPL runs unchanged.
+    fit_criterion: >-
+      Offline scripted tests with pipe input and a recording console:
+      (a) the completion candidates equal the REPL command table, and
+      every dispatched slash command is in that table; (b) no assistant
+      text appears in the captured output before the post-check verdict,
+      and a quarantined original never appears; (c) for every rendered
+      answer, the multiset of digit sequences on screen equals that of
+      the recorded assistant-message text, with Markdown falling back to
+      literal text on any mismatch (ordered-list renumbering, hidden link
+      targets, HTML comments); (d) a proposed write executes only after
+      an explicit accept: decline, Escape, Ctrl+C and single keystrokes
+      execute nothing, and the token stays single-use; (e) with the plain
+      front-end or a non-interactive terminal, scripted REPL output is
+      byte-identical to the pre-change REPL.
+    priority: Should
+    tradeoff: >-
+      Usability of daily interactive sessions against a second
+      presentation surface and one new dependency (prompt_toolkit); the
+      inline style keeps terminal scrollback and native copy at the cost
+      of a full-screen layout (sidebars, panes).
+    source: "Owner request 2026-10-01 (Claude-Code-style terminal UI; decisions 1-7 in session)"
+    status: conceptual
+    depends_on: [REQ-SI-FR-013, REQ-SI-FR-019, REQ-SI-INV-001, REQ-SI-INV-004]
+    regression_trigger: true
+    regression_scope:
+      - test/offline/test_tui_render.py
+      - test/offline/test_tui_session.py
+      - test/offline/test_tui_invariants.py
 
   # -----------------------------------------------------------------
   # Invariants (INV) — non-negotiable, zero-tolerance

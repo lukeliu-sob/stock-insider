@@ -101,3 +101,9 @@ Categories at zero have no current entries; the category opens the moment its fi
 - **Description**: TP-020 (ADR-006 Am9) checks month-years and framed bare years against the evidence calendar. Still quarantining: an unframed year ("2025 was volatile", a table cell "| Year | 2025 |"), "from 2025 to 2026" (from/to/between frame values as often as times), and a month inside an evidence window that is not the month of any evidence date ("October 2025" for a window 2025-09-25..2026-09-29 with no October date). Passing by design: a remembered year in a framed sentence ("in 2025 BYD overtook Tesla") whenever an evidence date falls in that year (owner-accepted, 2026-10-01), and a value equal to an evidence year in a temporal frame whose unit word is outside the value list.
 - **Repayment trigger**: a live quarantine traced to one of these classes → extend the frame list together with its bypass test, or (owner decision) let a month inside a returned window count - that is range membership, not a registered value.
 - **Status**: open (2026-10-01)
+
+### DE-14 — Interrupted turns are not marked incomplete
+- **Category**: session debt (documentation and code drift)
+- **Description**: runtime policy P-17 and memory-design §3 specify that a turn interrupted before its post-check is written with status `incomplete` and excluded from context reconstruction (glossary: Incomplete Turn). The loop records nothing on interruption: the user message is already appended, no assistant message follows, and `_history_messages` replays the dangling question to the model on the next turn. Pre-existing; surfaced while planning TP-021, whose terminal UI makes Ctrl+C interruption routine.
+- **Repayment trigger**: before the terminal UI becomes the default front-end, or on the first live report of a model answering an interrupted question.
+- **Status**: open (2026-10-01; recorded by owner approval with TP-021)

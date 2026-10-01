@@ -66,7 +66,7 @@ Baseline discipline: **new work extends the existing baseline, never replaces it
 
 ```
 src/stockinsider/
-├── agent/   repl · session · context · guardrail · registry · providers   (advisory-side harness)
+├── agent/   repl · session · context · guardrail · registry · providers · tui   (advisory-side harness)
 ├── data/    ingest · store · compute · quant                              (authoritative side)
 ├── cli/     subcommand thin shell
 └── shared/  glossary constants · provenance types · schemas · egress whitelist

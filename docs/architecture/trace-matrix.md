@@ -41,6 +41,7 @@ Mapping: **every requirement → enforcing component → test/evidence → runti
 | FR-023 Session resume | `agent/session` | `test/offline/test_resume.py` | S1 (status transitions) |
 | FR-024 Chinese news pipeline | `data/ingest` (deferred, FR-024 Could) | `test/offline/test_zh_news.py` (planned) | — |
 | FR-025 Quant models | `data/quant` (deferred, future) | none until ADR reopen (per fit criterion) | — |
+| FR-026 Terminal UI (opt-in) | `agent/tui`, `agent/repl` (I/O port, command table), turn-engine hooks (`agent/loop`), `cli` (`--ui`) | `test/offline/test_tui_render.py`, `test/offline/test_tui_session.py`, `test/offline/test_tui_invariants.py` | S1 (session status on exit) |
 
 ## Invariants
 
