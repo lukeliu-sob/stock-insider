@@ -455,3 +455,12 @@ test-plan gate's safety-path attestation).
   cannot be verified offline - owner check before any default switch. Ctrl+C at the UI
   prompt clears input instead of ending the process (plain unchanged). DE-14 (interrupted
   turns are not marked incomplete) becomes more visible under the UI; it predates TP-021.
+- Follow-up (2026-10-01, before the change set was proposed): a headless real-console
+  smoke run (ConPTY, ctypes only) found BD-027, an input frame stretched to the bottom of
+  the console. It is fixed (`fit_to_content`) and pinned by `test_framed_prompts_stay_compact`
+  (TP-021 Amendment 1); the suite is now 30 TUI tests. The re-run in the real console
+  passes 13 of 13 checks: the session opens, the status line shows its counters, the
+  completion menu appears, Tab completes, `/watch list` and `/help` dispatch, Ctrl+D closes
+  with the resume hint and exit code 0, the frame has no empty rows, and no fallback and
+  no traceback appear. Glyph and color rendering in Windows Terminal itself remains the
+  owner check.

@@ -2719,3 +2719,39 @@ sessions:
       translated), which also settled /help listing /report and recording DE-14.
       Push and PR submission await a separate owner instruction.
     status: applied
+
+  - id: AILOG-0068
+    date: "2026-10-01"
+    agent_task: >-
+      TP-021 follow-up in the same change set, on the owner's instruction to
+      continue. Test hardening: the terminal-detection boundary (both stdin
+      and stdout must be terminals); a pin that Ctrl+C on a non-empty line
+      clears it without the exit hint; and a --help check that strips SGR
+      codes, because a developer shell with FORCE_COLOR set split "--ui" into
+      separately styled halves. A headless real-console smoke run through
+      Windows ConPTY (ctypes only, isolated data root, no new dependency)
+      found BD-027: in a real console the framed input box stretched to the
+      bottom row, because prompt_toolkit lets the input window absorb every
+      row below the cursor. The fix, fit_to_content in agent/tui/prompt.py,
+      sizes the input window to its content and reserves completion-menu
+      rows only while a menu is open. The status line now keeps counters
+      only, so it fits 120 columns. The regression test
+      test_framed_prompts_stay_compact reads the rendered screen and failed
+      before the fix. The re-run in the real console passes 13 of 13 checks:
+      open, status line, completion menu, Tab completion, /watch list, /help,
+      Ctrl+D close with the resume hint, exit 0, no empty frame rows, no
+      fallback notice, no traceback, and a closed index row. Records: TP-021
+      Amendment 1, BD-027, RM-58 follow-up note.
+    artifacts:
+      - docs/test-plans/TP-021.md
+      - src/stockinsider/agent/tui/prompt.py
+      - test/offline/test_tui_render.py
+      - test/offline/test_tui_session.py
+      - test/offline/test_tui_invariants.py
+      - docs/bug-diary.md
+      - docs/review-memo.md
+      - docs/ai-use-log.yaml
+    human_decision: >-
+      Owner instructed in session to continue with the open items (2026-10-01).
+      Push and PR submission still await a separate owner instruction.
+    status: applied
