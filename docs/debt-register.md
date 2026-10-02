@@ -15,7 +15,7 @@
 | Hidden dependencies | 0 |
 | Agent-induced bloat | 0 |
 | Evaluation debt | 2 (DE-01, DE-09) |
-| Guardrail debt | 6 (DE-03, DE-06, DE-08, DE-10, DE-11, DE-15) |
+| Guardrail debt | 7 (DE-03, DE-06, DE-08, DE-10, DE-11, DE-15, DE-16) |
 | Human/cognitive debt | 1 |
 
 Categories at zero have no current entries; the category opens the moment its first entry appears — do not pre-register speculative debt.
@@ -113,3 +113,13 @@ Categories at zero have no current entries; the category opens the moment its fi
 - **Description**: field classes come from result key names and a cue vocabulary, and subjects from text proximity (TP-024 Appendix A). A misread cue flags a correct number. Keys outside the vocabulary stay compatible with any field, so a value under an unknown key can verify a fielded claim.
 - **Repayment trigger**: TP-025 (ADR-008 phase 3), where tools declare result-field semantics in `shared/`; or a live false flag or escape traced to the vocabulary.
 - **Status**: open (2026-10-02; recorded by owner approval with TP-024)
+
+### DE-16 — Company names resolve only when the ledger carries them
+- **Category**: guardrail debt
+- **Description**:
+  - Subjects resolve from three sources: tickers, bare codes, and the first word of an `official_name` in the ledger.
+  - Market, indicator, news and fundamentals results carry no names. A misattribution written with company names ("Tencent's volatility of 37.1%", which is BYD's) is therefore checked against any subject, and can verify.
+  - A company absent from the ledger entirely ("a 46.49% gross margin at BYD" in an Apple-only session) is not recognized as a subject at all.
+  - Five held-out claims escape this way (E-010). The owner waived them for TP-024.
+- **Repayment trigger**: TP-025 (ADR-008 phase 3). Tools return `official_name` with each subject-bearing result and declare field semantics in `shared/`. An unresolvable company name can then count as a subject without evidence.
+- **Status**: open (2026-10-02; recorded by owner decision during TP-024)
