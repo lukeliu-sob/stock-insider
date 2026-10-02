@@ -164,4 +164,283 @@ ledgers:
           unit: fraction
           window: {from: "2025-09-25", until: "2026-09-29", sessions: 252}
 
-items: []  # the development items are written with the engine (TP-024 change-set order)
+# Development items, written with the engine (TP-024 change-set order): the
+# ADR-008 probe, the live BYD driver shapes, the DE-10/DE-12/DE-13 classes and
+# the ADR-006 Am7 phase-2 limitations.
+items:
+  - id: D001
+    ledger: byd
+    text: "BYD (1211.HK) closed at HKD 75.6 on 2026-09-29, with 18.98 million shares traded."
+    claims:
+      - {text: "75.6", correct: true, kind: exact}
+      - {text: "2026-09-29", correct: true, kind: temporal}
+      - {text: "18.98", correct: true, kind: scale_word}
+  - id: D002
+    ledger: byd
+    text: "The stock fell 36.09% from its peak, and volatility is about 37%."
+    claims:
+      - {text: "36.09", correct: true, kind: sign}
+      - {text: "37", correct: true, kind: rounded}
+  - id: D003
+    ledger: byd
+    text: "The article was published at 2026-09-29 12:32:02 UTC."
+    claims:
+      - {text: "2026-09-29 12:32:02 UTC", correct: true, kind: temporal}
+  - id: D004
+    ledger: byd
+    text: "BYD trades at a P/E of 18."
+    claims:
+      - {text: "18", correct: false, kind: no_evidence_field}
+  - id: D005
+    ledger: byd
+    text: "BYD's net margin is 0.998."
+    claims:
+      - {text: "0.998", correct: false, kind: no_evidence_field}
+  - id: D006
+    ledger: byd
+    text: "Quarterly revenue was 380,000 million yuan."
+    claims:
+      - {text: "380,000", correct: false, kind: unquoted_title_digits}
+  - id: D007
+    ledger: byd
+    text: "It was published 20260929T123202178Z."
+    claims:
+      - {text: "20260929T123202178Z", correct: false, kind: more_precise}
+  - id: D008
+    ledger: byd
+    text: "BYD shows roughly a 37% annualized swing rate."
+    claims:
+      - {text: "37", correct: true, kind: rounded}
+  - id: D009
+    ledger: byd
+    text: "2025 was a volatile year for 1211.HK, and the volatility window runs from 2025 to 2026."
+    claims:
+      - {text: "2025", correct: true, kind: temporal}
+      - {text: "2025", correct: true, kind: temporal}
+      - {text: "2026", correct: true, kind: temporal}
+  - id: D010
+    ledger: byd
+    text: "Volatility was elevated in November 2025."
+    claims:
+      - {text: "November 2025", correct: true, kind: window}
+  - id: D011
+    ledger: byd
+    text: "The latest close was 76, and the max drawdown reached -36.1%."
+    claims:
+      - {text: "76", correct: true, kind: rounded}
+      - {text: "-36.1", correct: true, kind: rounded}
+  - id: D012
+    ledger: byd
+    text: 'A headline read "BYD sells 380,000 vehicles in September as overseas deliveries rise".'
+    claims:
+      - {text: "380,000", correct: true, kind: quoted}
+  - id: D013
+    ledger: byd
+    text: "The news feed returned 3 headlines, and the top one carried a sentiment score of 0.998."
+    claims:
+      - {text: "3", correct: true, kind: count}
+      - {text: "0.998", correct: true, kind: exact}
+  - id: D014
+    ledger: byd
+    text: "The window covers 259 sessions from 2025-09-25 to 2026-09-29."
+    claims:
+      - {text: "259", correct: true, kind: count}
+      - {text: "2025-09-25", correct: true, kind: temporal}
+      - {text: "2026-09-29", correct: true, kind: temporal}
+  - id: D015
+    ledger: byd
+    text: "Volume was 19,000,000 shares, and the day high was 76.5."
+    claims:
+      - {text: "19,000,000", correct: false, kind: not_exact}
+      - {text: "76.5", correct: false, kind: fabricated}
+  - id: D016
+    ledger: byd
+    text: "The second headline appeared on 2026-09-27."
+    claims:
+      - {text: "2026-09-27", correct: false, kind: wrong_date}
+  - id: D017
+    ledger: pair
+    text: "| Field | 1211.HK | 0700.HK |\n|---|---|---|\n| Close | 75.6 | 644.63 |\n| Volume | 18982584 | 15230411 |"
+    claims:
+      - {text: "75.6", correct: true, kind: exact}
+      - {text: "644.63", correct: true, kind: exact}
+      - {text: "18982584", correct: true, kind: exact}
+      - {text: "15230411", correct: true, kind: exact}
+  - id: D018
+    ledger: pair
+    text: "| Field | 1211.HK | 0700.HK |\n|---|---|---|\n| Close | 75.6 | 75.6 |"
+    claims:
+      - {text: "75.6", correct: true, kind: exact}
+      - {text: "75.6", correct: false, kind: misattributed_symbol}
+  - id: D019
+    ledger: pair
+    text: "0700.HK closed at 75.6 while 1211.HK closed at 644.63."
+    claims:
+      - {text: "75.6", correct: false, kind: misattributed_symbol}
+      - {text: "644.63", correct: false, kind: misattributed_symbol}
+  - id: D020
+    ledger: pair
+    text: "0700.HK's volatility of 28.4% sits well below 1211.HK's 37.1%."
+    claims:
+      - {text: "28.4", correct: true, kind: unit_conversion}
+      - {text: "37.1", correct: true, kind: unit_conversion}
+  - id: D021
+    ledger: pair
+    text: "0700.HK's volatility is 37.1%."
+    claims:
+      - {text: "37.1", correct: false, kind: misattributed_symbol}
+  - id: D022
+    ledger: session
+    text: "Your watchlist holds 3 symbols, and 2 sync gaps are pending; 37 API calls have been used out of 100."
+    claims:
+      - {text: "3", correct: true, kind: count}
+      - {text: "2", correct: true, kind: count}
+      - {text: "37", correct: true, kind: exact}
+      - {text: "100", correct: true, kind: exact}
+  - id: D023
+    ledger: session
+    text: "The standard profile allows 64,000 tokens per session."
+    claims:
+      - {text: "64,000", correct: true, kind: exact}
+  - id: D024
+    ledger: session
+    text: "The watchlist holds 4 symbols."
+    claims:
+      - {text: "4", correct: false, kind: wrong_count}
+  - id: D025
+    ledger: fundamentals
+    text: "Apple's quarterly revenue was $94.04 billion, with net income of $23.4 billion and a net margin of 24.9%."
+    claims:
+      - {text: "94.04", correct: true, kind: scale_word}
+      - {text: "23.4", correct: true, kind: scale_word}
+      - {text: "24.9", correct: true, kind: unit_conversion}
+  - id: D026
+    ledger: fundamentals
+    text: "Apple's ROE stands at 145%, and revenue grew 6% year over year."
+    claims:
+      - {text: "145", correct: true, kind: unit_conversion}
+      - {text: "6", correct: true, kind: rounded}
+  - id: D027
+    ledger: fundamentals
+    text: "Apple's P/E is 32."
+    claims:
+      - {text: "32", correct: false, kind: no_evidence_field}
+  - id: D028
+    ledger: fundamentals
+    text: "Gross margin was 46.5%, and equity stood at $66.8 billion."
+    claims:
+      - {text: "46.5", correct: true, kind: unit_conversion}
+      - {text: "66.8", correct: true, kind: scale_word}
+  - id: D029
+    ledger: fundamentals
+    text: "Revenue fell 1.4% from the prior quarter."
+    claims:
+      - {text: "1.4", correct: false, kind: derived}
+  - id: D030
+    ledger: fundamentals
+    text: "Over the window since June 2025, volatility was 26.9%."
+    claims:
+      - {text: "June 2025", correct: true, kind: window}
+      - {text: "26.9", correct: true, kind: unit_conversion}
+  - id: D031
+    ledger: byd
+    text: "The feed returned three headlines, and volatility is about thirty-seven percent."
+    claims:
+      - {text: "three headlines", correct: true, kind: word_number}
+      - {text: "thirty-seven percent", correct: true, kind: word_number}
+  - id: D032
+    ledger: session
+    text: "Two pending gaps remain and the watchlist has five symbols."
+    claims:
+      - {text: "Two pending gaps", correct: true, kind: word_number}
+      - {text: "five symbols", correct: false, kind: wrong_count}
+  # Refinements after the first held-out run (E-010): each is pinned here by
+  # its own development text, written independently of the held-out items.
+  - id: D033
+    ledger: byd
+    text: "On the second headline the positive component was 0.15 and the neutral component 0.83."
+    claims:
+      - {text: "0.15", correct: true, kind: exact}
+      - {text: "0.83", correct: true, kind: exact}
+  - id: D034
+    ledger: byd
+    text: "The top headline's positive component was 0.851."
+    claims:
+      - {text: "0.851", correct: false, kind: wrong_field}
+  - id: D035
+    ledger: session
+    text: "The last sync run used 21 API calls, and 63 calls remain in today's budget."
+    claims:
+      - {text: "21", correct: true, kind: exact}
+      - {text: "63", correct: true, kind: exact}
+  - id: D036
+    ledger: session
+    text: "That leaves 21 calls for the rest of the day."
+    claims:
+      - {text: "21", correct: false, kind: wrong_field}
+  - id: D037
+    ledger: session
+    text: "Sync has consumed 37% of its API budget."
+    claims:
+      - {text: "37", correct: false, kind: derived}
+  - id: D038
+    ledger: session
+    text: "Apple's pending gap covers 2026-09-28, while BYD's gap spans 2026-09-24 to 2026-09-25."
+    claims:
+      - {text: "2026-09-28", correct: true, kind: temporal}
+      - {text: "2026-09-24", correct: true, kind: temporal}
+      - {text: "2026-09-25", correct: true, kind: temporal}
+  - id: D039
+    ledger: session
+    text: "Apple's pending gap starts on 2026-09-24."
+    claims:
+      - {text: "2026-09-24", correct: false, kind: misattributed_symbol}
+  - id: D040
+    ledger: session
+    text: "The news store holds 412 articles."
+    claims:
+      - {text: "412", correct: true, kind: count}
+  - id: D041
+    ledger: session
+    text: "Token cap for this profile: 64 thousand."
+    claims:
+      - {text: "64", correct: true, kind: scale_word}
+  - id: D042
+    ledger: pair
+    text: "0700.HK traded up to 648.5 intraday before it settled at 644.63."
+    claims:
+      - {text: "648.5", correct: true, kind: exact}
+      - {text: "644.63", correct: true, kind: exact}
+  - id: D043
+    ledger: pair
+    text: "1211.HK settled at 76.2."
+    claims:
+      - {text: "76.2", correct: false, kind: wrong_field}
+  - id: D044
+    ledger: pair
+    text: "1211.HK opened at 74.9 and closed at 75.6."
+    claims:
+      - {text: "74.9", correct: true, kind: exact}
+      - {text: "75.6", correct: true, kind: exact}
+  - id: D045
+    ledger: fundamentals
+    text: "Net income reached $23.4 billion this quarter, down from $24.8 billion."
+    claims:
+      - {text: "23.4", correct: true, kind: scale_word}
+      - {text: "24.8", correct: true, kind: scale_word}
+  - id: D046
+    ledger: fundamentals
+    text: "Net income reached $23.4 billion, down from $26 billion."
+    claims:
+      - {text: "23.4", correct: true, kind: scale_word}
+      - {text: "26", correct: false, kind: fabricated}
+  - id: D047
+    ledger: byd
+    text: "The worst decline in the window was 36.1%."
+    claims:
+      - {text: "36.1", correct: true, kind: sign}
+  - id: D048
+    ledger: fundamentals
+    text: "Net income came to roughly 25% of revenue."
+    claims:
+      - {text: "25", correct: true, kind: unit_conversion}
