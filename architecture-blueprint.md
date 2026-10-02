@@ -163,8 +163,9 @@ user input
               stamps provenance → appends result to context snapshot
               (values-as-seen) → result re-enters context
         → response completes
-        → guardrail post-check (INV-001 numeric verification vs. snapshot:
-          unverified numbers are marked and named, ADR-008; INV-002
+        → guardrail post-check (INV-001 typed claim verification vs. the
+          session ledger: unverified numbers are marked and named with a
+          reason, ADR-008; INV-002
           epistemic filter: fail → degrade per INV-003)
         → persist: session.jsonl append, snapshot write, usage accounting
         → render (degraded or full)
