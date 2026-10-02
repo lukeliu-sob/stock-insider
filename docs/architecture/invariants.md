@@ -31,7 +31,7 @@ The requirement registry (`REQ-SI-INV-001..004`) is the normative source for inv
 - **Operational fallback (violated at runtime)**:
   1. Each word holding an unverified number is marked `[?]`; the answer is displayed, followed by a notice naming the unverified numbers and the reason.
   2. The record stores the marked text, `post_check: flagged` and the list (screen == record); the model's history names the unverified numbers so later turns do not restate them as fact; they never enter the evidence ledger.
-  3. If an unverified number cannot be located for marking, the response is withheld: stored flagged `post_check: failed`, degraded to `data unavailable for: <list>` (fail-closed).
+  3. If an unverified number cannot be located for marking, the response is withheld: stored with `post_check: failed`, degraded to `data unavailable for: <list>` (fail-closed).
   4. Three consecutive answers with unverified numbers produce a non-blocking notice; the session continues (the INV-001 abort is retired, ADR-008; INV-002's abort is unchanged).
 
 ## INV-002 — Epistemic safety

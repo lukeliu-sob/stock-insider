@@ -2793,3 +2793,157 @@ sessions:
       same message asked to push, open the PR and sync the local branches
       after the fix.
     status: applied
+
+  - id: AILOG-0070
+    date: "2026-10-02"
+    agent_task: >-
+      TP-023, INV-001 v2 phase 1 (ADR-008): numbers the post-check cannot
+      verify are flagged instead of withholding the answer. Driver: on
+      2026-10-02 two live BYD answers were withheld whole, each for one number
+      (a news timestamp written to the millisecond; "about 37%" for a
+      volatility stored as 0.3711553760998695). A probe of the post-check the
+      same day showed it strict on form and loose on meaning: correct
+      renderings were withheld while misattributed values passed. The owner
+      chose typed claim verification, rounding allowed, and flag instead of
+      withhold, then approved ADR-008 (three phases) and TP-023 in session.
+      Records came first (TP-023, then ADR-008 and the governance edits), then
+      code. Phase 1 keeps detection unchanged and changes the consequence.
+      guardrail: mark_unverified puts the [?] marker on every word holding an
+      unverified token, before trailing punctuation and Markdown emphasis;
+      unlocatable_unverified withholds an answer whose unverified number
+      cannot be found in the text for marking (a folded ISO date), so the
+      path stays fail-closed; unverified_notice names the numbers and the
+      reason; GuardrailVerdict gains unverified and flagged (quarantined now
+      means withheld); PostCheckCounter no longer returns abort:number and
+      makes a notice due after three consecutive flagged answers. loop: a
+      flagged answer reaches the answer channel once, as marked text, and its
+      raw deltas are dropped; the record stores the marked text with
+      post_check "flagged", the unverified list and the unmarked original;
+      history replays it with a harness note so later turns do not restate
+      the numbers as fact; INV-002 regenerations are rechecked and marked. A
+      self-review against TP-023 item 9 found the streak fed by the
+      pre-regeneration draft; it now counts the answer as shown. repl:
+      /report stores a flagged report with an "unverified numbers" header
+      line instead of the "passed" line; the status line shows "flagged".
+      tui/render: the notices are styled as warnings. Verification: 23 new
+      cases in test_tp023_verify_and_flag.py; against the pre-change tree 22
+      fail and the INV-002 abort guard holds on both trees; nine injected
+      mutations (no marking, first occurrence only, unlocatable check
+      fail-open, marker after punctuation, streak notice off, history note
+      dropped, unmarked text on screen, report claiming a pass, streak
+      counting the draft) each fail at least one new test. Ten existing test
+      files carry migrated assertions (requirement change, listed below with
+      before and after); the full offline suite is 535 green; ruff, mypy and
+      the structural gates pass. The language gate caught literal CJK in two
+      new fixtures; they are now written as escapes. One wording fix in
+      invariants.md INV-001 fallback item 3 ("stored flagged" became "stored
+      with", since "flagged" is now a post_check value).
+    migrated_assertions:
+      - >-
+        test_agent_loop.py test_fabricated_number_quarantined, renamed
+        test_fabricated_number_flagged: quarantined, display "data unavailable
+        for: 999" and one error event -> display "The answer is 999[?].", no
+        error event, the message recorded as "flagged" with its original.
+      - >-
+        test_agent_loop.py test_three_strikes_aborts, renamed
+        test_three_flagged_turns_notify_without_abort: "abort:number" after
+        three fabrications -> no abort; the streak notice is shown.
+      - >-
+        test_guardrail_pipeline.py test_h4_abort_is_sticky: a stub verdict with
+        a failed number check and number_limit=1 -> a withheld stub with three
+        INV-002 violations and epistemic_limit=2; the stickiness assertions
+        are unchanged.
+      - >-
+        test_guardrail_pipeline.py test_h2_regenerated_fabrication_degrades,
+        renamed test_h2_regenerated_fabrication_is_marked: "777.77" absent
+        from the display -> present only as "777.77[?]", not withheld.
+      - >-
+        test_inv1_postcheck.py test_verdict_quarantines_and_degrades, renamed
+        test_verdict_flags_and_marks: quarantined with degraded "data
+        unavailable for: 42.0" -> flagged, display "The close was 42.0[?].",
+        degraded None.
+      - >-
+        test_inv1_postcheck.py test_counter_three_strikes_then_abort, renamed
+        test_counter_streak_notice_without_abort: "abort:number" on the third
+        record -> None on all three; the notice is due on the third only.
+      - >-
+        test_inv2_filter.py test_quarantine_takes_precedence_in_display,
+        renamed test_unverified_number_flags_alongside_epistemic_strip:
+        quarantined with a degraded display -> flagged with unverified ["42"]
+        and the violating sentence stripped from the display; the violations
+        are still recorded.
+      - >-
+        test_report_gate.py test_untraceable_report_degrades_and_stores_nothing,
+        renamed test_untraceable_report_is_stored_flagged: not stored -> stored
+        with "99999[?] points", the header line "- unverified numbers: 1 (marked
+        [?]; ...)" and no "passed" line.
+      - >-
+        test_resume.py
+        test_resumed_engine_restores_history_and_degrades_absent_numbers,
+        renamed ..._flags_absent_numbers: "data unavailable for: 777" ->
+        "sure, 777[?]."; the history assertions are unchanged.
+      - >-
+        test_tp018_remediation.py test_fabricated_prelude_number_quarantined,
+        renamed test_fabricated_prelude_number_flagged: quarantined with the
+        degraded line naming 999.99 -> not withheld, "999.99" shown once and
+        marked; the screen == record assertion is unchanged.
+      - >-
+        test_tp018_remediation.py helper _three_fabrications, renamed
+        _three_epistemic_violations: three numeric fabrications -> three
+        INV-002 violations, each regenerated; test_abort_persists_and_resume_refused
+        keeps its assertions, with the abort now driven by the INV-002 budget.
+      - >-
+        test_tp018b_fourth_audit.py
+        test_fabricated_regeneration_never_reaches_screen, renamed
+        test_fabricated_regeneration_reaches_screen_only_marked: the degraded
+        line "data unavailable for: 777.77" -> the regeneration shown once
+        with "777.77[?]" and never bare; the violating original is never shown.
+      - >-
+        test_tp020_partial_dates.py
+        test_bd026_unsupported_month_still_quarantines_in_the_loop, renamed
+        test_bd026_unsupported_month_is_flagged_in_the_loop: "data unavailable
+        for: 2024" and "post-check: failed" -> "... since March 2024[?]." and
+        "post-check: flagged".
+      - >-
+        test_tui_invariants.py test_quarantined_original_never_displayed,
+        renamed test_unverified_number_marked_in_ui: the degraded line and no
+        answer bullet -> "The answer is 999[?]." and the notice on screen,
+        never shown unmarked, no "data unavailable".
+    artifacts:
+      - docs/test-plans/TP-023.md
+      - docs/architecture/adr/008-numeric-verification-v2.md
+      - docs/architecture/adr/006-guardrail.md
+      - docs/req/requirements.yaml
+      - docs/architecture/invariants.md
+      - docs/architecture/runtime-policy-catalog.md
+      - docs/architecture/trace-matrix.md
+      - docs/req/glossary.md
+      - architecture-blueprint.md
+      - AGENTS.md
+      - docs/debt-register.md
+      - src/stockinsider/agent/guardrail.py
+      - src/stockinsider/agent/loop.py
+      - src/stockinsider/agent/repl.py
+      - src/stockinsider/agent/tui/render.py
+      - test/offline/test_tp023_verify_and_flag.py
+      - test/offline/test_agent_loop.py
+      - test/offline/test_guardrail_pipeline.py
+      - test/offline/test_inv1_postcheck.py
+      - test/offline/test_inv2_filter.py
+      - test/offline/test_report_gate.py
+      - test/offline/test_resume.py
+      - test/offline/test_tp018_remediation.py
+      - test/offline/test_tp018b_fourth_audit.py
+      - test/offline/test_tp020_partial_dates.py
+      - test/offline/test_tui_invariants.py
+      - docs/review-memo.md
+      - docs/ai-use-log.yaml
+    human_decision: >-
+      Owner decisions in session 2026-10-02: after the post-check probe the
+      owner agreed with the diagnosis, allowed rounding ("this is not a data
+      modification", translated) and asked that the answer point out which
+      numbers may be wrong instead of being blocked. The owner then approved
+      the drafted ADR-008, TP-023 and governance edits ("approve",
+      translated), together with the proposed workflow: TP-023 first, then
+      the records, code and tests, then the PR.
+    status: applied
