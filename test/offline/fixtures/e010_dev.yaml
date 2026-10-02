@@ -1,0 +1,167 @@
+# E-010 development corpus (TP-024, ADR-008 Am1).
+#
+# `ledgers` are session ledgers shaped like real tool results (turn-scoped
+# keys, as the session ledger stores them). The held-out corpus
+# (e010_heldout.yaml) cites the same ledgers by name. `items` are labeled
+# answer texts: every number-bearing expression is labeled in order of
+# appearance with the exact substring and whether it is correct.
+
+ledgers:
+  byd:
+    turn-0001/market.quote#1:
+      symbol: 1211.HK
+      date: "2026-09-29"
+      open: 74.9
+      high: 76.2
+      low: 74.5
+      close: 75.6
+      adjusted_close: 75.6
+      volume: 18982584
+      currency: HKD
+    turn-0001/market.indicators#2:
+      symbol: 1211.HK
+      as_of: "2026-09-29"
+      valuation:
+        note: "share count is not captured by the fundamentals adapter; per-share ratios unavailable until it is (INV-003)"
+      profitability:
+        roe: {metric: roe, unavailable: "no fundamentals rows stored"}
+        net_margin: {metric: net_margin, unavailable: "no fundamentals rows stored"}
+        gross_margin: {metric: gross_margin, unavailable: "gross profit not stored"}
+      growth:
+        revenue_yoy: {metric: yoy_growth, unavailable: "fewer than five quarters of revenue stored"}
+        earnings_yoy: {unavailable: "quarterly net-income series not assembled in this snapshot"}
+      risk:
+        volatility:
+          metric: volatility
+          value: 0.3711553760998695
+          unit: fraction
+          window: {from: "2025-09-25", until: "2026-09-29", sessions: 259}
+        max_drawdown:
+          metric: max_drawdown
+          value: -0.36087947
+          unit: fraction
+          window: {peak_date: "2025-10-03", trough_date: "2026-04-08"}
+    turn-0001/news.recent#3:
+      symbol: 1211.HK
+      count: 3
+      items:
+        - title: "BYD sells 380,000 vehicles in September as overseas deliveries rise"
+          url: "https://www.example-news.com/autos/byd-september-sales-380000"
+          domain: example-news.com
+          seendate: "20260929T123202Z"
+          source: eodhd
+          sentiment: {polarity: 0.998, neg: 0.0, neu: 0.851, pos: 0.149}
+        - title: "BYD opens second European plant in Hungary"
+          url: "https://www.example-wire.com/byd-hungary-plant"
+          domain: example-wire.com
+          seendate: "20260926T081500Z"
+          source: eodhd
+          sentiment: {polarity: 0.71, neg: 0.02, neu: 0.83, pos: 0.15}
+        - title: "Chinese EV makers face price war pressure in Q3"
+          url: "https://www.example-wire.com/ev-price-war-q3"
+          domain: example-wire.com
+          seendate: "20260923T183300Z"
+          source: gdelt
+          sentiment: null
+      note: "titles sanitized at egress (SEC-002 layer one); cite only these items (FR-007)"
+    turn-0001/fundamentals.summary#4:
+      symbol: 1211.HK
+      coverage: {symbol: 1211.HK, quarters: 0, quarters_expected: 8, cells: 0}
+      stored: []
+      stored_unavailable_reason: "no fundamentals rows stored for this symbol: the fundamentals data feed is not in the current vendor plan (explicit, not omitted)"
+
+  pair:
+    turn-0001/market.quote#1:
+      symbol: 1211.HK
+      date: "2026-09-29"
+      open: 74.9
+      high: 76.2
+      low: 74.5
+      close: 75.6
+      adjusted_close: 75.6
+      volume: 18982584
+      currency: HKD
+    turn-0001/market.quote#2:
+      symbol: 0700.HK
+      date: "2026-09-29"
+      open: 640.0
+      high: 648.5
+      low: 636.2
+      close: 644.63
+      adjusted_close: 644.63
+      volume: 15230411
+      currency: HKD
+    turn-0001/market.indicators#3:
+      symbol: 1211.HK
+      as_of: "2026-09-29"
+      risk:
+        volatility:
+          metric: volatility
+          value: 0.3711553760998695
+          unit: fraction
+          window: {from: "2025-09-25", until: "2026-09-29", sessions: 259}
+        max_drawdown:
+          metric: max_drawdown
+          value: -0.36087947
+          unit: fraction
+          window: {peak_date: "2025-10-03", trough_date: "2026-04-08"}
+    turn-0001/market.indicators#4:
+      symbol: 0700.HK
+      as_of: "2026-09-29"
+      risk:
+        volatility:
+          metric: volatility
+          value: 0.2841
+          unit: fraction
+          window: {from: "2025-09-25", until: "2026-09-29", sessions: 259}
+        max_drawdown:
+          metric: max_drawdown
+          value: -0.1932
+          unit: fraction
+          window: {peak_date: "2026-02-11", trough_date: "2026-05-20"}
+
+  session:
+    turn-0001/watchlist.list#1:
+      - {canonical_symbol: 0700.HK, added_at: "2026-09-20T09:12:44+00:00", added_via: cli, official_name: "Tencent Holdings Ltd", exchange: HKEX, asset_type: stock}
+      - {canonical_symbol: 1211.HK, added_at: "2026-09-21T10:03:10+00:00", added_via: agent-tool, official_name: "BYD Company Ltd", exchange: HKEX, asset_type: stock}
+      - {canonical_symbol: AAPL.US, added_at: "2026-09-22T14:30:00+00:00", added_via: cli, official_name: "Apple Inc", exchange: NASDAQ, asset_type: stock}
+    turn-0001/sync.status#2:
+      budget: {used: 37, remaining: 63, cap: 100}
+      pending_gaps:
+        - {canonical_symbol: 1211.HK, from_date: "2026-09-24", to_date: "2026-09-25"}
+        - {canonical_symbol: AAPL.US, from_date: "2026-09-28", to_date: "2026-09-28"}
+      no_data_gaps: []
+      active_symbols: 3
+      last_run: {run_id: 12, started_at: "2026-09-30T00:05:12+00:00", calls_used: 21, status: complete}
+      news: {stored: 412, last_fetch: "2026-09-30T00:06:40+00:00"}
+    turn-0002/budget.query#1: {profile: standard, max_session_tokens: 64000}
+
+  fundamentals:
+    turn-0001/fundamentals.summary#1:
+      symbol: AAPL.US
+      coverage: {symbol: AAPL.US, quarters: 4, quarters_expected: 8, cells: 12}
+      stored:
+        - period_end: "2026-06-30"
+          statement_type: income
+          data: {totalRevenue: 94036000000, netIncome: 23434000000, grossProfit: 43718000000, totalStockholdersEquity: 66796000000}
+        - period_end: "2026-03-31"
+          statement_type: income
+          data: {totalRevenue: 95359000000, netIncome: 24780000000, grossProfit: 44867000000, totalStockholdersEquity: 66708000000}
+      stored_unavailable_reason: null
+    turn-0001/market.indicators#2:
+      symbol: AAPL.US
+      as_of: "2026-09-29"
+      profitability:
+        roe: {metric: roe, value: 1.4512, unit: ratio, window: {}}
+        net_margin: {metric: net_margin, value: 0.2492, unit: ratio, window: {}}
+        gross_margin: {metric: gross_margin, value: 0.4649, unit: ratio, window: {}}
+      growth:
+        revenue_yoy: {metric: yoy_growth, value: 0.0596, unit: fraction, window: {from: "2025-06-30", until: "2026-06-30"}}
+      risk:
+        volatility:
+          metric: volatility
+          value: 0.2687
+          unit: fraction
+          window: {from: "2025-09-25", until: "2026-09-29", sessions: 252}
+
+items: []  # the development items are written with the engine (TP-024 change-set order)

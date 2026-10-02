@@ -1,0 +1,597 @@
+# e010 held-out evaluation corpus: authored by a separately briefed agent session (TP-024, P6); labels pending owner review.
+# Each item cites exactly one ledger defined in test/offline/fixtures/e010_dev.yaml (byd, pair, session, fundamentals).
+# Claims are listed in order of appearance; each claim text is the exact substring as written in the item text.
+items:
+  # ---------------------------------------------------------------- byd
+  - id: H001
+    ledger: byd
+    text: |-
+      BYD (1211.HK) closed at HKD 75.6 on September 29, 2026, after trading between 74.5 and 76.2. Turnover reached 18.98 million shares, and the stock currently trades at 18 times earnings.
+    claims:
+      - {text: "75.6", correct: true, kind: exact}
+      - {text: "September 29, 2026", correct: true, kind: temporal}
+      - {text: "74.5", correct: true, kind: exact}
+      - {text: "76.2", correct: true, kind: exact}
+      - {text: "18.98", correct: true, kind: scale_word}
+      - {text: "18", correct: false, kind: no_evidence_field}  # P/E: per-share ratios unavailable
+
+  - id: H002
+    ledger: byd
+    text: |-
+      | Field | 1211.HK |
+      |---|---|
+      | Open | 74.9 |
+      | High | 76.2 |
+      | Low | 74.5 |
+      | Close | 76.2 |
+      | Adjusted close | 75.6 |
+      | Volume | 19,000,000 |
+
+      Prices are in HKD as of 2026-09-29.
+    claims:
+      - {text: "74.9", correct: true, kind: exact}
+      - {text: "76.2", correct: true, kind: exact}
+      - {text: "74.5", correct: true, kind: exact}
+      - {text: "76.2", correct: false, kind: wrong_field}  # the high shown as the close
+      - {text: "75.6", correct: true, kind: exact}
+      - {text: "19,000,000", correct: false, kind: not_exact}
+      - {text: "2026-09-29", correct: true, kind: temporal}
+
+  - id: H003
+    ledger: byd
+    text: |-
+      BYD's volatility over the 259 sessions from 2025-09-25 to 2026-09-29 was 37.1%. Its maximum drawdown was 36.09%, measured from a peak on October 3, 2025 to a trough on April 18, 2026.
+    claims:
+      - {text: "259", correct: true, kind: count}
+      - {text: "2025-09-25", correct: true, kind: temporal}
+      - {text: "2026-09-29", correct: true, kind: temporal}
+      - {text: "37.1", correct: true, kind: unit_conversion}
+      - {text: "36.09", correct: true, kind: sign}
+      - {text: "October 3, 2025", correct: true, kind: temporal}
+      - {text: "April 18, 2026", correct: false, kind: wrong_date}  # trough_date is 2026-04-08
+
+  - id: H004
+    ledger: byd
+    text: |-
+      Fundamentals for BYD are not stored (0 of 8 expected quarters), so per-share ratios are unavailable (INV-003). Even so, BYD runs a net margin of about 5.4% and a gross margin near 20%, with return on equity of 15.2%.
+    claims:
+      - {text: "0", correct: true, kind: count}
+      - {text: "8", correct: true, kind: count}
+      - {text: "5.4", correct: false, kind: no_evidence_field}
+      - {text: "20", correct: false, kind: no_evidence_field}
+      - {text: "15.2", correct: false, kind: no_evidence_field}
+
+  - id: H005
+    ledger: byd
+    text: |-
+      The news tool returned 3 items for BYD. The most upbeat headline, "BYD sells 380,000 vehicles", carries a sentiment polarity of 0.998, the Hungary plant story scores 0.71, and the Q3 price-war piece reads negative at -0.42.
+    claims:
+      - {text: "3", correct: true, kind: count}
+      - {text: "380,000", correct: true, kind: quoted}
+      - {text: "0.998", correct: true, kind: exact}
+      - {text: "0.71", correct: true, kind: exact}
+      - {text: "-0.42", correct: false, kind: no_evidence_field}  # sentiment is null for the price-war item
+
+  - id: H006
+    ledger: byd
+    text: |-
+      BYD delivered 380,000 vehicles in September 2026 on stronger overseas demand, and the stock closed the session at 75.6 HKD.
+    claims:
+      - {text: "380,000", correct: false, kind: unquoted_title_digits}
+      - {text: "September 2026", correct: true, kind: window}
+      - {text: "75.6", correct: true, kind: exact}
+
+  - id: H007
+    ledger: byd
+    text: |-
+      BYD finished the day at USD 75.6. That is 0.93% above the HKD 74.9 open, and the high-low spread came to 1.7 HKD.
+    claims:
+      - {text: "75.6", correct: false, kind: wrong_currency}
+      - {text: "0.93", correct: false, kind: derived}
+      - {text: "74.9", correct: true, kind: exact}
+      - {text: "1.7", correct: false, kind: derived}
+
+  - id: H008
+    ledger: byd
+    text: |-
+      The sales headline was picked up at 12:32 UTC on September 29, 2026, the Hungary plant report at 2026-09-26 08:15:00.000 UTC, and the price-war piece on September 24, 2026.
+    claims:
+      - {text: "12:32 UTC on September 29, 2026", correct: true, kind: temporal}
+      - {text: "2026-09-26 08:15:00.000 UTC", correct: false, kind: more_precise}
+      - {text: "September 24, 2026", correct: false, kind: wrong_date}  # seendate 20260923T183300Z is September 23 in UTC
+
+  - id: H009
+    ledger: byd
+    text: |-
+      BYD traded nineteen million shares on the day. Its volatility is about thirty-seven percent, and from the October 2025 peak the stock fell as much as thirty-nine percent.
+    claims:
+      - {text: "nineteen million shares", correct: true, kind: word_number}
+      - {text: "thirty-seven percent", correct: true, kind: word_number}
+      - {text: "October 2025", correct: true, kind: window}
+      - {text: "thirty-nine percent", correct: false, kind: fabricated}
+
+  - id: H010
+    ledger: byd
+    text: |-
+      On valuation, BYD trades at 4.1 times book and 1.2 times sales, and the consensus price target of HKD 95 implies meaningful upside from the 75.6 close.
+    claims:
+      - {text: "4.1", correct: false, kind: no_evidence_field}
+      - {text: "1.2", correct: false, kind: no_evidence_field}
+      - {text: "95", correct: false, kind: no_evidence_field}
+      - {text: "75.6", correct: true, kind: exact}
+
+  - id: H011
+    ledger: byd
+    text: |-
+      BYD's adjusted close matched the raw close at 75.6, on volume of 18,982,584 shares. For the sales headline, the positive component was 0.851 and the neutral component 0.149.
+    claims:
+      - {text: "75.6", correct: true, kind: exact}
+      - {text: "18,982,584", correct: true, kind: exact}
+      - {text: "0.851", correct: false, kind: wrong_field}  # 0.851 is the neutral component
+      - {text: "0.149", correct: false, kind: wrong_field}  # 0.149 is the positive component
+
+  - id: H012
+    ledger: byd
+    text: |-
+      BYD's revenue grew 29% year over year in Q2 2026, and quarterly net income reached 9.1 billion yuan, although the fundamentals coverage reports 0 cells stored.
+    claims:
+      - {text: "29", correct: false, kind: no_evidence_field}
+      - {text: "Q2 2026", correct: true, kind: window}
+      - {text: "9.1", correct: false, kind: no_evidence_field}
+      - {text: "0", correct: true, kind: count}
+
+  - id: H013
+    ledger: byd
+    text: |-
+      BYD's drawdown began in Q4 2024 and bottomed in the H1 sell-off, while the volatility window opens in September 2025. Averaged across the scored headlines, sentiment polarity comes to 0.85.
+    claims:
+      - {text: "Q4 2024", correct: false, kind: wrong_date}
+      - {text: "September 2025", correct: true, kind: window}
+      - {text: "0.85", correct: false, kind: derived}  # mean of 0.998 and 0.71; also equals the neutral component 0.851 at this precision
+
+  - id: H014
+    ledger: byd
+    text: |-
+      The latest BYD quote is dated 2026-09-29, and the oldest headline in the feed landed at 2026-09-23 18:33 UTC. Expressed as a fraction, the maximum drawdown is -0.36; momentum looks neutral, with an RSI reading of 58.
+    claims:
+      - {text: "2026-09-29", correct: true, kind: temporal}
+      - {text: "2026-09-23 18:33 UTC", correct: true, kind: temporal}
+      - {text: "-0.36", correct: true, kind: rounded}
+      - {text: "58", correct: false, kind: no_evidence_field}
+
+  - id: H015
+    ledger: byd
+    text: |-
+      The top story in the feed reads "BYD sells 380,000 vehicles in September as overseas deliveries rise" and was seen at 2026-09-29 12:32:02 UTC. Momentum abroad looks strong, with "380,000 vehicles" moved in the month.
+    claims:
+      - {text: "380,000", correct: true, kind: quoted}  # bare "September" inside the verbatim title is not labeled
+      - {text: "2026-09-29 12:32:02 UTC", correct: true, kind: temporal}
+      - {text: "380,000", correct: false, kind: unquoted_title_digits}  # two-word quotation fails the three-word rule
+
+  - id: H016
+    ledger: byd
+    text: |-
+      Of the 4 headlines returned, the lead item says "BYD sold 380,000 vehicles", and the Hungary plant story was seen at 08:15 UTC on September 26, 2026.
+    claims:
+      - {text: "4", correct: false, kind: wrong_count}
+      - {text: "380,000", correct: false, kind: unquoted_title_digits}  # paraphrased quotation (sold vs sells) is not verbatim
+      - {text: "08:15 UTC on September 26, 2026", correct: true, kind: temporal}
+
+  - id: H017
+    ledger: byd
+    text: |-
+      Sources: the Hungary plant story (https://www.example-wire.com/byd-hungary-plant, seen 2026-09-26 08:15 UTC) and the sales report (https://www.example-news.com/autos/byd-september-sales-380000), which scored 0.998. BYD volume on the day was 18.9 million shares.
+    claims:
+      - {text: "2026-09-26 08:15 UTC", correct: true, kind: temporal}
+      - {text: "0.998", correct: true, kind: exact}
+      - {text: "18.9", correct: false, kind: fabricated}  # 18,982,584 rounds to 19.0 million at one decimal
+
+  - id: H018
+    ledger: byd
+    text: |-
+      ### 1. Price action
+      BYD closed at 75.6 Hong Kong dollars after opening at 74.9.
+
+      ### 2. Risk
+      Volatility stands at 37.12% over 259 sessions, and the deepest decline was 36.1% by April 2025.
+    claims:
+      - {text: "75.6", correct: true, kind: exact}
+      - {text: "74.9", correct: true, kind: exact}
+      - {text: "37.12", correct: true, kind: unit_conversion}
+      - {text: "259", correct: true, kind: count}
+      - {text: "36.1", correct: true, kind: sign}
+      - {text: "April 2025", correct: false, kind: wrong_date}
+
+  # ---------------------------------------------------------------- pair
+  - id: H019
+    ledger: pair
+    text: |-
+      | Metric | BYD (1211.HK) | Tencent (0700.HK) |
+      |---|---|---|
+      | Close (HKD) | 75.6 | 648.5 |
+      | Open (HKD) | 74.9 | 640.0 |
+      | Volume | 18.98 million | 15.2 million |
+      | Volatility | 37.12% | 28.41% |
+      | Max drawdown | -36.09% | -19.3% |
+      | Sessions in window | 259 | 252 |
+    claims:
+      - {text: "75.6", correct: true, kind: exact}
+      - {text: "648.5", correct: false, kind: wrong_field}  # Tencent high shown as the close
+      - {text: "74.9", correct: true, kind: exact}
+      - {text: "640.0", correct: true, kind: exact}
+      - {text: "18.98", correct: true, kind: scale_word}
+      - {text: "15.2", correct: true, kind: scale_word}
+      - {text: "37.12", correct: true, kind: unit_conversion}
+      - {text: "28.41", correct: true, kind: unit_conversion}
+      - {text: "-36.09", correct: true, kind: unit_conversion}
+      - {text: "-19.3", correct: true, kind: unit_conversion}
+      - {text: "259", correct: true, kind: count}
+      - {text: "252", correct: false, kind: fabricated}
+
+  - id: H020
+    ledger: pair
+    text: |-
+      Tencent closed at HKD 644.63 against BYD's HKD 75.6. On risk, Tencent's volatility of 37.1% sits above BYD's 28.4%, although BYD's 36.1% drawdown was deeper than Tencent's 19.32% decline.
+    claims:
+      - {text: "644.63", correct: true, kind: exact}
+      - {text: "75.6", correct: true, kind: exact}
+      - {text: "37.1", correct: false, kind: misattributed_symbol}
+      - {text: "28.4", correct: false, kind: misattributed_symbol}
+      - {text: "36.1", correct: true, kind: sign}
+      - {text: "19.32", correct: true, kind: sign}
+
+  - id: H021
+    ledger: pair
+    text: |-
+      BYD and Tencent were both last quoted on September 29, 2026. Tencent saw 15.23 million shares change hands, against 18,982,584 for BYD; Tencent's low of 640.0 and BYD's low of 74.5 framed the day's trading.
+    claims:
+      - {text: "September 29, 2026", correct: true, kind: temporal}
+      - {text: "15.23", correct: true, kind: scale_word}
+      - {text: "18,982,584", correct: true, kind: exact}
+      - {text: "640.0", correct: false, kind: wrong_field}  # Tencent open shown as the low
+      - {text: "74.5", correct: true, kind: exact}
+
+  - id: H022
+    ledger: pair
+    text: |-
+      Tencent (0700.HK) opened at 640 and climbed to a high of 648.5 before settling at 644.6. Meanwhile, BYD's turnover came to 15.23 million shares.
+    claims:
+      - {text: "640", correct: true, kind: exact}
+      - {text: "648.5", correct: true, kind: exact}
+      - {text: "644.6", correct: true, kind: rounded}
+      - {text: "15.23", correct: false, kind: misattributed_symbol}
+
+  - id: H023
+    ledger: pair
+    text: |-
+      Tencent's drawdown ran from a peak on 2026-02-11 to a trough on 2026-05-02, while BYD peaked on 2025-10-03 and bottomed on 2026-04-08. Tencent lost 19% over that stretch and BYD shed 36%, a gap of 17 percentage points.
+    claims:
+      - {text: "2026-02-11", correct: true, kind: temporal}
+      - {text: "2026-05-02", correct: false, kind: wrong_date}  # trough_date is 2026-05-20
+      - {text: "2025-10-03", correct: true, kind: temporal}
+      - {text: "2026-04-08", correct: true, kind: temporal}
+      - {text: "19", correct: true, kind: sign}
+      - {text: "36", correct: true, kind: sign}
+      - {text: "17", correct: false, kind: derived}
+
+  - id: H024
+    ledger: pair
+    text: |-
+      Tencent's peak came in February 2026 and its trough in Q2 2026, whereas BYD's slide started back in 2024. In dollar terms, Tencent's close of USD 644.63 still dwarfs BYD.
+    claims:
+      - {text: "February 2026", correct: true, kind: window}
+      - {text: "Q2 2026", correct: true, kind: window}
+      - {text: "2024", correct: false, kind: wrong_date}
+      - {text: "644.63", correct: false, kind: wrong_currency}
+
+  - id: H025
+    ledger: pair
+    text: |-
+      Tencent looks cheaper than BYD on earnings, at 21 times versus 24 times, and the analyst price target for Tencent of HKD 720 sits well above the 644.63 close. Both volatility figures are computed over 259 sessions.
+    claims:
+      - {text: "21", correct: false, kind: no_evidence_field}
+      - {text: "24", correct: false, kind: no_evidence_field}
+      - {text: "720", correct: false, kind: no_evidence_field}
+      - {text: "644.63", correct: true, kind: exact}
+      - {text: "259", correct: true, kind: count}
+
+  - id: H026
+    ledger: pair
+    text: |-
+      Tencent's adjusted close of 644.63 matches its raw close, while BYD's adjusted close rounds to 76. In round numbers, Tencent's volatility is twenty-eight percent and its drawdown nineteen percent; BYD's volatility is closer to thirty-eight percent.
+    claims:
+      - {text: "644.63", correct: true, kind: exact}
+      - {text: "76", correct: true, kind: rounded}
+      - {text: "twenty-eight percent", correct: true, kind: word_number}
+      - {text: "nineteen percent", correct: true, kind: word_number}
+      - {text: "thirty-eight percent", correct: false, kind: fabricated}
+
+  - id: H027
+    ledger: pair
+    text: |-
+      For both BYD and Tencent, the volatility window runs from 2025-09-25 to 2026-09-29, and BYD's drawdown peak in October 2025 came well before Tencent's. The Tencent quote itself was stamped at 2026-09-29 16:10:00 UTC.
+    claims:
+      - {text: "2025-09-25", correct: true, kind: temporal}
+      - {text: "2026-09-29", correct: true, kind: temporal}
+      - {text: "October 2025", correct: true, kind: window}
+      - {text: "2026-09-29 16:10:00 UTC", correct: false, kind: more_precise}  # the quote carries a date only
+
+  - id: H028
+    ledger: pair
+    text: |-
+      At 644.63, Tencent's share price is roughly 8.5 times BYD's, and Tencent turned over 15,000,000 shares. News sentiment for BYD scored 0.998 this week.
+    claims:
+      - {text: "644.63", correct: true, kind: exact}
+      - {text: "8.5", correct: false, kind: derived}
+      - {text: "15,000,000", correct: false, kind: not_exact}
+      - {text: "0.998", correct: false, kind: no_evidence_field}  # no news tool result in this ledger
+
+  - id: H029
+    ledger: pair
+    text: |-
+      Tencent's adjusted close came in at 644.36, a touch below its HKD 648.5 high, while BYD opened at HKD 74.9 and closed at HKD 75.6 on 18.98 million shares.
+    claims:
+      - {text: "644.36", correct: false, kind: fabricated}
+      - {text: "648.5", correct: true, kind: exact}
+      - {text: "74.9", correct: true, kind: exact}
+      - {text: "75.6", correct: true, kind: exact}
+      - {text: "18.98", correct: true, kind: scale_word}
+
+  - id: H030
+    ledger: pair
+    text: |-
+      Over the shared window of 259 sessions, BYD's volatility runs 871 basis points above Tencent's 28.41%. BYD also posted the heavier volume, 18.98 million shares against 15.23 million for Tencent.
+    claims:
+      - {text: "259", correct: true, kind: count}
+      - {text: "871", correct: false, kind: derived}
+      - {text: "28.41", correct: true, kind: unit_conversion}
+      - {text: "18.98", correct: true, kind: scale_word}
+      - {text: "15.23", correct: true, kind: scale_word}
+
+  - id: H031
+    ledger: pair
+    text: |-
+      Tencent's worst decline was 19.32%, while BYD's price climbed 36.09% over the same window, and BYD's high of 76.2 capped the session.
+    claims:
+      - {text: "19.32", correct: true, kind: sign}
+      - {text: "36.09", correct: false, kind: fabricated}  # drawdown magnitude reported as a gain (sign flipped)
+      - {text: "76.2", correct: true, kind: exact}
+
+  # ---------------------------------------------------------------- session
+  - id: H032
+    ledger: session
+    text: |-
+      | Symbol | Name | Added (UTC) | Via |
+      |---|---|---|---|
+      | 0700.HK | Tencent Holdings Ltd | 2026-09-20 09:12:44 | cli |
+      | 1211.HK | BYD Company Ltd | 2026-09-21 | agent-tool |
+      | AAPL.US | Apple Inc | 2026-09-23 | cli |
+
+      The watchlist holds three symbols, all listed on HKEX or NASDAQ.
+    claims:
+      - {text: "2026-09-20 09:12:44", correct: true, kind: temporal}
+      - {text: "2026-09-21", correct: true, kind: temporal}
+      - {text: "2026-09-23", correct: false, kind: wrong_date}  # AAPL.US added 2026-09-22
+      - {text: "three symbols", correct: true, kind: word_number}
+
+  - id: H033
+    ledger: session
+    text: |-
+      Sync status shows 2 pending gaps: BYD from September 24, 2026 to September 25, 2026, and Apple on September 29, 2026. The data budget has 37 calls used and 63 remaining out of a cap of 100.
+    claims:
+      - {text: "2", correct: true, kind: count}
+      - {text: "September 24, 2026", correct: true, kind: temporal}
+      - {text: "September 25, 2026", correct: true, kind: temporal}
+      - {text: "September 29, 2026", correct: false, kind: wrong_date}  # AAPL.US gap is 2026-09-28
+      - {text: "37", correct: true, kind: exact}
+      - {text: "63", correct: true, kind: exact}
+      - {text: "100", correct: true, kind: exact}
+
+  - id: H034
+    ledger: session
+    text: |-
+      The last sync run started at 2026-09-30 00:05:12 UTC and used 21 API calls; news storage stands at 412 articles, last fetched at 00:06:40 UTC on September 30, 2026. That leaves 21 calls in the budget.
+    claims:
+      - {text: "2026-09-30 00:05:12 UTC", correct: true, kind: temporal}
+      - {text: "21", correct: true, kind: exact}
+      - {text: "412", correct: true, kind: count}
+      - {text: "00:06:40 UTC on September 30, 2026", correct: true, kind: temporal}
+      - {text: "21", correct: false, kind: wrong_field}  # calls_used cited as the remaining budget (63)
+
+  - id: H035
+    ledger: session
+    text: |-
+      Your session runs on the standard profile with a ceiling of 64,000 tokens, and each turn is capped at 8,000 tokens. Sync tracks 3 active symbols and has consumed 37% of its API budget.
+    claims:
+      - {text: "64,000", correct: true, kind: exact}
+      - {text: "8,000", correct: false, kind: no_evidence_field}
+      - {text: "3", correct: true, kind: count}
+      - {text: "37", correct: false, kind: derived}  # percent computed from used/cap; no fraction field was returned
+
+  - id: H036
+    ledger: session
+    text: |-
+      The watchlist currently holds four symbols, and 3 sync gaps are still pending. Meanwhile the news store has grown to 412 articles.
+    claims:
+      - {text: "four symbols", correct: false, kind: wrong_count}
+      - {text: "3", correct: false, kind: wrong_count}
+      - {text: "412", correct: true, kind: count}
+
+  - id: H037
+    ledger: session
+    text: |-
+      Tencent was the first addition, logged at 2026-09-20 09:12:44.120 UTC via the CLI. BYD followed through the agent tool at 10:03 UTC on September 21, 2026, and Apple joined on 2026-09-22, so every entry dates from September 2026.
+    claims:
+      - {text: "2026-09-20 09:12:44.120 UTC", correct: false, kind: more_precise}
+      - {text: "10:03 UTC on September 21, 2026", correct: true, kind: temporal}
+      - {text: "2026-09-22", correct: true, kind: temporal}
+      - {text: "September 2026", correct: true, kind: window}
+
+  - id: H038
+    ledger: session
+    text: |-
+      Apple's pending sync gap covers 2026-09-24 through 2026-09-25, and BYD's gap still needs a backfill as well. Of the 100-call budget, 63 calls remain, and the last run finished with status complete.
+    claims:
+      - {text: "2026-09-24", correct: false, kind: misattributed_symbol}  # gap dates belong to 1211.HK (rule 2 applied to dates)
+      - {text: "2026-09-25", correct: false, kind: misattributed_symbol}
+      - {text: "100", correct: true, kind: exact}
+      - {text: "63", correct: true, kind: exact}
+
+  - id: H039
+    ledger: session
+    text: |-
+      1. Watchlist: Tencent, BYD and Apple, 3 symbols in all.
+      2. Budget: 37 of 100 API calls used, 21 of them in the last run.
+      3. Session tokens: 64 thousand at most.
+      4. Last news fetch: 2026-09-30 00:16:40 UTC.
+    claims:
+      - {text: "3", correct: true, kind: count}
+      - {text: "37", correct: true, kind: exact}
+      - {text: "100", correct: true, kind: exact}
+      - {text: "21", correct: true, kind: exact}
+      - {text: "64", correct: true, kind: scale_word}
+      - {text: "2026-09-30 00:16:40 UTC", correct: false, kind: wrong_date}  # last_fetch is 00:06:40
+
+  - id: H040
+    ledger: session
+    text: |-
+      News storage holds 412 items, last refreshed on 2026-09-30, and the session token cap is sixty-four thousand tokens. The sync scheduler last ran in October 2026.
+    claims:
+      - {text: "412", correct: true, kind: count}
+      - {text: "2026-09-30", correct: true, kind: temporal}
+      - {text: "sixty-four thousand tokens", correct: true, kind: word_number}
+      - {text: "October 2026", correct: false, kind: wrong_date}
+
+  # ---------------------------------------------------------------- fundamentals
+  - id: H041
+    ledger: fundamentals
+    text: |-
+      Apple's return on equity stands at 145.1%, with a net margin of 24.92% and a gross margin of roughly 47%. Revenue grew 5.96% year over year through 2026-06-30, and the shares trade on a P/E of 31.
+    claims:
+      - {text: "145.1", correct: true, kind: unit_conversion}
+      - {text: "24.92", correct: true, kind: unit_conversion}
+      - {text: "47", correct: false, kind: fabricated}  # 0.4649 rounds to 46 percent, not 47
+      - {text: "5.96", correct: true, kind: unit_conversion}
+      - {text: "2026-06-30", correct: true, kind: temporal}
+      - {text: "31", correct: false, kind: no_evidence_field}
+
+  - id: H042
+    ledger: fundamentals
+    text: |-
+      | Quarter ended | Revenue | Net income | Equity |
+      |---|---|---|---|
+      | 2026-06-30 | 94.04 billion | 43.72 billion | 66.80 billion |
+      | 2026-03-31 | 95.4 billion | 24.78 billion | 66,708,000,000 |
+
+      Coverage is 4 of 8 expected quarters, with 12 cells stored.
+    claims:
+      - {text: "2026-06-30", correct: true, kind: temporal}
+      - {text: "94.04", correct: true, kind: scale_word}
+      - {text: "43.72", correct: false, kind: wrong_field}  # gross profit shown as net income
+      - {text: "66.80", correct: true, kind: scale_word}
+      - {text: "2026-03-31", correct: true, kind: temporal}
+      - {text: "95.4", correct: true, kind: scale_word}
+      - {text: "24.78", correct: true, kind: scale_word}
+      - {text: "66,708,000,000", correct: true, kind: exact}
+      - {text: "4", correct: true, kind: count}
+      - {text: "8", correct: true, kind: count}
+      - {text: "12", correct: true, kind: count}
+
+  - id: H043
+    ledger: fundamentals
+    text: |-
+      In the quarter ended June 30, 2026, Apple booked revenue of 94,036,000,000 and net income of 23.4 billion, down from 24.78 billion in the March 2026 quarter. That is a sequential decline of 5.4% in profit.
+    claims:
+      - {text: "June 30, 2026", correct: true, kind: temporal}
+      - {text: "94,036,000,000", correct: true, kind: exact}
+      - {text: "23.4", correct: true, kind: scale_word}
+      - {text: "24.78", correct: true, kind: scale_word}
+      - {text: "March 2026", correct: true, kind: window}
+      - {text: "5.4", correct: false, kind: derived}
+
+  - id: H044
+    ledger: fundamentals
+    text: |-
+      Apple's volatility over 252 sessions was 26.87%, and the stock last closed at USD 254.43 with a price target of USD 280. On sales, it trades at 8.9 times.
+    claims:
+      - {text: "252", correct: true, kind: count}
+      - {text: "26.87", correct: true, kind: unit_conversion}
+      - {text: "254.43", correct: false, kind: no_evidence_field}  # no quote tool result in this ledger
+      - {text: "280", correct: false, kind: no_evidence_field}
+      - {text: "8.9", correct: false, kind: no_evidence_field}
+
+  - id: H045
+    ledger: fundamentals
+    text: |-
+      Gross profit reached 43.72 billion on 94.0 billion of revenue in the June 2026 quarter, and year-over-year revenue growth of 596 basis points was modest. Apple's net margin of 46.49% is exceptional.
+    claims:
+      - {text: "43.72", correct: true, kind: scale_word}
+      - {text: "94.0", correct: true, kind: scale_word}
+      - {text: "June 2026", correct: true, kind: window}
+      - {text: "596", correct: true, kind: unit_conversion}
+      - {text: "46.49", correct: false, kind: wrong_field}  # gross margin cited as net margin
+
+  - id: H046
+    ledger: fundamentals
+    text: |-
+      Shareholders' equity was 66.8 billion at the end of June 2026, roughly flat against 66.7 billion a quarter earlier. Apple's ROE is 1.45 on a ratio basis, revenue growth is measured from June 30, 2025 to June 30, 2026, and equity per share works out to 4.43.
+    claims:
+      - {text: "66.8", correct: true, kind: scale_word}
+      - {text: "June 2026", correct: true, kind: window}
+      - {text: "66.7", correct: true, kind: scale_word}
+      - {text: "1.45", correct: true, kind: rounded}
+      - {text: "June 30, 2025", correct: true, kind: temporal}
+      - {text: "June 30, 2026", correct: true, kind: temporal}
+      - {text: "4.43", correct: false, kind: no_evidence_field}
+
+  - id: H047
+    ledger: fundamentals
+    text: |-
+      Apple's net margin of 24.92% compares with a 46.49% gross margin at BYD, and Tencent's revenue growth of 6% is in the same range.
+    claims:
+      - {text: "24.92", correct: true, kind: unit_conversion}
+      - {text: "46.49", correct: false, kind: misattributed_symbol}
+      - {text: "6", correct: false, kind: misattributed_symbol}
+
+  - id: H048
+    ledger: fundamentals
+    text: |-
+      Apple's stored statements cover the quarters ended March 2026 and June 2026, and the revenue growth window reaches back to Q2 2025, anchored on May 2025 results. Volatility history starts in September 2025.
+    claims:
+      - {text: "March 2026", correct: true, kind: window}
+      - {text: "June 2026", correct: true, kind: window}
+      - {text: "Q2 2025", correct: true, kind: window}  # overlaps the revenue_yoy window only on 2025-06-30
+      - {text: "May 2025", correct: false, kind: wrong_date}
+      - {text: "September 2025", correct: true, kind: window}
+
+  - id: H049
+    ledger: fundamentals
+    text: |-
+      Net income in the June 2026 quarter was 23,400,000,000, about twenty-five percent of revenue. Revenue in the March 2026 quarter came to 95,359,000,000.
+    claims:
+      - {text: "June 2026", correct: true, kind: window}
+      - {text: "23,400,000,000", correct: false, kind: not_exact}
+      - {text: "twenty-five percent", correct: true, kind: word_number}  # net_margin 0.2492
+      - {text: "March 2026", correct: true, kind: window}
+      - {text: "95,359,000,000", correct: true, kind: exact}
+
+  - id: H050
+    ledger: fundamentals
+    text: |-
+      Apple's revenue slipped to 94.04 billion from 95.36 billion, while gross profit eased to 43.72 billion from 44.87 billion. Across the stored FY2026 periods, net income summed to 48.21 billion.
+    claims:
+      - {text: "94.04", correct: true, kind: scale_word}
+      - {text: "95.36", correct: true, kind: scale_word}
+      - {text: "43.72", correct: true, kind: scale_word}
+      - {text: "44.87", correct: true, kind: scale_word}
+      - {text: "48.21", correct: false, kind: derived}
+
+  - id: H051
+    ledger: fundamentals
+    text: |-
+      Apple's net margin of 145% stands out, and revenue growth of 26.9% shows momentum. Gross margin is 46%, with volatility measured over 259 sessions.
+    claims:
+      - {text: "145", correct: false, kind: wrong_field}  # ROE cited as net margin
+      - {text: "26.9", correct: false, kind: wrong_field}  # volatility cited as revenue growth
+      - {text: "46", correct: true, kind: unit_conversion}
+      - {text: "259", correct: false, kind: fabricated}  # AAPL.US window has 252 sessions
