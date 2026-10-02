@@ -23,6 +23,7 @@ import re
 from collections import Counter
 from collections.abc import Callable, Sequence
 from dataclasses import dataclass, field
+from typing import Any
 
 from stockinsider.shared.language import is_english_only
 
@@ -576,10 +577,32 @@ class NumberCheck:
     #: the text the tokens were extracted from (after layout stripping and
     #: date folding): the fail-closed marking check compares against it (ADR-008)
     checked_text: str = ""
+    #: numbers attributed to the wrong subject (ADR-008 Am1, DE-12)
+    subject_mismatch: list[str] = field(default_factory=list)
+    #: every numeric claim with its position and verdict (ADR-008 Am1)
+    claims: list[Any] = field(default_factory=list)
 
 
 def postcheck_numbers(candidate: str, snapshot_values: object) -> NumberCheck:
-    """Verify every numeric token against the snapshot pool.
+    """Verify every numeric claim of an answer against the session ledger.
+
+    ADR-008 Amendment 1 (TP-024): numbers are typed claims. A claim with
+    a field cue is compared with evidence of its subject and field at
+    its written precision; one without keeps the v1 rule below (exact
+    after normalization, 2-4-decimal display rounding as `rounded`,
+    BD-012; marker-gated percents, BD-015); times are parsed whole;
+    partial dates are checked at their written precision and audited
+    as `calendar` (TP-020).
+
+    Implements: REQ-SI-INV-001 (ADR-006, ADR-008)
+    """
+    from stockinsider.agent import guardrail_claims
+
+    return guardrail_claims.check(candidate, snapshot_values)
+
+
+def postcheck_numbers_v1(candidate: str, snapshot_values: object) -> NumberCheck:
+    """The v1 token check, kept for comparison audits (ADR-008 Am1).
 
     Exact match after normalization; a token that is a standard display
     rounding (2-4 decimals) of a pool value also matches, tracked as
@@ -667,18 +690,66 @@ def _token_spans(text: str) -> list[tuple[str, int, int]]:
 
 
 def unlocatable_unverified(candidate: str, check: NumberCheck) -> list[str]:
-    """Unverified tokens with an occurrence the marker cannot find in the candidate.
+    """Unverified claims the marker cannot find in the candidate.
 
-    The detector reads a transformed text (layout stripped, dates folded), so a
-    failing token can exist there in a form the candidate never shows (an ISO
-    date folds to its compact form). Such a number cannot be marked, and the
-    response must be withheld (fail-closed, ADR-008).
+    Phase 2 (ADR-008 Am1): every claim carries its position in the text it
+    was read from, so a claim whose position does not hold its text cannot
+    be marked. Without claim positions (phase 1 verdicts), the detector read
+    a transformed text (layout stripped, dates folded), and a failing token
+    can exist there in a form the candidate never shows. Either way such a
+    number cannot be marked, and the response must be withheld (fail-closed,
+    ADR-008).
 
     Implements: REQ-SI-INV-001 (ADR-008)
     """
+    if check.claims:
+        return list(
+            dict.fromkeys(
+                claim.surface for claim in check.claims
+                if not claim.verified and candidate[claim.start : claim.end] != claim.raw
+            )
+        )
     shown = Counter(token for token, _start, _end in _token_spans(candidate))
     checked = Counter(extract_numbers(check.checked_text))
     return [token for token in dict.fromkeys(check.failed) if shown[token] < checked[token]]
+
+
+def _marker_position(text: str, end: int) -> int:
+    """After the word that ends at or after `end`, in front of trailing punctuation."""
+    stop = end
+    while stop < len(text) and not text[stop].isspace() and text[stop] != "|":
+        stop += 1
+    while stop > end and text[stop - 1] in _MARK_BEFORE:
+        stop -= 1
+    return stop
+
+
+def _insert_markers(text: str, positions: set[int]) -> str:
+    marked = text
+    for position in sorted(positions, reverse=True):
+        marked = marked[:position] + UNVERIFIED_MARKER + marked[position:]
+    return marked
+
+
+def mark_claims(text: str, check: NumberCheck, offset: int = 0) -> str:
+    """Mark exactly the unverified claims of `check` in `text` (ADR-008 Am1).
+
+    `check` was computed on a text of which `text` is the part starting at
+    `offset` (the answer without its pre-tool prelude). A verified number
+    never carries the marker, even where the same digits are unverified
+    elsewhere. Without claim positions, every occurrence of each unverified
+    token is marked (the phase 1 rule).
+
+    Implements: REQ-SI-INV-001 (ADR-008)
+    """
+    if not check.claims:
+        return mark_unverified(text, list(dict.fromkeys(check.failed)))
+    positions = {
+        _marker_position(text, claim.end - offset)
+        for claim in check.claims
+        if not claim.verified and claim.start >= offset and claim.end - offset <= len(text)
+    }
+    return _insert_markers(text, positions)
 
 
 def mark_unverified(text: str, tokens: Sequence[str]) -> str:
@@ -687,7 +758,8 @@ def mark_unverified(text: str, tokens: Sequence[str]) -> str:
     Every occurrence is marked (conservative). The marker goes in front of
     trailing punctuation and Markdown emphasis; a word gets one marker. A
     word ends at whitespace or a table cell bar. Removing the markers gives
-    back the text unchanged.
+    back the text unchanged. A surface that is not a single number (a date,
+    a time, a number phrase; ADR-008 Am1) is marked wherever it occurs.
 
     Implements: REQ-SI-INV-001 (ADR-008)
     """
@@ -696,25 +768,55 @@ def mark_unverified(text: str, tokens: Sequence[str]) -> str:
         return text
     positions: set[int] = set()
     for token, _start, end in _token_spans(text):
-        if token not in wanted:
+        if token in wanted:
+            positions.add(_marker_position(text, end))
+    for surface in wanted:
+        if _NUMBER_TOKEN.fullmatch(surface):
             continue
-        stop = end
-        while stop < len(text) and not text[stop].isspace() and text[stop] != "|":
-            stop += 1
-        while stop > end and text[stop - 1] in _MARK_BEFORE:
-            stop -= 1
-        positions.add(stop)
-    marked = text
-    for position in sorted(positions, reverse=True):
-        marked = marked[:position] + UNVERIFIED_MARKER + marked[position:]
-    return marked
+        for match in re.finditer(rf"(?<![\w]){re.escape(surface)}(?!\d)", text):
+            positions.add(_marker_position(text, match.end()))
+    return _insert_markers(text, positions)
+
+
+def unverified_detail(check: NumberCheck) -> list[dict[str, Any]]:
+    """Per-claim record of the unverified numbers: class, subject, field, reason (ADR-008 Am1).
+
+    Implements: REQ-SI-INV-001 (ADR-008)
+    """
+    from stockinsider.agent.guardrail_claims import FIELD_NAMES
+
+    return [
+        {
+            "claim": claim.surface,
+            "class": claim.cls,
+            "subject": claim.subject,
+            "field": FIELD_NAMES.get(claim.field or "", claim.field),
+            "reason": claim.reason,
+        }
+        for claim in check.claims
+        if not claim.verified
+    ]
 
 
 def unverified_notice(check: NumberCheck) -> str:
     """The notice naming the unverified numbers of an answer and why (ADR-008).
 
+    Phase 2 (ADR-008 Am1): one group per distinct reason, in the order the
+    claims appear; the phase 1 wording stays for numbers not found at all.
+
     Implements: REQ-SI-INV-001 (ADR-008)
     """
+    if check.claims:
+        groups: dict[str, list[str]] = {}
+        for claim in check.claims:
+            if not claim.verified:
+                surfaces = groups.setdefault(claim.reason, [])
+                if claim.surface not in surfaces:
+                    surfaces.append(claim.surface)
+        return "; ".join(
+            f"unverified ({reason}; marked {UNVERIFIED_MARKER}): " + ", ".join(surfaces)
+            for reason, surfaces in groups.items()
+        )
     mismatched = list(dict.fromkeys(check.field_mismatch))
     missing = [token for token in dict.fromkeys(check.failed) if token not in set(mismatched)]
     parts = []
@@ -1107,7 +1209,7 @@ def run_postcheck(candidate: str, snapshot_values: object) -> GuardrailVerdict:
     elif epi.violations:
         display = mark_unverified(epi.clean_text, unverified) if flagged else epi.clean_text
     else:
-        display = mark_unverified(candidate, unverified) if flagged else candidate
+        display = mark_claims(candidate, numbers) if flagged else candidate
     violations = list(epi.violations)
     if not language_ok:
         violations.append("language policy (GOV-001)")

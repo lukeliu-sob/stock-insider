@@ -23,7 +23,12 @@ def test_heading_ordinals_are_layout() -> None:
 
 def test_symbol_fragments_are_structural() -> None:
     check = postcheck_numbers("comparing 0700 with 1211 on close 436.6", POOL)
-    assert check.passed, check.failed
+    assert check.structural == ["0700", "1211"]  # the codes are never numeric claims
+    # TP-024 (ADR-008 Am1, owner decision 2026-10-02 during implementation): the
+    # nearest-subject rule reads "1211 on close 436.6" as 1211's close; 436.6 is
+    # 0700's, so it is flagged as a misattribution
+    assert check.failed == ["436.6"] and check.subject_mismatch == ["436.6"]
+    assert postcheck_numbers("comparing 1211 with 0700 on close 436.6", POOL).passed
 
 
 def test_absent_symbol_fragment_still_fails() -> None:

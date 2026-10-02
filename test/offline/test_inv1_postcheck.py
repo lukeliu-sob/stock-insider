@@ -55,9 +55,13 @@ def test_nested_snapshot_walk() -> None:
     assert check.passed is True
 
 
-def test_string_values_are_walked() -> None:
+def test_string_values_verify_only_as_quotes() -> None:
+    # TP-024 (ADR-008 Am1 requirement change, P3): digits inside tool text are
+    # not data; cited in the answer's own words they are flagged, quoted they verify
     check = postcheck_numbers("level 309.0", {"note": "support level 309.0 held"})
-    assert check.passed is True
+    assert check.passed is False and check.failed == ["309.0"]
+    assert check.claims[0].reason == "appears only in tool text; quote it to cite it"
+    assert postcheck_numbers('the note says "support level 309.0 held"', {"note": "support level 309.0 held"}).passed
 
 
 def test_zero_numbers_passes_trivially() -> None:
@@ -163,17 +167,23 @@ def test_display_rounded_near_misses_rejected() -> None:
     from stockinsider.agent.guardrail import postcheck_numbers
 
     snapshot = {"market.quote": {"close": 24879.2402}}
-    for candidate in ("close is 24,879.23", "close is 24,879.241", "close is 24,879.2"):
+    for candidate in ("close is 24,879.23", "close is 24,879.241"):
         check = postcheck_numbers(candidate, snapshot)
         assert not check.passed, candidate
+    # TP-024 (ADR-008 Am1 requirement change, owner decision 2): a 1-decimal
+    # rounding of the close is a correct rendering at its written precision
+    assert postcheck_numbers("close is 24,879.2", snapshot).rounded == ["24879.2"]
 
 
-def test_integer_rendering_of_fractional_value_rejected() -> None:
+def test_integer_rendering_of_fractional_value_rounds() -> None:
     from stockinsider.agent.guardrail import postcheck_numbers
 
+    # TP-024 (ADR-008 Am1 requirement change, owner decision 2): whole-number
+    # rounding of a fielded value verifies; one unit off still fails
     snapshot = {"market.quote": {"close": 24879.2402}}
     check = postcheck_numbers("close is 24879", snapshot)
-    assert not check.passed  # 0-decimal rendering: not a display-rounding match
+    assert check.passed and check.rounded == ["24879"]
+    assert not postcheck_numbers("close is 24880", snapshot).passed
 
 
 def test_plus_minus_one_adversarial_unchanged() -> None:

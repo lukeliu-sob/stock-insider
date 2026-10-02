@@ -91,7 +91,7 @@ def test_natural_dates_fold_to_pool_dates() -> None:
     assert postcheck_numbers("Seen on 23 Sep 2026.", NEWS_POOL).passed
     # a natural date that is NOT in the evidence still fails
     absent = postcheck_numbers("It appeared on September 24, 2026.", NEWS_POOL)
-    assert absent.failed == ["20260924"]
+    assert absent.failed == ["September 24, 2026"]  # TP-024 (ADR-008 Am1): the date as written
 
 
 def test_vol_abbreviation_is_not_volume() -> None:
