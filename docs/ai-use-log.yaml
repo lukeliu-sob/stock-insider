@@ -2755,3 +2755,41 @@ sessions:
       Owner instructed in session to continue with the open items (2026-10-01).
       Push and PR submission still await a separate owner instruction.
     status: applied
+
+  - id: AILOG-0069
+    date: "2026-10-02"
+    agent_task: >-
+      TP-022 slash write commands (BD-028), from an owner report: in the
+      terminal UI, /sync and /sync run answered "unknown argument(s)
+      ['user_confirmed'] for tool 'sync.run'; allowed: []". Diagnosis:
+      TP-017 PR-2 (H3, PR #51, 2026-09-29) removed the model-fillable
+      user_confirmed boolean from every write tool spec, and the registry
+      rejects undeclared arguments. The REPL's three slash write handlers
+      (_cmd_sync, and _cmd_watch add/remove) still sent it. Reproduced
+      offline against the real registry with a recording fake data store:
+      all three paths failed with zero data-layer calls, so there was no side
+      effect. Fix: the slash calls send exactly their tools' arguments, with
+      the gate unchanged (allow_write=True, set only by the human-typed
+      command and, for /watch, the yes to [y/N]); the stale _cmd_watch
+      docstring is corrected. The register_data_tools docstring in
+      agent/registry (safety path) is left as is and noted in BD-028.
+      Verification: the 6 new tests (12 cases) ran first against the pre-fix
+      repl.py and 6 cases failed (sync, three yes spellings for add/remove,
+      the terminal UI run, the structural spec check); the 6 guards (any
+      answer but a yes, an unknown /sync action) held on both trees. After
+      the fix, all 12 pass and the full offline suite is 512 green with zero
+      edits to existing tests; ruff, mypy and the structural gates pass.
+      Records: TP-022 (committed first), BD-028, RM-59.
+    artifacts:
+      - docs/test-plans/TP-022.md
+      - src/stockinsider/agent/repl.py
+      - test/offline/test_tp022_slash_writes.py
+      - docs/bug-diary.md
+      - docs/review-memo.md
+      - docs/ai-use-log.yaml
+    human_decision: >-
+      Owner reported the live /sync failure (2026-10-02) and approved the
+      diagnosis and the planned fix in session ("approve", translated). The
+      same message asked to push, open the PR and sync the local branches
+      after the fix.
+    status: applied

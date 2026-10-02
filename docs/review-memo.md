@@ -464,3 +464,25 @@ test-plan gate's safety-path attestation).
   with the resume hint and exit code 0, the frame has no empty rows, and no fallback and
   no traceback appear. Glyph and color rendering in Windows Terminal itself remains the
   owner check.
+
+### RM-59 — TP-022: slash write commands rejected since H3 (BD-028)
+
+- Verdict: APPROVE pending owner merge (owner approved TP-022 in session, 2026-10-02, after
+  the diagnosis, the offline reproduction and the planned fix were presented; TP-022
+  committed before any implementation change, GOV-006 ordering).
+- Spec alignment: REQ-SI-FR-001 - `/sync` runs the sync again from the REPL entry.
+  REQ-SI-FR-004 and REQ-SI-INV-004 - `/watch add` and `/watch remove` execute only after
+  the human's yes; any other answer executes nothing. REQ-SI-FR-013 - the slash commands
+  and the CLI subcommands are one verb set again.
+- Architecture: one file changed (`agent/repl.py`: three argument dicts and one docstring).
+  The registry, the tool specs, the confirmation broker and the conversational write path
+  are unchanged; the model still cannot write without a human token. No safety-critical
+  path touched. The stale `register_data_tools` docstring in `agent/registry.py` is left
+  for the next registry change set (noted in BD-028).
+- Test quality: 6 new tests (12 cases), with positive, negative and boundary cases for the
+  `[y/N]` answer, plus a structural guard that checks every literal tool call in
+  `agent/repl.py` against its tool's spec. Against the pre-fix `repl.py`, 6 of 12 cases
+  fail; the 6 guards hold on both trees. Zero edits to existing tests; full offline suite
+  512 green; ruff, mypy and the structural gates pass.
+- Risk: none new. The fix only removes an argument the registry already refused; the write
+  gate and the human confirmation are as before.
