@@ -118,9 +118,11 @@ def test_year_ranges_inherit_the_frame() -> None:
 
 
 def test_partial_dates_absent_from_evidence_fail() -> None:
+    # TP-024 (ADR-008 Am1): failed lists name the whole claim, not its year;
+    # both months lie outside the returned window (2025-09-25..2026-09-29)
     cases = {
-        "Volatility is measured since March 2025.": ["2025"],  # year present, month absent
-        "Volatility is measured since August 2025.": ["2025"],  # neighbouring month
+        "Volatility is measured since March 2025.": ["March 2025"],  # year present, month absent
+        "Volatility is measured since August 2025.": ["August 2025"],  # neighbouring month
         "The peak came in 2024.": ["2024"],
         "The trough came in late 2027.": ["2027"],
     }
@@ -128,7 +130,7 @@ def test_partial_dates_absent_from_evidence_fail() -> None:
         check = postcheck_numbers(text, EVIDENCE)
         assert check.failed == failed, (text, check.failed)
     iso = postcheck_numbers("Window opens 2024-09.", EVIDENCE)
-    assert not iso.passed and "2024" in iso.failed
+    assert not iso.passed and iso.failed == ["2024-09"]
 
 
 def test_year_valued_numbers_stay_numeric_claims() -> None:
@@ -141,35 +143,44 @@ def test_year_valued_numbers_stay_numeric_claims() -> None:
         "Last close: 2026",
         "| close | 2026 |",
         "In 2026 HKD terms it is cheap.",
-        "Holdings in 2026.HK rose.",
         "It rose 2026 points.",
     ):
         check = postcheck_numbers(text, EVIDENCE)
         assert not check.passed, text
         assert "2026" in check.failed, (text, check.failed)
         assert check.calendar == [], text
+    # TP-024 (ADR-008 Am1, P4): a symbol-shaped ticker is an identifier, never
+    # a year and never a numeric claim
+    ticker = postcheck_numbers("Holdings in 2026.HK rose.", EVIDENCE)
+    assert ticker.passed and ticker.claims == [] and ticker.calendar == []
 
 
 def test_full_dates_keep_day_precision() -> None:
     assert postcheck_numbers("The window opened on 25 September 2025.", EVIDENCE).passed
+    # TP-024 (ADR-008 Am1): failed lists name the date as written
     wrong_day = postcheck_numbers("The window opened on 26 September 2025.", EVIDENCE)
-    assert wrong_day.failed == ["20250926"]  # September 2025 is an evidence month; the day is not
+    assert wrong_day.failed == ["26 September 2025"]  # September 2025 is an evidence month; the day is not
     absent = postcheck_numbers("It appeared on September 24, 2026.", NEWS_POOL)
-    assert absent.failed == ["20260924"]
+    assert absent.failed == ["September 24, 2026"]
 
 
 def test_evidence_calendar_reads_dates_not_numbers() -> None:
     numbers_only = {"turn-0001/market.quote#1": {"volume": 202509, "close": 2025.5}}
     check = postcheck_numbers("Volatility is measured since September 2025.", numbers_only)
-    assert check.failed == ["2025"]  # a number shaped like a month makes no month citable
+    # TP-024 (ADR-008 Am1): failed lists name the whole claim
+    assert check.failed == ["September 2025"]  # a number shaped like a month makes no month citable
     assert postcheck_numbers("The article ran in September 2026.", NEWS_POOL).passed
-    assert postcheck_numbers("The article ran in August 2026.", NEWS_POOL).failed == ["2026"]
+    assert postcheck_numbers("The article ran in August 2026.", NEWS_POOL).failed == ["August 2026"]
 
 
-def test_cue_less_year_stays_a_number() -> None:
-    """Fail-closed default (DE-13): no temporal frame, no allowance."""
-    assert postcheck_numbers("2025 was a volatile year.", EVIDENCE).failed == ["2025"]
-    assert postcheck_numbers("| Year | 2025 |", EVIDENCE).failed == ["2025"]
+def test_de13_years_verify_and_value_positions_stay_numbers() -> None:
+    """DE-13 repaid (TP-024, ADR-008 Am1): a sentence-subject year and a
+    "Year" table label are temporal; a bare year in a value position stays a
+    numeric claim (fail-closed default)."""
+    assert postcheck_numbers("2025 was a volatile year.", EVIDENCE).passed
+    assert postcheck_numbers("| Year | 2025 |", EVIDENCE).passed
+    assert postcheck_numbers("| Value | 2025 |", EVIDENCE).failed == ["2025"]
+    assert postcheck_numbers("Revenue reached 2025.", EVIDENCE).failed == ["2025"]
 
 
 def test_calendar_hits_are_audited() -> None:
@@ -281,6 +292,6 @@ def test_bd026_unsupported_month_is_flagged_in_the_loop(engine_parts) -> None:
     # TP-023 (ADR-008 requirement change): still unverified, now flagged and marked
     outcome, lines = _run_byd_turn(engine_parts, "For 1211.HK, volatility covers the sessions since March 2024.")
     assert outcome.quarantined is False
-    assert outcome.unverified == ["2024"]
+    assert outcome.unverified == ["March 2024"]  # TP-024: the whole claim is named
     assert outcome.displayed == "For 1211.HK, volatility covers the sessions since March 2024[?]."
     assert any("post-check: flagged" in line for line in lines)

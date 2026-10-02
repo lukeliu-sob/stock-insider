@@ -165,3 +165,41 @@ the passing set where the evidence supports the date, by owner decision
 (2026-10-01: bare years allowed); the remaining partial-date residuals
 are DE-13. Not yet re-measured live: the next live session should
 replay the BYD question.
+
+### E-010 — INV-001 typed claims (TP-024)
+
+Date: 2026-10-02 - Model(s): n/a (checker, unit-level)
+
+Corpora:
+- test/offline/fixtures/e010_dev.yaml: 48 answers, 82 labeled claims,
+  written with the engine.
+- test/offline/fixtures/e010_heldout.yaml: 51 answers, 250 claims
+  (170 correct, 80 wrong). Written by a separately briefed agent session
+  and committed before any engine code. Labels pending owner review.
+
+Scores:
+- Development set: precision 61/61, recall 21/21, no flags on unlabeled
+  numbers.
+- Held-out set, first run on the frozen engine: precision 156/170 =
+  0.918, recall 68/80 = 0.850.
+- Held-out set after the refinements of TP-024 Amendment 1 (each pinned
+  by a development item): precision 168/170 = 0.988, recall 75/80 =
+  0.938.
+  - The 5 escapes are the company-name class (DE-16), waived by the
+    owner for TP-024.
+  - The 2 false flags are pinned residuals: the field was stated in the
+    previous sentence.
+- ADR-008 probe: 4/4 correct renderings verify; 4/4 misattributions are
+  flagged, each with its reason; the DE-12 table swap is flagged.
+- E-006 suite: GOOD 9/9 pass, BAD 6/6 flagged. Residuals: prose year,
+  window word, time of day.
+- Mutation evidence: against the pre-change tree 36/55 new cases fail;
+  10 injected mutations are each caught.
+
+Verdict: pass, with one class waived.
+
+Notes:
+- The post-fix held-out numbers are not an independent measurement for
+  the refined classes; a fresh held-out set is the next evaluation's
+  instrument.
+- Not yet measured live: replay the BYD question after merge.

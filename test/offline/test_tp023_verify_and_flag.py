@@ -12,6 +12,7 @@ Implements: REQ-SI-INV-001, REQ-SI-FR-008, REQ-SI-QA-004 (ADR-008)
 
 from __future__ import annotations
 
+import dataclasses
 import re
 from pathlib import Path
 
@@ -28,7 +29,6 @@ MARK = "[?]"
 NOTICE_999 = "unverified (not found in this session's tool results; marked [?]): 999"
 #: "price rises" in Chinese, written as escapes so the repository language gate stays clean
 CJK_TEXT = "\u4ef7\u683c\u4e0a\u6da8"
-_TOKEN = re.compile(r"-?\d[\d,]*(?:\.\d+)?")
 
 
 @pytest.fixture()
@@ -92,8 +92,14 @@ BATTERY = [
 ]
 
 
-def _words(text: str) -> list[str]:
-    return [word for word in re.split(r"[\s|]+", text) if word]
+def _marker_offsets(shown: str) -> list[int]:
+    """Where the markers sit, as positions in the unmarked text."""
+    offsets: list[int] = []
+    index = 0
+    while (found := shown.find(MARK, index)) >= 0:
+        offsets.append(found - len(MARK) * len(offsets))
+        index = found + len(MARK)
+    return offsets
 
 
 @pytest.mark.parametrize("text", BATTERY)
@@ -102,14 +108,20 @@ def test_every_unverified_occurrence_is_marked(text) -> None:
     assert verdict.flagged is True and verdict.quarantined is False
     shown = verdict.display_text
     assert shown.replace(MARK, "") == text  # the marker only adds, never alters
-    unverified = set(verdict.unverified)
+    # TP-024 (ADR-008 Am1 requirement change): markers follow claim positions.
+    # Every unverified claim ends its word with the marker, and every marker
+    # belongs to an unverified claim (dates and times are whole claims now).
+    unverified = [claim for claim in verdict.number_check.claims if not claim.verified]
     assert unverified
-    for word in _words(shown):
-        tokens = {t.replace(",", "") for t in _TOKEN.findall(word.replace(MARK, ""))}
-        if tokens & unverified:
-            assert MARK in word, f"unmarked unverified number in {word!r} ({text!r})"
-        elif MARK in word:
-            pytest.fail(f"marker on a word without an unverified number: {word!r}")
+    offsets = _marker_offsets(shown)
+
+    def owns(claim, offset: int) -> bool:
+        return claim.end <= offset and not re.search(r"[\s|]", text[claim.end : offset])
+
+    for claim in unverified:
+        assert any(owns(claim, offset) for offset in offsets), f"unmarked unverified claim {claim.raw!r} ({text!r})"
+    for offset in offsets:
+        assert any(owns(claim, offset) for claim in unverified), f"marker owned by no unverified claim ({text!r})"
 
 
 def test_verified_number_in_battery_stays_unmarked() -> None:
@@ -118,17 +130,31 @@ def test_verified_number_in_battery_stays_unmarked() -> None:
     assert "120.5[?]" in verdict.display_text
 
 
-def test_unmarkable_number_withholds(store, prompts_dir) -> None:
+def test_unmarkable_number_withholds(store, prompts_dir, monkeypatch) -> None:
+    # TP-024 (ADR-008 Am1 requirement change): a date is a whole claim with a
+    # position, so an unverified date is now marked instead of withheld
     ledger = {"turn-0001/market.quote#1": {"date": "2026-09-30", "close": 75.6}}
-    verdict = guardrail.run_postcheck("The close on 2026-09-28 was 75.6.", ledger)
+    marked = guardrail.run_postcheck("The close on 2026-09-28 was 75.6.", ledger)
+    assert marked.flagged is True and marked.display_text == "The close on 2026-09-28[?] was 75.6."
+    # the fail-closed path itself: a claim whose position does not hold its
+    # text cannot be marked, and the answer is withheld
+    real = guardrail.postcheck_numbers
+
+    def misplaced(candidate, snapshot_values):
+        check = real(candidate, snapshot_values)
+        claims = [c if c.verified else dataclasses.replace(c, start=0, end=len(c.raw)) for c in check.claims]
+        return dataclasses.replace(check, claims=claims)
+
+    monkeypatch.setattr(guardrail, "postcheck_numbers", misplaced)
+    verdict = guardrail.run_postcheck("The answer is 999.", {})
     assert verdict.quarantined is True and verdict.flagged is False
-    assert verdict.display_text == "data unavailable for: 20260928"
-    # end to end: withheld exactly as before, nothing streamed
-    engine = make_engine(store, [ChatOutcome(text="The answer is 2026-09-28.", usage={})], prompts_dir)
+    assert verdict.display_text == "data unavailable for: 999"
+    # end to end: withheld, nothing streamed
+    engine = make_engine(store, [ChatOutcome(text="The answer is 999.", usage={})], prompts_dir)
     record = store.create(profile="standard")
     outcome, spy = _turn(engine, record)
     assert outcome.quarantined is True
-    assert outcome.displayed.startswith("data unavailable for:")
+    assert outcome.displayed == "data unavailable for: 999"
     assert spy.streamed == []
     assert _assistant_events(store, record)[-1]["post_check"] == "failed"
 

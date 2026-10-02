@@ -32,9 +32,10 @@ from typing import Any
 from stockinsider.agent.guardrail import (
     UNVERIFIED_STREAK_NOTICE,
     PostCheckCounter,
-    mark_unverified,
+    mark_claims,
     run_postcheck,
     run_with_regeneration,
+    unverified_detail,
     unverified_notice,
 )
 from stockinsider.agent.profiles import tool_loop_limit
@@ -604,7 +605,7 @@ class TurnEngine:
                 if recheck.flagged:
                     # ADR-008: unverified numbers in the refusal summary are marked
                     unverified, original_text = recheck.unverified, displayed
-                    displayed = mark_unverified(displayed, unverified)
+                    displayed = mark_claims(displayed, recheck.number_check)
                 render(displayed)  # the INV-002 refusal summary
                 refused = True
                 regeneration_outcome = "refused"
@@ -612,7 +613,7 @@ class TurnEngine:
                 if recheck.flagged:
                     regen_sink.reset()
                     unverified, original_text = recheck.unverified, epi.displayed
-                    displayed = mark_unverified(epi.displayed, unverified)
+                    displayed = mark_claims(epi.displayed, recheck.number_check)
                     _show_flagged(displayed)
                 elif stream_sink is not None and regen_sink.buffer:
                     # verify-then-display for the regeneration: replay
@@ -646,7 +647,9 @@ class TurnEngine:
             unverified = verdict.unverified
             displayed = verdict.display_text
             _show_flagged(displayed)
-            body = mark_unverified(candidate, unverified)
+            # the claims were read on prelude + candidate; the body is the
+            # candidate alone, so its claim positions start after the prelude
+            body = mark_claims(candidate, verdict.number_check, offset=len(combined) - len(candidate))
         else:
             _replay()
             # screen == record: the event stores the full validated text
@@ -665,6 +668,8 @@ class TurnEngine:
         if unverified:
             message_event["unverified"] = list(unverified)
             message_event["original"] = original_text
+            # ADR-008 Am1: per-claim class, subject, field and reason
+            message_event["unverified_detail"] = unverified_detail(flag_check)
         self._store.append_event(session_id, message_event)
         # ADR-008: the unverified streak counts the answer as shown (for a
         # regeneration, its recheck); the INV-002 budget is fed as before

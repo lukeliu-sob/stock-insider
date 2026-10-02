@@ -22,6 +22,7 @@
 | Backfill | Fetching missing historical bars for a symbol (5-year horizon), triggered on watchlist addition or gap detection. | `IngestionService.backfill` |
 | Benchmark Index | Built-in index whose returns serve as the baseline for abnormal-return computation: HSI, HSTECH, S&P 500, Nasdaq-100. | `benchmarks` config; `market_data` rows (index symbols) |
 | Canonical Symbol | The internal security identifier: `US:<ticker>` or `HK:<4-digit code>`, e.g. `US:AAPL`, `HK:0700`. All storage, retrieval, and output use canonical symbols. | `symbol_map` table |
+| Claim Class | The class the post-check assigns to a Numeric Claim before checking it: structural (layout numbering), identifier (governance IDs, period labels, versions, URLs, tickers), quoted (inside a quotation of tool text), temporal (dates, times, periods) or quantitative (everything else, fail-closed). Non-data numerics are identified this way. | `agent/guardrail_claims` (`REQ-SI-INV-001`, ADR-008 Am1) |
 | Compaction | The reduction of the conversation-history layer (L4) into the session summary (L5) when assembled context reaches the compaction threshold (default 80% of the profile budget) or on `/compact`. Critical constraints and the provenance ledger are re-injected afterward. | `agent/context` (ADR-001 §6.3–6.4) |
 | Context Snapshot | The manifest of every data record that entered a response's model context — one snapshot per assistant response. Basis for post-check verification and session review. | `sessions/<session_id>/context/` |
 | Context Assembly | The deterministic pipeline that builds each model prompt: deduplicate → prioritize by layer → budget by profile → compact → assemble → re-inject critical constraints. | `agent/context` (full design in the ADR) |
@@ -36,8 +37,9 @@
 | Incomplete Turn | A turn interrupted before its post-check completed; marked `incomplete` in session.jsonl and excluded from context reconstruction on resume. | `agent/session` (memory-design §3) |
 | Model Routing | The per-profile, per-role mapping of model roles (chat, reasoning, event scoring, embedding) to configured models. Default for all roles and profiles: `deepseek-flash`; user-overridable per profile. | config `profiles.*.models` (ADR-001 §6.5) |
 | News Relevance Filter | Ingestion-time filter admitting only news relevant to active watchlist symbols or macro keywords. No firehose ingestion. | `IngestionService.filter_news` (`REQ-SI-FR-003`) |
+| Numeric Claim | A number in agent output together with its position, Claim Class and, for quantitative claims, its subject, field, unit and written precision; the unit the post-check verifies, marks and records. | `agent/guardrail_claims` (`REQ-SI-INV-001`, ADR-008 Am1) |
 | Plain REPL | The line-oriented front-end of the REPL: one input line per prompt, plain-text output, ASCII chrome. The default front-end and the only one for non-interactive or scripted input. | `agent/repl` (`PlainIO`); `--ui plain` (`REQ-SI-FR-013`) |
-| Post-check | Deterministic verifier that extracts numerics from final agent output and checks each against the session's evidence ledger; numbers it cannot verify are displayed and stored only with the Unverified Marker (ADR-008). Executor of `REQ-SI-INV-001`. | `Guardrail.postcheck` |
+| Post-check | Deterministic verifier that classifies every number of final agent output as a Numeric Claim and checks each claim against the session's evidence ledger according to its Claim Class; claims it cannot verify are displayed and stored only with the Unverified Marker and a reason (ADR-008). Executor of `REQ-SI-INV-001`. | `Guardrail.postcheck` |
 | Profile Budget Envelope | The per-session token ceiling bound to the analysis profile. Overflow: compact-and-retry once per response, then explicit abort. | config `profiles.*.budget` (`REQ-SI-COST-001`) |
 | Provenance Ledger | A compact digest of every data record used in a session (record IDs + value hashes), maintained by the context assembler and re-injected after every compaction. Architecturally non-compactable — the comparison basis of the INV-001 post-check in long sessions. | `agent/context` (ADR-001 §6.4) |
 | Provenance Type | Data-origin tag on every stored record and cited fact: `api`, `crawled`, `computed`, or `model-judgment`. | record field `provenance` |
@@ -51,7 +53,7 @@
 | Terminal UI | The opt-in inline front-end of the REPL on an interactive terminal: framed input with slash completion, status line, activity indicator, Markdown answers under Render Fidelity, and choice prompts for write confirmations. A presentation layer over the same slash-command dispatch, never a third verb set. | `agent/tui`; `--ui tui` (`REQ-SI-FR-026`) |
 | Test Plan | A version-controlled artifact (`docs/test-plans/TP-NNN.md`) describing a change's tests, approved before implementation begins; implementation PRs must reference it and the approval gate validates the reference. | `docs/test-plans/` (`REQ-SI-GOV-006`) |
 | Tool Registry | The single catalog of runtime agent tools: name, input schema, output schema, provenance stamping rule, failure semantics. The only channel between the agent and the data side. | `agent/registry`; schemas in `shared/` |
-| Unverified Marker | The `[?]` appended to a word holding a number the post-check could not verify, with a notice naming the number and the reason. Such a number is never displayed or stored without it; one that cannot be marked withholds the response. | `agent/guardrail.mark_unverified` (`REQ-SI-INV-001`) |
+| Unverified Marker | The `[?]` placed after the word that ends a Numeric Claim the post-check could not verify, with a notice naming the claim and the reason. Such a claim is never displayed or stored without it; a claim that cannot be located for marking withholds the response. | `agent/guardrail` (claim-position marking) (`REQ-SI-INV-001`) |
 | Values-as-Seen | Snapshot discipline: context snapshots store the actual values that entered the model context, not references alone; later data changes never alter past audit records. | `sessions/<id>/context/` (`REQ-SI-FR-011`) |
 | Watchlist | The set of active canonical symbols under tracking, capped at 100. Basis for ingestion scope and news filtering. | `watchlist` table (`REQ-SI-GOV-004`) |
 | Whitelist Crawler | Optional fetch tool restricted to configured financial-media domains, with per-domain extraction templates and schema validation. | `Crawler` (`REQ-SI-FR-015`) |
@@ -61,5 +63,5 @@
 
 | Term | Why pending |
 |------|-------------|
-| Safe-list (post-check) | Mechanism for non-data numerics (e.g. years) inside the INV-001 post-check — defined with the Guardrail design. |
+| Safe-list (post-check) | Resolved 2026-10-02 (ADR-008 Am1): non-data numerics are handled by Claim Class (structural, identifier, temporal); the term itself is not used. |
 | Session transcript | Field-level schema of `session.jsonl` — fixed when the session persistence module is designed. |

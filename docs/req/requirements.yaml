@@ -26,7 +26,10 @@ meta:
   # REQ-SI-INV-001, REQ-SI-FR-008 and REQ-SI-QA-004 move from withholding to
   # verify-and-flag (owner decision 2026-10-02); the scope_must_not_do item on
   # unverified numerics is reworded to match. Recorded in AILOG-0070.
-  registry_version: "0.6.0"
+  # 0.6.1 (2026-10-02, TP-024, ADR-008 Am1): REQ-SI-INV-001 regression_scope
+  # gains test/offline/test_tp024_typed_claims.py. No statement or fit-criterion
+  # change; recorded in AILOG-0071.
+  registry_version: "0.6.1"
   id_prefix: REQ-SI
   classification: type-c-system          # AI-agent-built AND LLM-native (methodology judgment 1)
   markets: [HK, US]
@@ -729,7 +732,7 @@ requirements:
     status: conceptual
     depends_on: [REQ-SI-FR-011]
     regression_trigger: true
-    regression_scope: [test/offline/test_inv1_postcheck.py, test/offline/test_tp023_verify_and_flag.py]
+    regression_scope: [test/offline/test_inv1_postcheck.py, test/offline/test_tp023_verify_and_flag.py, test/offline/test_tp024_typed_claims.py]
 
   - id: REQ-SI-INV-002
     type: invariant

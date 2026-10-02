@@ -39,10 +39,15 @@ GOOD = [
     ("iso date", "reported on 2026-09-25"),
     ("compact date", "reported on 20260925"),
     ("volume", "volume 9110000 shares"),
+    # TP-024 (ADR-008 Am1 requirement change, owner decision 2): roundings
+    # to the written precision are correct renderings
+    ("whole-number rounding", "0700.HK closed at 437"),
+    ("integer percent", "volatility of about 45%"),
 ]
 BAD = [
     ("fabricated close", "0700.HK closed at 436.7"),
-    ("off-by-one-class", "0700.HK closed at 437"),
+    # TP-024: 437 is now the correct rounding of 436.6; one unit off is 438
+    ("off-by-one-class", "0700.HK closed at 438"),
     ("wrong date", "reported on 2026-09-26"),
     ("wrong percent no marker", "volatility of about 45.28"),
     ("invented number", "peaked at 500.0"),
@@ -50,7 +55,6 @@ BAD = [
 ]
 RESIDUAL = [
     ("prose year", "between October 2025 and June 2026"),
-    ("integer percent", "volatility of about 45%"),
     ("window word", "over the last 20 sessions"),
     ("time of day", "at 14:05:09 that day"),
 ]
@@ -79,9 +83,10 @@ def test_residual_classes_reported_not_hidden() -> None:
     never before.
     """
     still_failing = [name for name, text in RESIDUAL if not postcheck_numbers(text, POOL).passed]
+    # TP-024: "integer percent" moved to GOOD (owner decision 2); the rest
+    # still fail correctly - this pool holds no such months, sessions or times
     assert still_failing == [
         "prose year",
-        "integer percent",
         "window word",
         "time of day",
     ], "residual set changed - update the logbook record with this PR"

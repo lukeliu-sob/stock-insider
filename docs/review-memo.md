@@ -527,3 +527,42 @@ test-plan gate's safety-path attestation).
   reopens on owner observation. Until the typed engine (TP-024) accepts rounding, correct
   rounded renderings such as "about 37%" are flagged. The warning color of the notices in
   a real terminal is an owner check.
+
+### RM-61 — TP-024: INV-001 v2 phase 2, typed claim verification (ADR-008 Am1)
+
+- Verdict: APPROVE, pending owner merge and owner review of the held-out labels.
+  - The owner approved TP-024 and ADR-008 Am1 in session on 2026-10-02.
+  - TP-024 was committed first, and the held-out corpus before any engine code (GOV-006
+    ordering; P6 separation).
+- Spec alignment:
+  - REQ-SI-INV-001:
+    - fabricated and misattributed numbers are flagged by subject and field (the
+      ADR-008 probe, DE-12 swaps, a seeded generated battery);
+    - correct renderings verify at their written precision (rounding, scale words,
+      signs, whole times, partial dates within windows, quotes of tool text);
+    - only unverified claims carry the marker, each with one reason;
+    - the fail-closed withhold remains.
+  - Known gap: company names the ledger cannot resolve (DE-16), waived by the owner and
+    deferred to TP-025.
+  - REQ-SI-QA-001: E-010 recorded. REQ-SI-FR-022: `/show` lists each unverified number
+    with its reason.
+- Architecture:
+  - New module `agent/guardrail_claims.py`, inside the safety prefix.
+  - `guardrail.py` keeps every v1 helper and the `NumberCheck` shape, with two new
+    fields; the v1 check stays available as `postcheck_numbers_v1`.
+  - The loop marks from the verdict's claims.
+  - Registry 0.6.1 changes the regression scope only.
+  - Unchanged: tool results, `shared/`, `prompts/`, CI workflows.
+- Test quality:
+  - 55 new cases. Against the pre-change tree 36 fail; 19 guards hold on both trees.
+  - Ten injected mutations are each caught.
+  - The held-out first run was recorded before any refinement; every refinement is
+    pinned by a development item.
+  - Migrated assertions are listed in AILOG-0071 (one found during implementation and
+    approved by the owner).
+  - Full offline suite green; ruff, mypy and the structural gates pass.
+- Risk:
+  - Heuristic field and subject typing (DE-15): a misread cue shows as a flag.
+  - Company names (DE-16).
+  - The post-fix held-out numbers are not independent.
+  - An unfielded number keeps v1 semantics (P2), so its escapes are v1's.

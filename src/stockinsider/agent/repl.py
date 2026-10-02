@@ -1088,11 +1088,12 @@ def render_session(store: SessionStore, session_id: str, echo: Callable[[str], N
     """Render one session read-only from its authoritative event log (FR-022).
 
     Tool calls are enumerated in exact session.jsonl order with their
-    arguments; quarantined originals are shown flagged; snapshot
-    values and artifacts are listed. Raises SessionError for unknown
-    sessions.
+    arguments; quarantined originals are shown flagged; each unverified
+    number of a flagged answer is listed with its reason (ADR-008 Am1);
+    snapshot values and artifacts are listed. Raises SessionError for
+    unknown sessions.
 
-    Implements: REQ-SI-FR-022 (ADR-001)
+    Implements: REQ-SI-FR-022 (ADR-001, ADR-008)
     """
     events = store.read_events(session_id)
     header = dict(events[0].get("record", {})) if events else {}
@@ -1128,6 +1129,9 @@ def render_session(store: SessionStore, session_id: str, echo: Callable[[str], N
             echo(
                 f"  assistant  {event.get('text', '')} [post-check: {event.get('post_check', '?')} · tokens: {tokens}]"
             )
+            # ADR-008 Am1: each unverified number with the reason it did not verify
+            for detail in event.get("unverified_detail") or []:
+                echo(f"  unverified {detail.get('claim', '?')} - {detail.get('reason', '?')}")
         elif kind == "error":
             original = event.get("original")
             if event.get("kind") == "epistemic":

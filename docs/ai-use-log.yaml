@@ -2947,3 +2947,137 @@ sessions:
       translated), together with the proposed workflow: TP-023 first, then
       the records, code and tests, then the PR.
     status: applied
+
+  - id: AILOG-0071
+    date: "2026-10-02"
+    agent_task: >-
+      TP-024, INV-001 v2 phase 2 (ADR-008 Amendment 1): the typed claim
+      engine. Drafts (TP-024, ADR-008 Am1, the governance edits) were written
+      after a baseline run of the ADR-008 probe on main 97b4a88. The owner
+      took P1-P7 as recommended and approved the drafts. Order of the change
+      set: TP-024; the records (ADR-008 Am1, registry 0.6.1, invariants.md,
+      glossary Numeric Claim and Claim Class, trace matrix, blueprint, debt
+      register DE-10 a-c, DE-12 and DE-13 repaid and DE-15 opened); the E-010
+      ledgers and the held-out corpus, written by a separately briefed agent
+      session (P6) that read only the ledgers and the owner's correctness
+      rules, and committed before any engine code; then the engine. New
+      module agent/guardrail_claims.py (safety path): claims are classified
+      on the original text, so positions are kept; evidence is typed by
+      subject, field class, unit and currency, times carry their subject,
+      windows are indexed, free text serves only quotes, and list lengths
+      are counts; subjects come from table headers, the sentence or the
+      paragraph; fields come from clause cues, count nouns, refinements and
+      comparison inheritance; values match at the written precision with
+      units, scale words, decline sign and currency; times are parsed whole
+      in UTC with precision and window membership; DE-13 year rules; tickers
+      and period labels are identifiers; number words with a unit are
+      claims; every unverified claim has one reason. guardrail.py delegates
+      (v1 kept as postcheck_numbers_v1), marks exactly the unverified claims,
+      and groups the notice by reason; the loop marks from verdict claims
+      and records unverified_detail; /show lists the reasons. The engine
+      was frozen (hash 6ce7b767) before the first held-out run: precision
+      156/170 = 0.918, recall 68/80 = 0.850. Refinements followed (TP-024
+      Amendment 1, each pinned by a development item D033-D048), giving
+      168/170 = 0.988 and 75/80 = 0.938; the five remaining escapes are
+      company names the ledger cannot resolve. The owner waived them for
+      TP-024 and deferred them to TP-025 (DE-16), and approved the one
+      assertion change found outside the plan. Verification: 55 new cases;
+      against the pre-change tree 36 fail and 19 guards hold; ten injected
+      mutations (subject ignored, field ignored, tolerance doubled, free
+      text as data, precision check off, token marking, window membership
+      for days, unknown keys incompatible, the DE-13 value-word guard,
+      number words without a unit) each fail a new test, M9 after an added
+      pin; development corpus 61/61 and 21/21; full offline suite green;
+      ruff, mypy and the structural gates pass. A scripted rename briefly
+      broke two call sites; the full suite caught it, and the corpus
+      numbers were re-confirmed after the fix.
+    migrated_assertions:
+      - >-
+        test_inv1_postcheck.py test_integer_rendering_of_fractional_value_rejected,
+        renamed test_integer_rendering_of_fractional_value_rounds: "close is
+        24879" for 24879.2402 fails -> verifies (whole-number rounding,
+        owner decision 2); "close is 24880" still fails.
+      - >-
+        test_inv1_postcheck.py test_display_rounded_near_misses_rejected:
+        "close is 24,879.2" fails -> verifies at one decimal; 24,879.23 and
+        24,879.241 still fail.
+      - >-
+        test_inv1_postcheck.py test_string_values_are_walked, renamed
+        test_string_values_verify_only_as_quotes: "level 309.0" from a note
+        string passes -> flagged "appears only in tool text" (P3); the
+        quoted note verifies.
+      - >-
+        test_faithfulness_eval.py (E-006): BAD "0700.HK closed at 437" ->
+        GOOD (rounding of 436.6), BAD gains "0700.HK closed at 438";
+        RESIDUAL "volatility of about 45%" -> GOOD; the residual list
+        becomes prose year, window word, time of day.
+      - >-
+        test_tp020_partial_dates.py: failed lists name the whole claim
+        ("2025" -> "March 2025" and "August 2025"; "2024" in failed ->
+        ["2024-09"]; "20250926" -> "26 September 2025"; "20260924" ->
+        "September 24, 2026"; "2025" -> "September 2025" on a numbers-only
+        pool; "2026" -> "August 2026"); the in-loop unverified list "2024" ->
+        "March 2024", display unchanged.
+      - >-
+        test_tp020_partial_dates.py test_cue_less_year_stays_a_number,
+        renamed test_de13_years_verify_and_value_positions_stay_numbers:
+        "2025 was a volatile year." and "| Year | 2025 |" fail -> verify
+        (DE-13); the fail-closed pins move to "| Value | 2025 |" and
+        "Revenue reached 2025.".
+      - >-
+        test_tp020_partial_dates.py test_year_valued_numbers_stay_numeric_claims:
+        "Holdings in 2026.HK rose." as a numeric claim -> an identifier
+        with no claims (P4); the value-frame cases are unchanged.
+      - >-
+        test_tp019_fifth_audit.py test_natural_dates_fold_to_pool_dates:
+        absent.failed ["20260924"] -> ["September 24, 2026"].
+      - >-
+        test_tp023_verify_and_flag.py test_every_unverified_occurrence_is_marked:
+        the checker compared digit tokens with `unverified` -> it checks
+        claim positions (every unverified claim ends with the marker, every
+        marker belongs to one); the battery texts are unchanged.
+      - >-
+        test_tp023_verify_and_flag.py test_unmarkable_number_withholds: an
+        unverified ISO date withheld the answer -> the date is marked
+        ("2026-09-28[?]"); the fail-closed withhold is tested by fault
+        injection (a claim position that does not hold its text).
+      - >-
+        test_numbers_pipeline.py test_symbol_fragments_are_structural (found
+        during implementation, owner-approved): "comparing 0700 with 1211 on
+        close 436.6" passes -> the codes stay structural, and 436.6 is
+        flagged as 0700.HK's close by the nearest-subject rule; the reversed
+        order passes.
+    artifacts:
+      - docs/test-plans/TP-024.md
+      - docs/architecture/adr/008-numeric-verification-v2.md
+      - docs/req/requirements.yaml
+      - docs/architecture/invariants.md
+      - docs/architecture/trace-matrix.md
+      - docs/architecture/evaluation-logbook.md
+      - docs/req/glossary.md
+      - architecture-blueprint.md
+      - docs/debt-register.md
+      - src/stockinsider/agent/guardrail_claims.py
+      - src/stockinsider/agent/guardrail.py
+      - src/stockinsider/agent/loop.py
+      - src/stockinsider/agent/repl.py
+      - test/offline/test_tp024_typed_claims.py
+      - test/offline/fixtures/e010_dev.yaml
+      - test/offline/fixtures/e010_heldout.yaml
+      - test/offline/test_inv1_postcheck.py
+      - test/offline/test_faithfulness_eval.py
+      - test/offline/test_tp019_fifth_audit.py
+      - test/offline/test_tp020_partial_dates.py
+      - test/offline/test_tp023_verify_and_flag.py
+      - test/offline/test_numbers_pipeline.py
+      - docs/review-memo.md
+      - docs/ai-use-log.yaml
+    human_decision: >-
+      Owner decisions in session 2026-10-02: "continue, with the decision
+      points as you recommended" (P1-P7, translated); then "approve" for the
+      drafted TP-024, ADR-008 Am1 and governance edits; during
+      implementation, the owner deferred the company-name escape class to
+      TP-025 with an explicit waiver for TP-024 (DE-16), and approved
+      migrating the test_numbers_pipeline assertion. The held-out labels
+      await owner review in the PR.
+    status: applied
