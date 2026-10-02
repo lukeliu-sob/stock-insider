@@ -86,8 +86,11 @@ def test_two_violation_budget_aborts() -> None:
     assert counter.record(two_more) == "abort:epistemic"  # total 3 > 2
 
 
-def test_quarantine_takes_precedence_in_display() -> None:
+def test_unverified_number_flags_alongside_epistemic_strip() -> None:
+    # TP-023 (ADR-008 requirement change): a fabricated number flags instead of
+    # withholding; the epistemic strip still applies (here it removes the sentence)
     verdict = run_postcheck("The stock will fall to 42.", {"close": 311.4})
-    assert verdict.quarantined is True  # fabricated number dominates
-    assert verdict.display_text.startswith("data unavailable for:")
+    assert verdict.quarantined is False and verdict.flagged is True
+    assert verdict.unverified == ["42"]
+    assert verdict.display_text == ""  # the violating sentence is stripped; nothing to mark
     assert verdict.epistemic.violations  # still recorded for the counter

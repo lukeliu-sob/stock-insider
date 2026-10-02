@@ -69,11 +69,13 @@ def test_extract_numbers_shapes() -> None:
     assert extract_numbers("3.2% of $1,234.56 at -2.5") == ["3.2", "1234.56", "-2.5"]
 
 
-def test_verdict_quarantines_and_degrades() -> None:
+def test_verdict_flags_and_marks() -> None:
+    # TP-023 (ADR-008 requirement change): flagged and marked, no longer withheld
     verdict = run_postcheck("The close was 42.0.", {"close": 311.4})
-    assert verdict.quarantined is True
-    assert verdict.degraded == "data unavailable for: 42.0"
-    assert verdict.display_text == verdict.degraded
+    assert verdict.quarantined is False and verdict.flagged is True
+    assert verdict.unverified == ["42.0"]
+    assert verdict.display_text == "The close was 42.0[?]."
+    assert verdict.degraded is None
 
 
 def test_verdict_clean_pass() -> None:
@@ -91,12 +93,13 @@ def test_language_violation_quarantines() -> None:
     assert "language policy" in verdict.display_text
 
 
-def test_counter_three_strikes_then_abort() -> None:
+def test_counter_streak_notice_without_abort() -> None:
+    # TP-023 (ADR-008 requirement change): three strikes make a notice due, never an abort
     counter = PostCheckCounter()
     bad = run_postcheck("close was 42.0", {"close": 311.4})
-    assert counter.record(bad) is None
-    assert counter.record(bad) is None
-    assert counter.record(bad) == "abort:number"
+    assert counter.record(bad) is None and not counter.number_notice_due
+    assert counter.record(bad) is None and not counter.number_notice_due
+    assert counter.record(bad) is None and counter.number_notice_due
 
 
 def test_counter_resets_on_pass() -> None:

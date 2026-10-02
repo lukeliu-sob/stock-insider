@@ -160,12 +160,15 @@ def test_no_model_text_before_verdict(store, prompts_dir, monkeypatch) -> None:
     assert "The standard budget is 100000 tokens." in console.file.getvalue()  # shown after the verdict
 
 
-def test_quarantined_original_never_displayed(store, prompts_dir, monkeypatch) -> None:
+def test_unverified_number_marked_in_ui(store, prompts_dir, monkeypatch) -> None:
+    # TP-023 (ADR-008 requirement change): shown with the marker and the notice,
+    # instead of the withheld degraded line
     use_engine(monkeypatch, [ChatOutcome(text="The answer is 999.", usage={})], prompts_dir)
     screen = run_ui(store, "tell me" + ENTER + "/exit" + ENTER)
-    assert "answer is" not in screen
-    assert "data unavailable for: 999" in screen
-    assert "●" not in screen  # the degraded line is a notice, not an answer
+    assert "The answer is 999[?]." in screen
+    assert "unverified (not found in this session's tool results; marked [?]): 999" in screen
+    assert "data unavailable" not in screen
+    assert "999." not in screen.replace("999[?].", "")  # never shown unmarked
 
 
 def test_regenerated_answer_displayed_once(store, prompts_dir, monkeypatch) -> None:

@@ -277,8 +277,10 @@ def test_bd026_live_shape_passes_in_the_loop(engine_parts) -> None:
     assert any("post-check: pass" in line for line in lines)
 
 
-def test_bd026_unsupported_month_still_quarantines_in_the_loop(engine_parts) -> None:
+def test_bd026_unsupported_month_is_flagged_in_the_loop(engine_parts) -> None:
+    # TP-023 (ADR-008 requirement change): still unverified, now flagged and marked
     outcome, lines = _run_byd_turn(engine_parts, "For 1211.HK, volatility covers the sessions since March 2024.")
-    assert outcome.quarantined is True
-    assert outcome.displayed == "data unavailable for: 2024"
-    assert any("post-check: failed" in line for line in lines)
+    assert outcome.quarantined is False
+    assert outcome.unverified == ["2024"]
+    assert outcome.displayed == "For 1211.HK, volatility covers the sessions since March 2024[?]."
+    assert any("post-check: flagged" in line for line in lines)

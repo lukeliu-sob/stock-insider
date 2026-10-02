@@ -9,25 +9,34 @@ the full pipeline with scripted providers.
 
 Rendering contract (H1, 2026-09-29 audit): deltas buffer during the
 turn and replay through stream_sink only after the numeric post-
-check passes (verify-then-display; a quarantined turn never shows
-its original text). render() is called exactly once per turn with
-the final authoritative text; unchanged passing text is delivered
-via the stream replay, changed text (quarantine, regeneration,
-degradation, iteration-cap) via render().
+check passes (verify-then-display; a withheld turn never shows its
+original text). Unchanged passing text is delivered via the stream
+replay. A flagged answer (ADR-008: unverified numbers marked) is
+delivered through stream_sink as its marked text in one piece; its
+unmarked deltas never reach the screen. Other changed text
+(withholding, regeneration without a sink, degradation, iteration
+cap) goes through render().
 
 Implements: REQ-SI-FR-008, REQ-SI-FR-019, REQ-SI-COST-002,
-REQ-SI-INV-001, REQ-SI-INV-002, REQ-SI-GOV-003 (ADR-001)
+REQ-SI-INV-001, REQ-SI-INV-002, REQ-SI-GOV-003 (ADR-001, ADR-008)
 """
 
 from __future__ import annotations
 
 import json
 from collections.abc import Callable
-from dataclasses import dataclass, field
+from dataclasses import dataclass, field, replace
 from pathlib import Path
 from typing import Any
 
-from stockinsider.agent.guardrail import PostCheckCounter, run_postcheck, run_with_regeneration
+from stockinsider.agent.guardrail import (
+    UNVERIFIED_STREAK_NOTICE,
+    PostCheckCounter,
+    mark_unverified,
+    run_postcheck,
+    run_with_regeneration,
+    unverified_notice,
+)
 from stockinsider.agent.profiles import tool_loop_limit
 from stockinsider.agent.registry import Registry
 from stockinsider.agent.session import SessionStore
@@ -116,6 +125,8 @@ class TurnOutcome:
     body: str = ""
     #: True when INV-002 refused the answer after the one regeneration
     refused: bool = False
+    #: numbers shown with the unverified marker (ADR-008)
+    unverified: list[str] = field(default_factory=list)
 
 
 def _accumulate(total: dict[str, int], usage: dict[str, int]) -> None:
@@ -222,6 +233,15 @@ class TurnEngine:
                     "(INV-001): it cited numbers not found in the tool results. "
                     f"The user saw only: {content}"
                 )
+            elif role == "assistant" and event.get("post_check") == "flagged":
+                # ADR-008: the marked answer replays as shown, and the model is
+                # told which numbers stayed unverified so a later turn does not
+                # restate them as fact.
+                unverified = ", ".join(str(token) for token in event.get("unverified", []))
+                content = (
+                    f"{content}\n[harness] The numbers marked [?] were not verified "
+                    f"against tool results: {unverified}; do not restate them as facts."
+                )
             messages.append({"role": role, "content": content})
         return messages
 
@@ -239,6 +259,10 @@ class TurnEngine:
     ) -> TurnOutcome:
         """Run one full turn; content failures degrade, never crash (INV-003).
 
+        Unverified numbers flag the answer instead of withholding it
+        (ADR-008): the marked text is shown and recorded, a notice names
+        the numbers, and three flagged answers in a row add a notice.
+
         on_phase and on_pending_write are optional display hooks
         (ADR-007): they report the phase the turn is in and a write
         proposal awaiting the human. Absent, behavior is unchanged;
@@ -246,7 +270,7 @@ class TurnEngine:
         what reaches render and stream_sink.
 
         Implements: REQ-SI-FR-008, REQ-SI-FR-019, REQ-SI-COST-002,
-        REQ-SI-INV-001, REQ-SI-INV-002, REQ-SI-FR-026 (ADR-001, ADR-007)
+        REQ-SI-INV-001, REQ-SI-INV-002, REQ-SI-FR-026 (ADR-001, ADR-007, ADR-008)
         """
         if getattr(self, "_aborted", None):
             refusal = (
@@ -455,10 +479,23 @@ class TurnEngine:
                     stream_sink(piece)
                 stream_sink("\n")
 
+        def _show_flagged(marked: str) -> None:
+            # ADR-008: a flagged answer reaches the screen only as its MARKED
+            # text, through the answer channel; the unmarked deltas are dropped.
+            deferred.reset()
+            if stream_sink is not None:
+                stream_sink(marked)
+                stream_sink("\n")
+            else:
+                render(marked)
+
         # body: the answer without the pre-tool prelude (what /report
         # persists, TP-019); refused: the INV-002 refusal summary is the
         # answer (a report gate must not store it as a report).
         refused = False
+        unverified: list[str] = []
+        flag_check = verdict.number_check
+        original_text = combined
         if verdict.quarantined:
             self._store.append_event(
                 session_id,
@@ -549,6 +586,8 @@ class TurnEngine:
             # the turn snapshot alone wrongly quarantined restatements of
             # earlier turns' correct numbers inside a regeneration.
             recheck = run_postcheck(epi.displayed, ledger)
+            # ADR-008: the answer as shown decides its flag and the streak
+            flag_check = recheck.number_check
             deferred.reset()  # the violating original never reaches the screen
             if recheck.quarantined:
                 regen_sink.reset()
@@ -561,20 +600,30 @@ class TurnEngine:
                 regeneration_outcome = "regenerated-quarantined"
             elif getattr(epi, "refused", False):
                 regen_sink.reset()
-                render(epi.displayed)  # the INV-002 refusal summary
                 displayed = epi.displayed
+                if recheck.flagged:
+                    # ADR-008: unverified numbers in the refusal summary are marked
+                    unverified, original_text = recheck.unverified, displayed
+                    displayed = mark_unverified(displayed, unverified)
+                render(displayed)  # the INV-002 refusal summary
                 refused = True
                 regeneration_outcome = "refused"
             else:
-                if stream_sink is not None and regen_sink.buffer:
+                if recheck.flagged:
+                    regen_sink.reset()
+                    unverified, original_text = recheck.unverified, epi.displayed
+                    displayed = mark_unverified(epi.displayed, unverified)
+                    _show_flagged(displayed)
+                elif stream_sink is not None and regen_sink.buffer:
                     # verify-then-display for the regeneration: replay
                     # the checked deltas exactly once (screen == displayed)
                     for piece in regen_sink.buffer:
                         stream_sink(piece)
                     stream_sink("\n")
+                    displayed = epi.displayed
                 else:
                     render(epi.displayed)
-                displayed = epi.displayed
+                    displayed = epi.displayed
                 regeneration_outcome = "regenerated"
             body = displayed
             # audit trail (TP-019): the violating original, the violations
@@ -591,23 +640,37 @@ class TurnEngine:
                     "turn": turn_id,
                 },
             )
+        elif verdict.flagged:
+            # ADR-008: shown with every unverified number marked; screen ==
+            # record (the event stores the marked text and the unmarked original)
+            unverified = verdict.unverified
+            displayed = verdict.display_text
+            _show_flagged(displayed)
+            body = mark_unverified(candidate, unverified)
         else:
             _replay()
             # screen == record: the event stores the full validated text
             # (prelude included), exactly what the replay displayed.
             displayed = combined
             body = candidate
-        self._store.append_event(
-            session_id,
-            {
-                "event": "assistant-message",
-                "text": displayed,
-                "turn": turn_id,
-                "post_check": "failed" if verdict.quarantined else "ok",
-                "usage": dict(usage_total),
-            },
-        )
-        abort_reason = self._counter.record(verdict)
+        if unverified:
+            progress(unverified_notice(flag_check))
+        message_event: dict[str, Any] = {
+            "event": "assistant-message",
+            "text": displayed,
+            "turn": turn_id,
+            "post_check": "failed" if verdict.quarantined else ("flagged" if unverified else "ok"),
+            "usage": dict(usage_total),
+        }
+        if unverified:
+            message_event["unverified"] = list(unverified)
+            message_event["original"] = original_text
+        self._store.append_event(session_id, message_event)
+        # ADR-008: the unverified streak counts the answer as shown (for a
+        # regeneration, its recheck); the INV-002 budget is fed as before
+        abort_reason = self._counter.record(replace(verdict, number_check=flag_check))
+        if self._counter.number_notice_due:
+            progress(UNVERIFIED_STREAK_NOTICE)
         if abort_reason:
             # H4: the abort is now session-sticky — the next run_turn refuses
             # before any model call (the old code only printed a line).
@@ -618,7 +681,7 @@ class TurnEngine:
             # downgrade the status).
             self._store.abort(session_id, abort_reason)
             render(f"session aborted: {abort_reason} threshold reached (invariant fallback)")
-        progress(_footer(tools_used, verdict.quarantined, usage_total))
+        progress(_footer(tools_used, verdict.quarantined, usage_total, flagged=bool(unverified)))
         return TurnOutcome(
             displayed=displayed,
             quarantined=verdict.quarantined,
@@ -627,6 +690,7 @@ class TurnEngine:
             usage=dict(usage_total),
             body=body,
             refused=refused,
+            unverified=list(unverified),
         )
 
 
@@ -660,7 +724,12 @@ class _DeferredSink:
         self.buffer.clear()
 
 
-def _footer(tools_used: int, quarantined: bool | None, usage: dict[str, int]) -> str:
+def _footer(tools_used: int, quarantined: bool | None, usage: dict[str, int], *, flagged: bool = False) -> str:
     total = usage.get("prompt_tokens", 0) + usage.get("completion_tokens", 0)
-    state = "n/a" if quarantined is None else ("failed" if quarantined else "pass")
+    if quarantined is None:
+        state = "n/a"
+    elif quarantined:
+        state = "failed"
+    else:
+        state = "flagged" if flagged else "pass"
     return f"(tools: {tools_used} · post-check: {state} · tokens: {total})"

@@ -75,7 +75,9 @@ def _tool_call(name: str, arguments: dict) -> dict:
     }
 
 
-def test_untraceable_report_degrades_and_stores_nothing(tmp_path, prompts_dir, session_store) -> None:
+def test_untraceable_report_is_stored_flagged(tmp_path, prompts_dir, session_store) -> None:
+    # TP-023 (ADR-008 requirement change): stored with markers and the header
+    # count instead of not stored; never presented as fully verified
     store = session_store
     record = _record(store)
     data_store = _seed_market(tmp_path)
@@ -92,11 +94,15 @@ def test_untraceable_report_degrades_and_stores_nothing(tmp_path, prompts_dir, s
     )
     lines: list[str] = []
     outcome = _run_report_turn(engine, store, record, "HSI.INDX", lines.append)
-    assert outcome is not None and outcome.quarantined
-    assert not any("report stored" in line for line in lines)
-    assert any("not stored" in line for line in lines)
+    assert outcome is not None and not outcome.quarantined
+    assert outcome.unverified == ["99999"]
+    assert any(line.startswith("report stored:") and "1 unverified number marked [?]" in line for line in lines)
     artifacts = list((tmp_path / "sessions").rglob("report-*.md"))
-    assert artifacts == []
+    assert len(artifacts) == 1
+    content = artifacts[0].read_text(encoding="utf-8")
+    assert "99999[?] points" in content
+    assert "- unverified numbers: 1 (marked [?]; not verified by the INV-001 post-check)" in content
+    assert "passed the INV-001 post-check" not in content
 
 
 def test_traceable_report_stored_with_stamp(tmp_path, prompts_dir, session_store) -> None:

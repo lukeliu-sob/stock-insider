@@ -1,25 +1,27 @@
 """Runtime guardrail: INV-001 numeric post-check and INV-002 epistemic filter.
 
-Semantics follow docs/architecture/invariants.md exactly: numeric
-mismatches quarantine the response and degrade it to an explicit
-data-unavailable statement; epistemic violations strip and regenerate
-once, then refuse with a hypothesis-labeled summary. Wiring into the
-response pipeline (quarantine event storage, degradation display,
-session abort) lands with the agent loop (TP-007); this module is the
-authoritative, fully testable verdict library.
+Semantics follow docs/architecture/invariants.md exactly. Since
+ADR-008 (TP-023), a number the post-check cannot verify is displayed
+and stored only with the unverified marker and named in a notice; the
+response is withheld only when such a number cannot be located for
+marking (fail-closed) or the language policy fails. Epistemic
+violations strip and regenerate once, then refuse with a
+hypothesis-labeled summary. This module is the authoritative, fully
+testable verdict library; the agent loop wires it into the pipeline.
 
 Number matching is exact-after-normalization (no tolerance: a ±1
 mismatch fails), and derived numbers are NOT accepted unless a compute
 tool registered them in the snapshot — precision over convenience
 (ADR-006).
 
-Implements: REQ-SI-INV-001, REQ-SI-INV-002, REQ-SI-INV-003 (ADR-006)
+Implements: REQ-SI-INV-001, REQ-SI-INV-002, REQ-SI-INV-003 (ADR-006, ADR-008)
 """
 
 from __future__ import annotations
 
 import re
-from collections.abc import Callable
+from collections import Counter
+from collections.abc import Callable, Sequence
 from dataclasses import dataclass, field
 
 from stockinsider.shared.language import is_english_only
@@ -571,6 +573,9 @@ class NumberCheck:
     field_mismatch: list[str] = field(default_factory=list)
     #: partial dates verified against the evidence calendar (TP-020)
     calendar: list[str] = field(default_factory=list)
+    #: the text the tokens were extracted from (after layout stripping and
+    #: date folding): the fail-closed marking check compares against it (ADR-008)
+    checked_text: str = ""
 
 
 def postcheck_numbers(candidate: str, snapshot_values: object) -> NumberCheck:
@@ -628,7 +633,102 @@ def postcheck_numbers(candidate: str, snapshot_values: object) -> NumberCheck:
         structural=structural_hits,
         field_mismatch=mismatches,
         calendar=calendar,
+        checked_text=checked,
     )
+
+
+# ---- INV-001 v2: verify and flag (ADR-008) -------------------------------------
+
+#: The marker appended to a word holding a number the post-check could not
+#: verify (ADR-008). Plain ASCII, so both front-ends and the stored record
+#: carry the same characters.
+UNVERIFIED_MARKER = "[?]"
+
+#: Shown while consecutive answers keep carrying unverified numbers; the
+#: INV-001 abort it replaces is retired (ADR-008).
+UNVERIFIED_STREAK_NOTICE = (
+    "three answers in a row contained unverified numbers; check the data "
+    "(/sync status) or start a new session"
+)
+
+#: Characters the marker goes in front of when they end the word: sentence
+#: and clause punctuation, closing brackets and quotes, Markdown emphasis.
+_MARK_BEFORE = frozenset(".,;:!?)]}\"'*_")
+
+
+def _token_spans(text: str) -> list[tuple[str, int, int]]:
+    """(token, start, end) exactly as the detector tokenizes, with positions kept.
+
+    Identifier codes are blanked to the same length (not to one space as in
+    extract_numbers), so every span indexes the original text.
+    """
+    blanked = _ID_CODE.sub(lambda match: " " * len(match.group()), text)
+    return [(m.group().replace(",", ""), m.start(), m.end()) for m in _NUMBER_TOKEN.finditer(blanked)]
+
+
+def unlocatable_unverified(candidate: str, check: NumberCheck) -> list[str]:
+    """Unverified tokens with an occurrence the marker cannot find in the candidate.
+
+    The detector reads a transformed text (layout stripped, dates folded), so a
+    failing token can exist there in a form the candidate never shows (an ISO
+    date folds to its compact form). Such a number cannot be marked, and the
+    response must be withheld (fail-closed, ADR-008).
+
+    Implements: REQ-SI-INV-001 (ADR-008)
+    """
+    shown = Counter(token for token, _start, _end in _token_spans(candidate))
+    checked = Counter(extract_numbers(check.checked_text))
+    return [token for token in dict.fromkeys(check.failed) if shown[token] < checked[token]]
+
+
+def mark_unverified(text: str, tokens: Sequence[str]) -> str:
+    """Append the unverified marker to every word holding one of the tokens.
+
+    Every occurrence is marked (conservative). The marker goes in front of
+    trailing punctuation and Markdown emphasis; a word gets one marker. A
+    word ends at whitespace or a table cell bar. Removing the markers gives
+    back the text unchanged.
+
+    Implements: REQ-SI-INV-001 (ADR-008)
+    """
+    wanted = set(tokens)
+    if not wanted:
+        return text
+    positions: set[int] = set()
+    for token, _start, end in _token_spans(text):
+        if token not in wanted:
+            continue
+        stop = end
+        while stop < len(text) and not text[stop].isspace() and text[stop] != "|":
+            stop += 1
+        while stop > end and text[stop - 1] in _MARK_BEFORE:
+            stop -= 1
+        positions.add(stop)
+    marked = text
+    for position in sorted(positions, reverse=True):
+        marked = marked[:position] + UNVERIFIED_MARKER + marked[position:]
+    return marked
+
+
+def unverified_notice(check: NumberCheck) -> str:
+    """The notice naming the unverified numbers of an answer and why (ADR-008).
+
+    Implements: REQ-SI-INV-001 (ADR-008)
+    """
+    mismatched = list(dict.fromkeys(check.field_mismatch))
+    missing = [token for token in dict.fromkeys(check.failed) if token not in set(mismatched)]
+    parts = []
+    if missing:
+        parts.append(
+            f"unverified (not found in this session's tool results; marked {UNVERIFIED_MARKER}): "
+            + ", ".join(missing)
+        )
+    if mismatched:
+        parts.append(
+            f"unverified (quoted for a different field than the tool returned; marked {UNVERIFIED_MARKER}): "
+            + ", ".join(mismatched)
+        )
+    return "; ".join(parts)
 
 
 # ---- INV-002: epistemic filter -----------------------------------------------
@@ -961,29 +1061,40 @@ class GuardrailVerdict:
     """
 
     display_text: str
+    #: withheld: the response is not displayed (language policy, or an
+    #: unverified number that cannot be marked - ADR-008)
     quarantined: bool
     degraded: str | None
     number_check: NumberCheck
     epistemic: EpistemicCheck
     language_ok: bool
     violations: list[str]
+    #: numbers the post-check could not verify (ADR-008)
+    unverified: list[str] = field(default_factory=list)
+    #: displayed with every unverified number marked (ADR-008)
+    flagged: bool = False
 
 
 def run_postcheck(candidate: str, snapshot_values: object) -> GuardrailVerdict:
     """Run INV-001 + INV-002 + language in one authoritative verdict.
 
-    Quarantine (never display the original): numeric mismatch or
-    language violation. Epistemic violations strip for display; the
-    loop (TP-007) composes regeneration on top of this verdict.
+    Unverified numbers flag the response: the display text carries the
+    unverified marker on each of them (ADR-008). The response is withheld
+    only for a language violation, or when an unverified number cannot be
+    located for marking (fail-closed: the old degraded line). Epistemic
+    violations strip for display; the loop composes regeneration on top.
 
-    Implements: REQ-SI-INV-001, REQ-SI-INV-002, REQ-SI-INV-003 (ADR-006)
+    Implements: REQ-SI-INV-001, REQ-SI-INV-002, REQ-SI-INV-003 (ADR-006, ADR-008)
     """
     language_ok = is_english_only(candidate)
     numbers = postcheck_numbers(candidate, snapshot_values)
     epi = epistemic_filter(candidate)
-    quarantined = (not numbers.passed) or not language_ok
+    unverified = list(dict.fromkeys(numbers.failed))
+    unmarkable = unlocatable_unverified(candidate, numbers) if unverified else []
+    quarantined = bool(unmarkable) or not language_ok
+    flagged = bool(unverified) and not quarantined
     degraded = None
-    if not numbers.passed:
+    if unmarkable:
         parts = ["data unavailable for: " + ", ".join(numbers.failed)]
         if numbers.field_mismatch:
             parts.append(
@@ -994,9 +1105,9 @@ def run_postcheck(candidate: str, snapshot_values: object) -> GuardrailVerdict:
     if quarantined:
         display = degraded if degraded else "response withheld: language policy violation (GOV-001)"
     elif epi.violations:
-        display = epi.clean_text
+        display = mark_unverified(epi.clean_text, unverified) if flagged else epi.clean_text
     else:
-        display = candidate
+        display = mark_unverified(candidate, unverified) if flagged else candidate
     violations = list(epi.violations)
     if not language_ok:
         violations.append("language policy (GOV-001)")
@@ -1008,34 +1119,46 @@ def run_postcheck(candidate: str, snapshot_values: object) -> GuardrailVerdict:
         epistemic=epi,
         language_ok=language_ok,
         violations=violations,
+        unverified=unverified,
+        flagged=flagged,
     )
 
 
 class PostCheckCounter:
-    """Session counters: INV-001 three-strike and INV-002 violation budget.
+    """Session counters: INV-001 unverified streak and INV-002 violation budget.
 
-    Implements: REQ-SI-INV-001, REQ-SI-INV-002 (ADR-006)
+    ADR-008 retired the INV-001 abort: the streak of consecutive answers
+    with unverified numbers now only makes a notice due. The INV-002
+    budget still aborts.
+
+    Implements: REQ-SI-INV-001, REQ-SI-INV-002 (ADR-006, ADR-008)
     """
 
     def __init__(self, *, number_limit: int = 3, epistemic_limit: int = 2) -> None:
-        """Set the abort thresholds (invariant-doc defaults: 3 and >2)."""
+        """Set the notice streak (3) and the INV-002 abort budget (>2)."""
         self._number_limit = number_limit
         self._epistemic_limit = epistemic_limit
         self._number_streak = 0
         self._epistemic_total = 0
 
     def record(self, verdict: GuardrailVerdict) -> str | None:
-        """Record one verdict; return the abort reason when thresholds trip.
+        """Record one verdict; return the abort reason when the INV-002 budget trips.
 
-        Implements: REQ-SI-INV-001, REQ-SI-INV-002 (ADR-006)
+        Implements: REQ-SI-INV-001, REQ-SI-INV-002 (ADR-006, ADR-008)
         """
         if verdict.number_check.passed:
             self._number_streak = 0
         else:
             self._number_streak += 1
         self._epistemic_total += len(verdict.epistemic.violations)
-        if self._number_streak >= self._number_limit:
-            return "abort:number"
         if self._epistemic_total > self._epistemic_limit:
             return "abort:epistemic"
         return None
+
+    @property
+    def number_notice_due(self) -> bool:
+        """True while the streak of answers with unverified numbers is at the limit or beyond.
+
+        Implements: REQ-SI-INV-001 (ADR-008)
+        """
+        return self._number_streak >= self._number_limit

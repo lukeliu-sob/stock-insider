@@ -113,7 +113,8 @@ def test_tool_loop_end_to_end(store, prompts_dir) -> None:
     assert events[-1]["usage"] == {"prompt_tokens": 30, "completion_tokens": 13}
 
 
-def test_fabricated_number_quarantined(store, prompts_dir) -> None:
+def test_fabricated_number_flagged(store, prompts_dir) -> None:
+    # TP-023 (ADR-008 requirement change): flagged and marked, no longer withheld
     engine = make_engine(store, [ChatOutcome(text="The answer is 999.", usage={})], prompts_dir)
     record = store.create(profile="standard")
     spy = Spy()
@@ -125,13 +126,14 @@ def test_fabricated_number_quarantined(store, prompts_dir) -> None:
         progress=spy.progress,
         stream_sink=spy.sink,
     )
-    assert outcome.quarantined is True
-    assert outcome.displayed == "data unavailable for: 999"
+    assert outcome.quarantined is False
+    assert outcome.unverified == ["999"]
+    assert outcome.displayed == "The answer is 999[?]."
     events = store.read_events(record["session_id"])
-    error_events = [e for e in events if e["event"] == "error"]
-    assert len(error_events) == 1
-    assert error_events[0]["post_check"] == "failed"
-    assert error_events[0]["original"] == "The answer is 999."
+    assert not [e for e in events if e["event"] == "error"]
+    message = [e for e in events if e["event"] == "assistant-message"][-1]
+    assert message["post_check"] == "flagged"
+    assert message["original"] == "The answer is 999."
 
 
 def test_epistemic_regeneration(store, prompts_dir) -> None:
@@ -157,7 +159,8 @@ def test_epistemic_regeneration(store, prompts_dir) -> None:
     assert outcome.usage == {"prompt_tokens": 12, "completion_tokens": 5}
 
 
-def test_three_strikes_aborts(store, prompts_dir) -> None:
+def test_three_flagged_turns_notify_without_abort(store, prompts_dir) -> None:
+    # TP-023 (ADR-008 requirement change): the INV-001 abort became a notice
     record = store.create(profile="standard")
     spy = Spy()
     aborted = None
@@ -174,8 +177,9 @@ def test_three_strikes_aborts(store, prompts_dir) -> None:
             stream_sink=spy.sink,
         )
         aborted = outcome.aborted
-    assert aborted == "abort:number"
-    assert any("session aborted: abort:number" in line for line in spy.lines)
+    assert aborted is None
+    assert any("three answers in a row contained unverified numbers" in line for line in spy.lines)
+    assert not any("session aborted" in line for line in spy.lines)
 
 
 def test_iteration_cap_per_profile(store, prompts_dir) -> None:
