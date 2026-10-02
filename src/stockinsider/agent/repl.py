@@ -369,8 +369,10 @@ def _cmd_watch(
 ) -> None:
     """Watchlist slash command, routed through registry tools (FR-004).
 
-    The interactive confirmation happens here; the registry write gate
-    opens only for calls carrying user_confirmed=true (INV-004).
+    The interactive confirmation happens here: only the human's yes to
+    the [y/N] prompt opens the registry write gate (allow_write=True,
+    INV-004). Write tools take no confirmation argument since H3
+    (TP-017 PR-2); the calls send exactly the tool's arguments (TP-022).
 
     Implements: REQ-SI-FR-004, REQ-SI-INV-004 (ADR-005)
     """
@@ -434,7 +436,7 @@ def _cmd_watch(
         result = registry.execute(
             ToolCall(
                 tool="watchlist.add",
-                arguments={"canonical_symbol": picked["canonical_symbol"], "user_confirmed": True},
+                arguments={"canonical_symbol": picked["canonical_symbol"]},
                 call_id="slash-watch",
             ),
             allow_write=True,
@@ -455,7 +457,7 @@ def _cmd_watch(
         result = registry.execute(
             ToolCall(
                 tool="watchlist.remove",
-                arguments={"canonical_symbol": rest[0], "user_confirmed": True},
+                arguments={"canonical_symbol": rest[0]},
                 call_id="slash-watch",
             ),
             allow_write=True,
@@ -497,7 +499,7 @@ def _cmd_sync(registry: Registry, args: list[str], echo: Callable[[str], None]) 
         echo(f"error: unknown sync action {action!r} (run | status)")
         return
     result = registry.execute(
-        ToolCall(tool="sync.run", arguments={"user_confirmed": True}, call_id="slash-sync"),
+        ToolCall(tool="sync.run", arguments={}, call_id="slash-sync"),
         allow_write=True,
     )
     if not result.ok:
