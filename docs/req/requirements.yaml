@@ -22,7 +22,11 @@ meta:
   # in AILOG-0054/0062 - version bump per registry discipline.
   # 0.5 (2026-10-01, TP-021): REQ-SI-FR-026 appended (opt-in terminal UI,
   # ADR-007). New row only; no existing row changed - recorded in AILOG-0067.
-  registry_version: "0.5.0"
+  # 0.6 (2026-10-02, TP-023, ADR-008): requirement change, not an append.
+  # REQ-SI-INV-001, REQ-SI-FR-008 and REQ-SI-QA-004 move from withholding to
+  # verify-and-flag (owner decision 2026-10-02); the scope_must_not_do item on
+  # unverified numerics is reworded to match. Recorded in AILOG-0070.
+  registry_version: "0.6.0"
   id_prefix: REQ-SI
   classification: type-c-system          # AI-agent-built AND LLM-native (methodology judgment 1)
   markets: [HK, US]
@@ -45,7 +49,7 @@ meta:
   scope_must_not_do:
     - Never execute trades or manage positions
     - Never emit deterministic causal claims or price predictions (REQ-SI-INV-002)
-    - Never display an unverified numeric (REQ-SI-INV-001)
+    - Never display or store an unverified numeric without an explicit unverified marker (REQ-SI-INV-001)
     - Never substitute fabricated/stale/estimated values for missing data (REQ-SI-INV-003)
     - Never add a symbol without verified resolution + user confirmation (REQ-SI-INV-004)
     - Never fetch outside the domain whitelist (REQ-SI-FR-015, when enabled)
@@ -239,13 +243,15 @@ requirements:
     statement: >-
       The agent produces an analysis report for a symbol or topic that
       combines deterministic computed facts, fundamentals, and retrieved
-      news. Every numeric value in the report cites its provenance, and
-      the report passes the REQ-SI-INV-001 post-check before being
-      stored or displayed.
+      news. Every numeric value in the report cites its provenance; the
+      REQ-SI-INV-001 post-check verifies every number before the report
+      is stored or displayed, and unverified numbers carry the unverified
+      marker in both.
     fit_criterion: >-
       On the fixed evaluation set, post-check numeric citation coverage
-      is 100 percent; a report failing post-check degrades to an explicit
-      data-unavailable statement and is never displayed as-is.
+      is 100 percent. A report with unverified numbers is stored and
+      displayed with each one marked and their count in the report
+      header, and is never presented as fully verified.
     priority: Must
     tradeoff: >-
       Post-check adds latency to every report; guaranteed traceability
@@ -694,31 +700,36 @@ requirements:
   - id: REQ-SI-INV-001
     type: invariant
     statement: >-
-      Every numeric value in agent output must trace to a database
-      record or a computed result registered in the response's context
-      snapshot. A deterministic post-check extracts numerics from every
-      assistant response and verifies each against that response's
-      context; on any mismatch the response degrades to an explicit
-      data-unavailable statement instead of displaying unverifiable
-      content.
+      Every numeric value in agent output is verified by a deterministic
+      post-check against the session's evidence: database records or
+      computed results registered in its context snapshots. A value that
+      cannot be verified is never displayed or stored without an explicit
+      unverified marker, and the user is told which values are unverified
+      and why. If an unverified value cannot be marked, the response is
+      withheld. Verified values display unmarked.
     fit_criterion: >-
-      Zero tolerance. Adversarial suite injecting fabricated numbers
-      into outputs must be rejected in 100 percent of attempts (no
-      fabricated number reaches display or storage); correctly cited
-      numbers must pass in 100 percent of cases. Boundary and boundary
-      plus/minus-one cases included.
+      Zero tolerance. In an adversarial suite, every fabricated or
+      misattributed number injected into outputs reaches display and
+      storage carrying the unverified marker in 100 percent of attempts
+      (zero unmarked unverified numbers); a number that cannot be marked
+      withholds the response. Correctly cited numbers display unmarked in
+      100 percent of cases. Boundary and boundary plus/minus-one cases
+      included.
     priority: Must
     zero_tolerance: true
     tradeoff: >-
-      Non-negotiable. The post-check design includes an explicit
-      safe-list mechanism for non-data numerics (for example years);
-      this is part of the check design and can never bypass data
+      Owner decision 2026-10-02 (ADR-008): flagging replaces withholding,
+      so that one unverifiable rendering no longer destroys a correct
+      answer. The user carries the residual risk of reading a flagged
+      value; the marker on the value, the notice and the stored marker
+      mitigate it. The post-check keeps an explicit mechanism for non-data
+      numerics (for example years), which can never bypass data
       verification.
-    source: "Owner requirements discussion R1 item 1 / R2 item 3"
+    source: "Owner requirements discussion R1 item 1 / R2 item 3; owner decision 2026-10-02 (verify and flag, ADR-008)"
     status: conceptual
     depends_on: [REQ-SI-FR-011]
     regression_trigger: true
-    regression_scope: [test/offline/test_inv1_postcheck.py]
+    regression_scope: [test/offline/test_inv1_postcheck.py, test/offline/test_tp023_verify_and_flag.py]
 
   - id: REQ-SI-INV-002
     type: invariant
@@ -842,7 +853,7 @@ requirements:
   - id: REQ-SI-QA-004
     type: quality
     statement: "Numeric citation coverage in final reports (measurement companion of REQ-SI-INV-001)."
-    fit_criterion: "Post-check log aggregated per run; coverage below 1.0 degrades the report."
+    fit_criterion: "Post-check log aggregated per run; coverage below 1.0 marks the report as containing unverified numbers (count in the report header)."
     metric: verified_numerics / total_numerics per report
     threshold: "= 1.0"
     verification: test/offline/test_report_gate.py

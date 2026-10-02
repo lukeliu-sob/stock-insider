@@ -327,3 +327,14 @@ an evidence date still quarantines; a value equal to an evidence year
 in a temporal frame, followed by a unit word outside the list, passes.
 
 Implements: REQ-SI-INV-001.
+
+## Amendment 10 (2026-10-02) — INV-001 fallback superseded by ADR-008
+
+The INV-001 half of ruling 4 (quarantine, degrade to `data unavailable
+for:`, abort after three consecutive failures) is superseded by ADR-008.
+Unverified numbers are displayed only with the `[?]` marker and are
+named in a notice. Withholding remains only as the fail-closed path for
+a number that cannot be marked. The three-strike abort becomes a
+notice. Detection (rulings 1-3 and Am1-Am9) is unchanged in phase 1
+(TP-023); ADR-008 phase 2 replaces the match rules with typed claim
+verification.

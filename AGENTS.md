@@ -23,7 +23,7 @@ Normative scope: the registry's `meta` three lists in `docs/req/requirements.yam
 
 The financial agent is governed by four zero-tolerance invariants. **They constrain the code you write, not your own behavior.** When a task touches an enforcement point (`guardrail`, `registry`, `shared/`, `data/ingest`), read the full entry in `docs/architecture/invariants.md` first.
 
-- **INV-001** — every number in the product's output traces to the session's context snapshot; the post-check verdict is authoritative.
+- **INV-001** — every number in the product's output is verified against the session's context snapshot or carries a visible unverified marker; the post-check verdict is authoritative.
 - **INV-002** — no deterministic causal claims or price predictions in the product's output; speculation carries a hypothesis label.
 - **INV-003** — the product reports failures explicitly; never fabricates, never stale-as-fresh, never defaults.
 - **INV-004** — watchlist additions only via verified symbol resolution + user confirmation.

@@ -82,7 +82,7 @@ Categories at zero have no current entries; the category opens the moment its fi
 - **Category**: guardrail debt
 - **Description**: counts and tickers absent from the evidence ledger ("Your watchlist now holds 3 symbols", "No data is stored for 9988.HK yet"), integer-rounded percents ("about 8%" for 0.0809) and the model's own tool-call arguments ("k=10 requested, 4 returned") quarantine whole answers by design (TP-017 PR-3a standing decision; BD-012/BD-015 match semantics; arguments stay outside the ledger because a fabricated argument would otherwise become citable). The live runs keep hitting these classes.
 - **Repayment trigger**: owner decision on (a) list-length counts entering the ledger, (b) ticker tokens as structural references regardless of the ledger, (c) whether "about N%" is an allowed display form, (d) an identity-prompt rule against citing request parameters (prompts/ change, owner approval).
-- **Status**: open (2026-09-30)
+- **Status**: open (2026-09-30). (c) decided 2026-10-02 (ADR-008): rounding to any written precision, whole numbers included, is an allowed rendering, implemented against typed candidates in phase 2 (TP-024); until then such numbers are flagged, no longer withheld. (a), (b) and (d) remain open.
 
 ### DE-11 — Watchlist entries on secondary venues from before migration v6
 - **Category**: guardrail debt
