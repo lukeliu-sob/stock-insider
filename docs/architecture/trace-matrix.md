@@ -47,7 +47,7 @@ Mapping: **every requirement → enforcing component → test/evidence → runti
 
 | Req | Component(s) | Test / evidence | Monitor |
 |---|---|---|---|
-| INV-001 Numeric provenance | `agent/guardrail` (+ `agent/session` snapshots, `agent/context` provenance ledger) | `test/offline/test_inv1_postcheck.py` (adversarial, 0-escape) | S3 |
+| INV-001 Numeric provenance | `agent/guardrail` (+ `agent/session` snapshots, `agent/context` provenance ledger) | `test/offline/test_inv1_postcheck.py` (adversarial, 0-escape), `test/offline/test_tp023_verify_and_flag.py` (0 unmarked unverified numbers) | S3 |
 | INV-002 Epistemic safety | `agent/guardrail` | `test/offline/test_inv2_filter.py` + eval replay | S3 |
 | INV-003 Fail-safe | `data/ingest`, `agent/registry`, `agent/providers` | `test/offline/test_inv3_failsafe.py` (fault injection) | S2, S5 |
 | INV-004 Symbol resolution gate | `data/store` (SymbolResolver), `agent/registry` write gate | `test/offline/test_inv4_symbol_gate.py` (adversarial) | watchlist audit log |

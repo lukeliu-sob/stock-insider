@@ -25,7 +25,7 @@ What the system does when each degraded or failure path is triggered. Invariant 
 |---|---|---|---|---|---|
 | P-05 | Provider failure / stream interruption mid-response | Abort turn; partial usage recorded; no fabricated completion | Explicit error; session resumable | `resume` continues from last complete turn | INV-003 |
 | P-06 | Malformed model output (schema-invalid score etc.) | Reject and log; never silently repaired | News item marked unscored | Eligible for the next scoring pass | FR-009, INV-003 |
-| P-07 | INV-001 post-check failure | Quarantine response (stored, flagged `post_check: failed`, never displayed) | Degraded "data unavailable for: \<numerics\>" | 3 consecutive failures → session abort + bug-diary entry | INV-001 |
+| P-07 | INV-001 unverified numeric | Mark each occurrence `[?]`; record `post_check: flagged` with the list | Answer displayed with markers and a notice naming the numbers and reasons | Three consecutive flagged answers → non-blocking notice; an unmarkable number → withhold (stored `post_check: failed`, degraded line) | INV-001 |
 | P-08 | INV-002 violation | Strip passage; one constrained regeneration | Labeled refusal if regeneration still violates | > 2 per session → session abort + evaluation-logbook entry | INV-002 |
 | P-09 | Injection payload detected in untrusted content | Neutralize; log to tool-call and verdict streams; tool selection unchanged | Excluded content noted in the turn if neutralization is uncertain | Repeated payloads from one source → source/crawler review | SEC-002 |
 

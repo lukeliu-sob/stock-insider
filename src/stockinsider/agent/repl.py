@@ -689,7 +689,7 @@ def _status_snapshot(store: SessionStore, record: dict, data_store: Any) -> dict
             if event.get("event") == "assistant-message":
                 usage = event.get("usage") or {}
                 used += int(usage.get("prompt_tokens", 0)) + int(usage.get("completion_tokens", 0))
-                verdict = "pass" if event.get("post_check") == "ok" else "failed"
+                verdict = {"ok": "pass", "flagged": "flagged"}.get(str(event.get("post_check")), "failed")
         snapshot["session_tokens"] = used
         snapshot["last_verdict"] = verdict
     except (SessionError, OSError, ValueError, TypeError):
@@ -1011,19 +1011,32 @@ def _run_report_turn(
     artifacts = store._require(record["session_id"]) / "artifacts"  # noqa: SLF001
     existing = len(list(artifacts.glob(f"report-{safe_symbol}-*.md"))) if artifacts.exists() else 0
     stamp = record.get("provenance", {})
+    # ADR-008: a report with unverified numbers is stored with its markers
+    # and says so in the header; only a fully verified one claims the pass.
+    unverified = list(getattr(outcome, "unverified", None) or [])
+    if unverified:
+        verdict_line = (
+            f"- unverified numbers: {len(unverified)} (marked [?]; not verified by the INV-001 post-check)\n"
+        )
+    else:
+        verdict_line = "- stored: passed the INV-001 post-check before persistence (FR-008)\n"
     header = (
         f"# Analysis report — {symbol}\n\n"
         f"- session: {record['session_id']}\n"
         f"- model: {stamp.get('model_id', 'unknown')}\n"
         f"- prompt: {stamp.get('prompt_version', 'unknown')}\n"
-        f"- stored: passed the INV-001 post-check before persistence (FR-008)\n\n---\n\n"
+        f"{verdict_line}\n---\n\n"
     )
     path = store.artifact(
         record["session_id"],
         f"report-{safe_symbol}-{existing + 1:03d}.md",
         header + displayed + "\n",
     )
-    out.echo(f"report stored: {path.name}")
+    if unverified:
+        noun = "number" if len(unverified) == 1 else "numbers"
+        out.echo(f"report stored: {path.name} ({len(unverified)} unverified {noun} marked [?])")
+    else:
+        out.echo(f"report stored: {path.name}")
     return outcome
 
 

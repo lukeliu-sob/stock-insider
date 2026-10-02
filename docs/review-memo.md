@@ -486,3 +486,44 @@ test-plan gate's safety-path attestation).
   512 green; ruff, mypy and the structural gates pass.
 - Risk: none new. The fix only removes an argument the registry already refused; the write
   gate and the human confirmation are as before.
+
+### RM-60 — TP-023: INV-001 v2 phase 1, verify and flag (ADR-008)
+
+- Verdict: APPROVE pending owner merge (owner approved ADR-008 and TP-023 in session,
+  2026-10-02, after the post-check probe and the drafted records were presented; TP-023
+  committed before any implementation change, GOV-006 ordering).
+- Spec alignment: REQ-SI-INV-001 (changed, ADR-008) - no unverified number reaches the
+  screen or the record unmarked: every occurrence of an unverified token is marked (an
+  11-text battery), and a number that cannot be located for marking withholds the answer
+  as before (fail-closed). Screen == record: the event stores the marked text, the
+  unverified list and the unmarked original. Correctly cited numbers display unmarked; the
+  existing positive suites are unchanged. REQ-SI-FR-008 and REQ-SI-QA-004 (changed) - a
+  flagged report is stored with its markers and an "unverified numbers" header line; only
+  a fully verified report claims the pass; a withheld report is not stored. REQ-SI-INV-002
+  and REQ-SI-GOV-001 (unchanged) - the epistemic abort and the language withhold hold.
+  REQ-SI-INV-003 - nothing unverified is presented as verified: the marker, the notice and
+  the "flagged" footer say so.
+- Architecture: ADR-008 phase 1. Safety-critical path touched: `agent/guardrail.py`
+  (marking, verdict composition, counter semantics); the detector `postcheck_numbers` is
+  unchanged apart from exposing the text it checked. `agent/loop.py`, `agent/repl.py` and
+  `agent/tui/render.py` follow. The registry, `shared/`, `prompts/` and CI workflows are
+  untouched; no dependency added. Event kinds are unchanged; the assistant-message event
+  gains optional `unverified` and `original` fields and the `post_check` value "flagged"
+  (forward-only; old records render and replay as before).
+- Test quality: 23 new cases (positive, negative/adversarial, boundary, INV-002
+  composition, terminal UI). Against the pre-change tree 22 fail; the INV-002 abort guard
+  holds on both trees. Nine injected mutations each fail at least one new test. Ten
+  existing files carry migrated assertions for the requirement change (TP-023 table;
+  before and after in AILOG-0070); full offline suite 535 green; ruff, mypy and the
+  structural gates pass.
+- Self-review findings, fixed before the change set was proposed: the unverified streak
+  was fed by the pre-regeneration draft, so a flagged regeneration reset it and an
+  unverified number that never reached the screen counted; the counter now receives the
+  number check of the answer as shown (`test_streak_follows_the_answer_as_shown`). In
+  invariants.md, INV-001 fallback item 3 read "stored flagged `post_check: failed`"; it
+  now reads "stored with", because "flagged" is now a `post_check` value.
+- Risk: a user may act on a flagged number (ADR-008 residual risk). Mitigations: the
+  marker on every occurrence, the notice, the history note and the streak notice; ADR-008
+  reopens on owner observation. Until the typed engine (TP-024) accepts rounding, correct
+  rounded renderings such as "about 37%" are flagged. The warning color of the notices in
+  a real terminal is an owner check.

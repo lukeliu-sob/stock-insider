@@ -75,11 +75,11 @@ def line_style(line: str) -> str:
 
 
 def progress_style(line: str) -> str:
-    """Color for an engine progress line (tool lines, footer, pending write).
+    """Color for an engine progress line (tool lines, footer, pending write, unverified notices).
 
-    Implements: REQ-SI-FR-019, REQ-SI-FR-026 (ADR-007)
+    Implements: REQ-SI-FR-019, REQ-SI-FR-026, REQ-SI-INV-001 (ADR-007, ADR-008)
     """
-    if line.startswith("pending write confirmation"):
+    if line.startswith(("pending write confirmation", "unverified")) or "contained unverified numbers" in line:
         return "yellow"
     if "… failed" in line:
         return "red"

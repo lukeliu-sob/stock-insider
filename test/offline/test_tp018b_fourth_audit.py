@@ -311,7 +311,7 @@ def test_regeneration_displays_once_and_only_when_clean(store_fix, prompts_fix) 
     assert outcome.displayed == "It might surge (hypothesis)."
 
 
-def test_fabricated_regeneration_never_reaches_screen(store_fix, prompts_fix) -> None:
+def test_fabricated_regeneration_reaches_screen_only_marked(store_fix, prompts_fix) -> None:
     from stockinsider.agent.loop import TurnEngine
     from stockinsider.agent.providers import ChatOutcome
     from stockinsider.agent.repl import build_registry
@@ -334,12 +334,14 @@ def test_fabricated_regeneration_never_reaches_screen(store_fix, prompts_fix) ->
         progress=lambda _l: None,
         stream_sink=streamed.append,
     )
-    assert outcome.quarantined is True
-    # the regen PROSE never reached the screen; only the degraded line
-    # (which names the failed token by design, INV-003) was rendered
-    assert "777.77" not in "".join(streamed)
-    assert "It might surge to 777.77" not in "".join(rendered)
-    assert "data unavailable for: 777.77" in outcome.displayed
+    # TP-023 (ADR-008 requirement change): the regenerated answer is shown
+    # once, with the fabricated number marked; the violating original never
+    # reaches the screen, and the bare number never does either
+    assert outcome.quarantined is False
+    assert outcome.unverified == ["777.77"]
+    shown = "".join(streamed) + "".join(rendered)
+    assert shown.count("777.77[?]") == 1 and shown.count("777.77") == 1
+    assert "It will surge tomorrow" not in shown
 
 
 @pytest.fixture()

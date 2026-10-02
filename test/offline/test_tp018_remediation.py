@@ -147,8 +147,12 @@ def test_tokens_expire_at_turn_boundaries(store, prompts_dir) -> None:
 # ---- H1 residual: prelude text is validated and recorded --------------------
 
 
-def test_fabricated_prelude_number_quarantined(store, prompts_dir) -> None:
-    """The old hole: pre-tool prose streamed through unvalidated."""
+def test_fabricated_prelude_number_flagged(store, prompts_dir) -> None:
+    """The old hole: pre-tool prose streamed through unvalidated.
+
+    TP-023 (ADR-008 requirement change): the prelude's fabricated number is
+    shown only with the marker, instead of withholding the answer.
+    """
     outcomes = [
         ChatOutcome(
             text="Let me check. The current price is 999.99.",
@@ -163,8 +167,10 @@ def test_fabricated_prelude_number_quarantined(store, prompts_dir) -> None:
     outcome = engine.run_turn(
         record["session_id"], "budget?", profile="quick", render=spy, progress=spy, stream_sink=None
     )
-    assert outcome.quarantined is True
-    assert "999.99" in outcome.displayed  # degraded names the fabricated token
+    assert outcome.quarantined is False
+    assert outcome.unverified == ["999.99"]
+    assert "999.99[?]" in outcome.displayed  # marked where it appears, never bare
+    assert outcome.displayed.count("999.99") == 1
     # screen == record: the stored assistant text matches what was displayed
     events = store.read_events(record["session_id"])
     stored = [e for e in events if e["event"] == "assistant-message"][-1]
@@ -218,8 +224,15 @@ def test_cross_turn_restatement_survives_a_second_symbol(store, prompts_dir) -> 
 # ---- H4 residual: abort persists; resume refused -----------------------------
 
 
-def _three_fabrications(store, prompts_dir):
-    outcomes = [ChatOutcome(text=f"The answer is {900 + i}.", usage={}) for i in range(3)]
+def _three_epistemic_violations(store, prompts_dir):
+    # TP-023 (ADR-008 requirement change): the INV-001 abort is retired, so
+    # the sticky-abort property is driven by the INV-002 budget (> 2)
+    outcomes = []
+    for _ in range(3):
+        outcomes += [
+            ChatOutcome(text="BYD will surge.", usage={}),
+            ChatOutcome(text="Hypothesis: BYD might rise.", usage={}),
+        ]
     engine = make_engine(store, outcomes, prompts_dir)
     record = store.create(profile="standard")
     spy = Spy()
@@ -229,7 +242,7 @@ def _three_fabrications(store, prompts_dir):
 
 
 def test_abort_persists_and_resume_refused(store, prompts_dir) -> None:
-    engine, record = _three_fabrications(store, prompts_dir)
+    engine, record = _three_epistemic_violations(store, prompts_dir)
     assert engine.run_turn  # engine alive
     row = next(r for r in store.list_sessions() if r["session_id"] == record["session_id"])
     assert row["status"] == "aborted"

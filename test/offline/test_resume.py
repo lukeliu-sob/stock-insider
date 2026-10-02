@@ -58,7 +58,7 @@ def test_prior_bytes_identical_after_appended_turn(store, tmp_path) -> None:
     assert b"again" in after[len(before) :]
 
 
-def test_resumed_engine_restores_history_and_degrades_absent_numbers(store, tmp_path) -> None:
+def test_resumed_engine_restores_history_and_flags_absent_numbers(store, tmp_path) -> None:
     sid = _seed_closed(store)
     store.resume(sid)
     prompts = _Prompts.make(tmp_path)
@@ -77,8 +77,10 @@ def test_resumed_engine_restores_history_and_degrades_absent_numbers(store, tmp_
         progress=lambda _p: None,
         stream_sink=lambda _s: None,
     )
-    assert outcome.quarantined is True
-    assert outcome.displayed == "data unavailable for: 777"
+    # TP-023 (ADR-008 requirement change): flagged and marked, no longer withheld
+    assert outcome.quarantined is False
+    assert outcome.unverified == ["777"]
+    assert outcome.displayed == "sure, 777[?]."
     provider = engine._provider  # noqa: SLF001 - white-box history assertion
     messages = provider.seen_messages[0]
     user_texts = [m["content"] for m in messages if m["role"] == "user"]

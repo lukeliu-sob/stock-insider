@@ -108,23 +108,25 @@ def test_h4_abort_is_sticky(tmp_path, monkeypatch) -> None:
     engine = _engine(tmp_path, [ChatOutcome(text="a1", usage={}), ChatOutcome(text="never", usage={})])
     record = engine._store.create(profile="quick")  # noqa: SLF001
 
-    # force a quarantine verdict twice -> counter hits the threshold
+    # force a withheld verdict whose INV-002 violations exceed the budget ->
+    # the counter aborts on the first turn. TP-023 (ADR-008 requirement
+    # change): the INV-001 abort is retired, so the INV-002 budget drives it.
     from stockinsider.agent import loop as loop_mod
     from stockinsider.agent.guardrail import PostCheckCounter
 
     def fake_postcheck(candidate, snapshot_values):
         return GuardrailVerdict(
-            display_text="data unavailable",
+            display_text="response withheld",
             quarantined=True,
             degraded=None,
-            number_check=NumberCheck(passed=False, matched=[], failed=["1"], rounded=[]),
-            epistemic=SimpleNamespace(violations=[], clean_text=candidate),
+            number_check=NumberCheck(passed=True, matched=[], failed=[], rounded=[]),
+            epistemic=SimpleNamespace(violations=["v1", "v2", "v3"], clean_text=candidate),
             language_ok=True,
             violations=[],
         )
 
     monkeypatch.setattr(loop_mod, "run_postcheck", fake_postcheck)
-    engine._counter = PostCheckCounter(number_limit=1, epistemic_limit=2)  # noqa: SLF001
+    engine._counter = PostCheckCounter(epistemic_limit=2)  # noqa: SLF001
 
     first = _run(engine, record["session_id"], "x")
     assert first.quarantined
@@ -174,8 +176,8 @@ def test_h5_stream_break_wrapped() -> None:
         provider.complete([{"role": "user", "content": "hi"}], stream_sink=lambda p: None)
 
 
-def test_h2_regenerated_fabrication_degrades(tmp_path, monkeypatch) -> None:
-    """A regeneration carrying a fabricated number must NOT display or count as passed."""
+def test_h2_regenerated_fabrication_is_marked(tmp_path, monkeypatch) -> None:
+    """A regeneration carrying a fabricated number never displays it unmarked (ADR-008)."""
     # primary candidate violates epistemic rules; regeneration fabricates a number
     provider = ScriptedProvider(
         [
@@ -189,4 +191,8 @@ def test_h2_regenerated_fabrication_degrades(tmp_path, monkeypatch) -> None:
     # no tools ran, so the verification pool is empty: any number in the
     # regeneration must fail the recheck
     outcome = _run(engine, record["session_id"], "q")
-    assert "777.77" not in outcome.displayed  # fabricated regen number never displayed
+    # TP-023 (ADR-008 requirement change): shown only with the marker, never bare
+    assert outcome.quarantined is False
+    assert outcome.unverified == ["777.77"]
+    assert "777.77[?]" in outcome.displayed
+    assert outcome.displayed.count("777.77") == outcome.displayed.count("777.77[?]")
