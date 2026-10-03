@@ -366,11 +366,14 @@ def prompts_fix(tmp_path):
 # ---- 10. prompts v6 -------------------------------------------------------------
 
 
-def test_identity_prompt_is_v6_with_non_relay_rules() -> None:
+def test_identity_prompt_is_v7_with_non_relay_rules() -> None:
+    """TP-026 migrated assertion: v6 -> v7 (DE-10d's new rule bumped the
+    version; the confirmation-token wording and the absent boolean are
+    unrelated to that change and still hold)."""
     from stockinsider.agent.loop import load_identity_prompt
 
     version, body = load_identity_prompt()
-    assert version == "identity-v6"
+    assert version == "identity-v7"
     assert "do NOT repeat, spell out, or invent the token" in body
     assert "user_confirmed" not in body
 
