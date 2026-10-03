@@ -179,6 +179,13 @@ ALTER TABLE sync_gaps ADD COLUMN resolution TEXT;
 UPDATE symbols SET verified = 0 WHERE exchange NOT IN ('HK', 'US', 'INDX');
 """
 
+#: Migration v7 (DE-08, TP-026 plan): empty_attempts counted once per
+#: calendar day, not once per sync run - three quick re-runs during a
+#: vendor hiccup no longer exhaust MAX_EMPTY_ATTEMPTS by themselves.
+MIGRATION_V7 = """
+ALTER TABLE sync_gaps ADD COLUMN empty_attempts_date TEXT;
+"""
+
 #: Append-only migration list: index i holds migration to version i+1.
 MIGRATIONS: tuple[str, ...] = (
     MIGRATION_V1,
@@ -187,6 +194,7 @@ MIGRATIONS: tuple[str, ...] = (
     MIGRATION_V4,
     MIGRATION_V5,
     MIGRATION_V6,
+    MIGRATION_V7,
 )
 
 #: Latest schema version this code understands.

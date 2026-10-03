@@ -47,10 +47,16 @@ BACKFILL_DAYS = 5 * 365
 #: retrying forever and starving the daily budget (INV-003: the
 #: absence is recorded, never silently re-queued).
 MAX_EMPTY_ATTEMPTS = 3
-#: Gap-repair may consume at most half the daily call cap per run;
-#: the rest stays available to incremental updates so a long gap
-#: queue can never starve the rest of the watchlist (fourth audit).
+#: Gap-repair may consume at most half the daily call cap per DAY
+#: (DE-08, TP-026 plan: was per run, letting repeated same-day re-runs
+#: each claim a fresh half-cap share); the rest stays available to
+#: incremental updates so a long gap queue can never starve the rest
+#: of the watchlist (fourth audit).
 GAP_BUDGET_SHARE = 0.5
+#: sync_state track the gap-repair share is persisted under (DE-08) -
+#: the same lazy-reset-by-date mechanism as the real call budget
+#: (CallBudget), under a second track so the two never collide.
+GAP_BUDGET_TRACK = "gap-repair-daily"
 MARKET_TRACK = "market:{symbol}"
 FUND_TRACK = "fundamentals:{symbol}"
 FUND_ACCESS_TRACK = "fundamentals-access"
@@ -259,13 +265,25 @@ class SyncService:
                 # daily budget. Now: attempts are counted, and after
                 # MAX_EMPTY_ATTEMPTS the gap CLOSES as confirmed
                 # no-data - recorded, not silently re-queued nor faked.
+                # DE-08 (TP-026 plan): an attempt counts once per calendar
+                # day - three quick same-day re-runs during a vendor
+                # hiccup no longer exhaust the budget by themselves; the
+                # gap needs three DIFFERENT days of empty results.
+                today = self._today()
                 with self._conn:
-                    self._conn.execute(
-                        "UPDATE sync_gaps SET empty_attempts = empty_attempts + 1 "
-                        "WHERE canonical_symbol = ? AND from_date = ? AND to_date = ? "
-                        "AND resolved_at IS NULL",
-                        (symbol, from_date, to_date),
-                    )
+                    already_counted_today = self._conn.execute(
+                        "SELECT 1 FROM sync_gaps WHERE canonical_symbol = ? AND from_date = ? "
+                        "AND to_date = ? AND empty_attempts_date = ?",
+                        (symbol, from_date, to_date, today),
+                    ).fetchone()
+                    if not already_counted_today:
+                        self._conn.execute(
+                            "UPDATE sync_gaps SET empty_attempts = empty_attempts + 1, "
+                            "empty_attempts_date = ? "
+                            "WHERE canonical_symbol = ? AND from_date = ? AND to_date = ? "
+                            "AND resolved_at IS NULL",
+                            (today, symbol, from_date, to_date),
+                        )
                     row = self._conn.execute(
                         "SELECT empty_attempts FROM sync_gaps "
                         "WHERE canonical_symbol = ? AND from_date = ? AND to_date = ?",
@@ -501,17 +519,21 @@ class SyncService:
         self._enqueue_detected_gaps()  # deletions since last run enter THIS run's plan
         plan = self._plan()
         emit(f"plan: {len(plan)} market item(s) (gaps detected first, then incrementals)")
-        # Fourth-audit fix (TP-018b): gap-repair may consume at most half
-        # the daily cap per run; the remainder always stays available to
-        # incremental updates, so a long unfillable gap queue can never
-        # starve the rest of the watchlist.
+        # Fourth-audit fix (TP-018b); DE-08 (TP-026 plan) made the share
+        # per day, not per run: gap-repair may consume at most half the
+        # daily cap in total across every run today, persisted the same
+        # way the call budget itself is (lazy reset on date change) - the
+        # remainder always stays available to incremental updates, so a
+        # long unfillable gap queue can never starve the rest of the
+        # watchlist even across several same-day re-runs.
+        gap_counter = CallBudget(self._conn, track=GAP_BUDGET_TRACK)
         gap_quota = max(1, int((self._budget.remaining() + self._budget.used_today()) * GAP_BUDGET_SHARE))
-        gap_spent = 0
+        gap_spent = gap_counter.used_today()
         for item in plan:
             if item[1] == "gap-repair" and gap_spent >= gap_quota:
                 deferred = ItemResult(
                     item[0], item[1], "deferred",
-                    f"gap-repair budget share ({gap_quota} calls/run) exhausted; "
+                    f"gap-repair budget share ({gap_quota} calls/day) exhausted; "
                     "incremental updates proceed first",
                 )
                 report.results.append(deferred)
@@ -522,7 +544,10 @@ class SyncService:
             result = self._execute(item, report)
             report.results.append(result)
             if item[1] == "gap-repair":
-                gap_spent += self._budget.used_today() - before
+                delta = self._budget.used_today() - before
+                if delta:
+                    gap_counter.spend(delta)
+                gap_spent += delta
             emit(f"market {result.symbol} {result.action}: {result.status} ({result.detail}) +{monotonic() - t0:.1f}s")
         self._completeness_pass(report)
         report.calls_used = self._budget.used_today() - used_before

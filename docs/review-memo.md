@@ -663,3 +663,32 @@ test-plan gate's safety-path attestation).
 - Risk: none new in stage 1. Residual risk recorded in ADR-005 Am4, not this memo: a
   company absent from a session's ledger entirely still cannot be recognized as a subject
   even once DE-16's stage lands.
+
+### RM-65 — TP-028: Phase 3a/3b (DE-08 sync budget per day, DE-11 watchlist visibility)
+
+- Verdict: APPROVE pending owner merge (owner said "continue" per the debt-register
+  remediation plan's own recommended sequencing - Phase 3a/3b alongside the Phase 4 ADR
+  conversation - in session, 2026-10-03; TP-028 committed before any implementation
+  change, GOV-006 ordering).
+- Spec alignment: REQ-SI-FR-001, REQ-SI-INV-003, REQ-SI-FR-004 (unchanged scope - both
+  items correct accounting/visibility, not new policy). DE-08: `empty_attempts` and the
+  gap-repair budget share both now use the same lazy-reset-by-date mechanism the real
+  call budget already implements (`CallBudget`, parameterized by `track`); confirmed by
+  mutation check (`test_gap_repair_budget_share_persists_across_same_day_runs` reverted
+  to fail, then restored to pass). DE-11: `WatchlistService.list()` surfaces `verified`;
+  the demoted symbol stays active and keeps syncing exactly as before - visibility only.
+- Architecture: `agent/registry.py` touched (safety-critical prefix, hence this memo
+  entry) - one tool description string only, no dispatch/validation logic change. Schema
+  migration v7 (`sync_gaps.empty_attempts_date`), additive, append-only per the migration
+  discipline. No change to the watchlist write gate (INV-004) or sync's fail-closed budget
+  checks. `shared/` and `agent/guardrail*` untouched.
+- Test quality: 5 new/migrated tests (`test_ingest_market.py` x2, `test_tp018_remediation.py`
+  migrated to a real connection + 1 new, `test_watchlist.py` x1, `test_cli_surface.py` x1),
+  two explicitly adversarial (R7) and mutation-checked. One migrated assertion: the golden
+  transcript's `watchlist.list` description line (text only). Full offline suite 604 green;
+  ruff, mypy and every structural gate pass.
+- Security/efficiency: no new dependency; the gap-repair track reuses `CallBudget`'s
+  existing persistence rather than adding a second mechanism.
+- Risk: none new. Both fixes can only relabel/re-time accounting that was already
+  happening - no claim that was previously accepted now gets rejected outside the
+  intended per-day window, and no watchlist entry's active/sync status changes.

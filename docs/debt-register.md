@@ -15,7 +15,7 @@
 | Hidden dependencies | 0 |
 | Agent-induced bloat | 0 |
 | Evaluation debt | 2 (DE-01, DE-09) |
-| Guardrail debt | 5 (DE-03, DE-08, DE-11, DE-15, DE-16) |
+| Guardrail debt | 3 (DE-03, DE-15, DE-16) |
 | Human/cognitive debt | 1 |
 
 Categories at zero have no current entries; the category opens the moment its first entry appears — do not pre-register speculative debt.
@@ -70,7 +70,7 @@ Categories at zero have no current entries; the category opens the moment its fi
 - **Category**: guardrail debt
 - **Description**: a gap's empty-attempt counter and the gap-repair budget share (half the daily cap) count per `sync` run. Three quick re-runs during a vendor outage can close a fillable gap as `no-data`; same-day repeated runs can spend more than half the day's calls on gap repair (fifth review; TP-019 kept the behavior, which existing tests pin, and made closed no-data gaps visible in `sync status`).
 - **Repayment trigger**: a no-data closure observed for a range the vendor later serves, or a starved incremental in a same-day re-run → count attempts per calendar day and keep the share in the budget track.
-- **Status**: open (2026-09-30)
+- **Status**: repaid by TP-028 (2026-10-03): `empty_attempts` now counts once per calendar day (migration v7, `empty_attempts_date`); the gap-repair budget share is persisted under a second `CallBudget` track (`gap-repair-daily`) the same way the real daily cap already is, so it no longer resets to a fresh half-cap allowance every run.
 
 ### DE-09 — INV-002 regex recall is bounded; the fifth-audit sentences are now a development set
 - **Category**: evaluation debt
@@ -88,7 +88,7 @@ Categories at zero have no current entries; the category opens the moment its fi
 - **Category**: guardrail debt
 - **Description**: migration v6 demoted pre-ADR-005-Am2 secondary-exchange rows to verified=0, but a symbol already ACTIVE on the watchlist stays active and keeps syncing; no report lists such entries.
 - **Repayment trigger**: the first owner database found to hold one (a `watch list` warning or a one-off report), or the next INV-004 change set.
-- **Status**: open (2026-09-30)
+- **Status**: repaid by TP-028 (2026-10-03): `WatchlistService.list()` selects `symbols.verified`; the `watch list` CLI prints `[unverified resolution]` for such a row. Visibility only - a demoted-but-active symbol still stays active and keeps syncing, same as before.
 
 ### DE-12 — INV-001 typed provenance is field-level, not symbol-level
 - **Category**: guardrail debt

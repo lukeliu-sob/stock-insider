@@ -39,12 +39,18 @@ class WatchlistService:
     def list(self) -> list[dict[str, Any]]:
         """Active watchlist rows joined with symbol names.
 
+        `verified` surfaces a symbol whose resolution migration v6
+        demoted (DE-11, TP-026 plan): it stays active and keeps syncing
+        - this is visibility only, not a behavior change - so a row
+        already on the watchlist before a secondary-venue demotion is
+        no longer invisible to the one report that lists it.
+
         Implements: REQ-SI-FR-004 (ADR-003)
         """
         rows = self._conn.execute(
             """
             SELECT w.canonical_symbol, w.added_at, w.added_via,
-                   s.official_name, s.exchange, s.asset_type
+                   s.official_name, s.exchange, s.asset_type, s.verified
             FROM watchlist w JOIN symbols s USING (canonical_symbol)
             WHERE w.status = 'active'
             ORDER BY w.canonical_symbol

@@ -154,6 +154,34 @@ def test_deleted_bar_refetched_next_sync(store, monkeypatch) -> None:
     )
 
 
+def test_gap_repair_budget_share_persists_across_same_day_runs(store, monkeypatch) -> None:
+    """DE-08 (TP-026 plan): the gap-repair share is at most half the daily
+    cap per DAY, not per run. `_plan`/`_completeness_pass`/
+    `_enqueue_detected_gaps` are stubbed to a fixed 3-gap plan - the
+    benchmark indices otherwise need a fresh incremental call every run
+    against this fixture's fixed-date canned bars (real "today" keeps
+    moving), which would make the budget arithmetic below depend on the
+    wall-clock date instead of only on the gap-share logic under test."""
+    _add_symbol(store, "0700.HK", "Tencent Holdings")
+    conn = store._conn  # noqa: SLF001
+    monkeypatch.setenv("EODHD_DAILY_CALLS", "4")  # gap_quota = max(1, int(4 * 0.5)) = 2
+    gap_items = [("0700.HK", "gap-repair", f"2026-09-0{d}", f"2026-09-0{d}") for d in (3, 4, 5)]
+    monkeypatch.setattr(SyncService, "_plan", lambda self: list(gap_items))
+    monkeypatch.setattr(SyncService, "_completeness_pass", lambda self, report: None)
+    monkeypatch.setattr(SyncService, "_enqueue_detected_gaps", lambda self: None)
+    transport = FakeTransport({"0700.HK": _bars(["2026-09-03"])})
+    report1 = SyncService(conn, transport=transport, news_enabled=False).run()
+    gap1 = [r for r in report1.results if r.action == "gap-repair"]
+    assert sum(1 for r in gap1 if r.status == "ok") == 2  # exactly gap_quota succeeded
+    assert sum(1 for r in gap1 if r.status == "deferred") == 1
+    assert "budget share" in next(r for r in gap1 if r.status == "deferred").detail
+    # same fixed plan again; a same-day second run must not get a fresh share
+    report2 = SyncService(conn, transport=transport, news_enabled=False).run()
+    gap2 = [r for r in report2.results if r.action == "gap-repair"]
+    assert gap2 and all(r.status == "deferred" for r in gap2)
+    assert all("budget share" in r.detail for r in gap2)
+
+
 def test_completeness_equals_calendar(store, monkeypatch) -> None:
     _seed_full_environment(store, monkeypatch)
     conn = store._conn  # noqa: SLF001
