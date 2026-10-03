@@ -309,13 +309,17 @@ def test_two_digit_heading_ordinal_still_layout() -> None:
 # ---- low-4: zero-bar gap repair ---------------------------------------------
 
 
-def test_zero_bar_gap_repair_three_attempts_then_terminal(tmp_path) -> None:
-    """Fourth-audit high finding: unfillable gaps must CLOSE honestly
-    (attempt-counted, resolution='no-data') instead of retrying forever
-    and starving the daily budget - and must not be marked repaired."""
+def _gap_repair_engine(conn, gap_key: tuple[str, str, str]):
+    """Minimal SyncService wiring: _execute with a dead adapter returning [].
+
+    Real sqlite connection (DE-08, TP-026 plan: the old hand-rolled fake
+    matched SQL by string prefix with positional params, which broke the
+    moment the per-day gating added a bind parameter - a real connection
+    has no such fragility and lets the per-day behavior be driven by
+    actually changing empty_attempts_date between calls).
+    """
     from stockinsider.data.ingest.sync import SyncService
 
-    # minimal wiring: service._execute with a dead adapter returning []
     engine = SyncService.__new__(SyncService)
 
     class _Budget:
@@ -323,83 +327,81 @@ def test_zero_bar_gap_repair_three_attempts_then_terminal(tmp_path) -> None:
             return True
 
     engine._budget = _Budget()
-    engine._adapter = None
 
     class _Adapter:
         def fetch_eod(self, symbol, from_date, to_date):
             return []
 
     engine._adapter = _Adapter()
-
-    class _Conn:
-        def execute(self, *a, **k):
-            class _R:
-                def __init__(self):
-                    self.lastrowid = 1
-
-                def fetchone(self):
-                    return None
-
-            return _R()
-
-        def __enter__(self):
-            return self
-
-        def __exit__(self, *a):
-            return False
-
-    engine._conn = _Conn()
-    gaps = {("0700.HK", "2026-01-02", "2026-01-05"): {"attempts": 0, "resolved_at": None, "resolution": None}}
-
-    class _GapConn:
-        def __init__(self):
-            self.log = []
-
-        def execute(self, sql, params=()):
-            self.log.append((sql, params))
-            if sql.startswith("UPDATE sync_gaps SET empty_attempts"):
-                key = (params[0], params[1], params[2])
-                gaps[key]["attempts"] += 1
-            elif sql.startswith("UPDATE sync_gaps SET resolved_at"):
-                key = (params[1], params[2], params[3])
-                gaps[key]["resolved_at"] = params[0]
-                gaps[key]["resolution"] = "no-data"
-            elif sql.startswith("SELECT empty_attempts"):
-                key = (params[0], params[1], params[2])
-
-                class _R:
-                    def __getitem__(self, item):
-                        assert item == "empty_attempts"
-                        return gaps[key]["attempts"]
-
-                    def fetchone(self):
-                        return self
-
-                return _R()
-            return None
-
-        def __enter__(self):
-            return self
-
-        def __exit__(self, *a):
-            return False
-
-    engine._conn = _GapConn()
+    engine._conn = conn
     engine._cursor = lambda symbol: "2026-01-01"  # noqa: E731
     engine._set_cursor = lambda symbol, d: None
+    with conn:
+        conn.execute(
+            "INSERT INTO sync_gaps (canonical_symbol, from_date, to_date, detected_at) VALUES (?, ?, ?, ?)",
+            (*gap_key, "2026-01-01T00:00:00+00:00"),
+        )
+    return engine
+
+
+def _gap_row(conn, gap_key: tuple[str, str, str]):
+    return conn.execute(
+        "SELECT empty_attempts, empty_attempts_date, resolved_at, resolution FROM sync_gaps "
+        "WHERE canonical_symbol = ? AND from_date = ? AND to_date = ?",
+        gap_key,
+    ).fetchone()
+
+
+def test_zero_bar_gap_repair_three_attempts_then_terminal(tmp_path) -> None:
+    """Fourth-audit high finding: unfillable gaps must CLOSE honestly
+    (attempt-counted, resolution='no-data') instead of retrying forever
+    and starving the daily budget - and must not be marked repaired.
+    DE-08 (TP-026 plan): an attempt counts once per calendar day, so each
+    of these three attempts is backdated to a distinct, already-passed
+    day before the call - three DIFFERENT days of empty results, not
+    three quick same-day re-runs (see the sibling same-day test)."""
+    from stockinsider.data.store.db import open_db
+
+    conn = open_db(tmp_path / "data")
     key = ("0700.HK", "2026-01-02", "2026-01-05")
-    # attempts 1 and 2: failed, still open, retry scheduled
-    for attempt in (1, 2):
+    engine = _gap_repair_engine(conn, key)
+    for attempt, backdated_day in enumerate(("2025-01-01", "2025-01-02", "2025-01-03"), start=1):
+        with conn:
+            conn.execute(
+                "UPDATE sync_gaps SET empty_attempts_date = ? "
+                "WHERE canonical_symbol = ? AND from_date = ? AND to_date = ?",
+                (backdated_day, *key),
+            )
+        result = engine._execute((key[0], "gap-repair", key[1], key[2]), None)
+        row = _gap_row(conn, key)
+        if attempt < 3:
+            assert result.status == "failed"
+            assert f"({attempt}/3 attempts" in result.detail
+            assert row["resolved_at"] is None
+        else:
+            assert result.status == "failed"
+            assert "confirmed no-data" in result.detail
+            assert row["resolution"] == "no-data"
+            assert row["resolved_at"] is not None
+        assert row["empty_attempts"] == attempt
+
+
+def test_zero_bar_gap_repair_same_day_retries_count_once(tmp_path) -> None:
+    """DE-08 (TP-026 plan), the negative case: three quick re-runs on the
+    SAME day must not exhaust MAX_EMPTY_ATTEMPTS by themselves - the gap
+    needs three DIFFERENT days of empty results, not three calls."""
+    from stockinsider.data.store.db import open_db
+
+    conn = open_db(tmp_path / "data")
+    key = ("0700.HK", "2026-01-02", "2026-01-05")
+    engine = _gap_repair_engine(conn, key)
+    for _ in range(3):
         result = engine._execute((key[0], "gap-repair", key[1], key[2]), None)
         assert result.status == "failed"
-        assert f"({attempt}/3 attempts" in result.detail
-        assert gaps[key]["resolved_at"] is None
-    # attempt 3: terminal, honest resolution
-    result = engine._execute((key[0], "gap-repair", key[1], key[2]), None)
-    assert result.status == "failed"
-    assert "confirmed no-data" in result.detail
-    assert gaps[key]["resolution"] == "no-data"
-    assert gaps[key]["resolved_at"] is not None
+        assert "(1/3 attempts" in result.detail
+    row = _gap_row(conn, key)
+    assert row["empty_attempts"] == 1  # three same-day calls, one counted attempt
+    assert row["resolved_at"] is None  # nowhere near MAX_EMPTY_ATTEMPTS yet
 
 
 # ---- M4: language allowlist ---------------------------------------------------

@@ -36,11 +36,18 @@ def daily_cap() -> int:
 class CallBudget:
     """Check-and-spend accounting persisted in sync_state.
 
+    `track` names the sync_state row this instance reads/writes (default
+    the real EODHD daily cap's row); DE-08 (TP-026 plan) reuses the same
+    lazy-reset-by-date mechanism for the gap-repair share under a second
+    track, so that count also persists across same-day sync runs instead
+    of resetting to zero each call.
+
     Implements: REQ-SI-INV-003 (ADR-002)
     """
 
-    def __init__(self, conn: sqlite3.Connection) -> None:
+    def __init__(self, conn: sqlite3.Connection, track: str = BUDGET_TRACK) -> None:
         self._conn = conn
+        self._track = track
 
     def _today(self) -> str:
         return datetime.now(timezone.utc).date().isoformat()
@@ -51,7 +58,7 @@ class CallBudget:
         Implements: REQ-SI-INV-003 (ADR-002)
         """
         row = self._conn.execute(
-            "SELECT calls_today, calls_date FROM sync_state WHERE track = ?", (BUDGET_TRACK,)
+            "SELECT calls_today, calls_date FROM sync_state WHERE track = ?", (self._track,)
         ).fetchone()
         if row is None or row["calls_date"] != self._today():
             return 0
@@ -80,7 +87,7 @@ class CallBudget:
                     calls_today = excluded.calls_today, calls_date = excluded.calls_date,
                     last_run_at = excluded.last_run_at, last_status = excluded.last_status
                 """,
-                (BUDGET_TRACK, datetime.now(timezone.utc).isoformat(timespec="seconds"), used + n, today),
+                (self._track, datetime.now(timezone.utc).isoformat(timespec="seconds"), used + n, today),
             )
 
     def try_spend(self, n: int = 1) -> bool:
