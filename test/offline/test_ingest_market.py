@@ -9,6 +9,7 @@ Implements: REQ-SI-FR-001, REQ-SI-QA-003, REQ-SI-INV-003 (ADR-002)
 """
 
 import json
+import time
 from datetime import date, timedelta
 
 import pytest
@@ -137,7 +138,12 @@ def test_deleted_bar_refetched_next_sync(store, monkeypatch) -> None:
     conn = store._conn  # noqa: SLF001
     with conn:
         conn.execute("DELETE FROM market_bars WHERE canonical_symbol='0700.HK' AND date='2026-09-09'")
+    # DE-01 (TP-026): timing recorded only, no assertion - PERF-003 stays
+    # status: future until real workload data sets a threshold. This fixture
+    # is a one-symbol proxy for the 100-symbol watchlist the requirement names.
+    started = time.perf_counter()
     report = SyncService(conn, transport=FakeTransport({"0700.HK": _bars(["2026-09-09"])}), news_enabled=False).run()
+    print(f"[DE-01/PERF-003] sync run duration: {time.perf_counter() - started:.4f}s")
     repair = next(i for i in report.results if i.symbol == "0700.HK" and i.action == "gap-repair")
     assert repair.status == "ok"
     assert (
