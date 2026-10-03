@@ -232,6 +232,27 @@ def test_sign_and_decline_words() -> None:
     assert not fell.verified and fell.reason == "the tool's revenue growth is a rise"
 
 
+def test_duration_span_is_derived_not_misattributed() -> None:
+    """TP-024 live finding (DE-15): a duration span must not inherit a nearby field cue.
+
+    A live BYD session wrote "...a drawdown of -36.09% within the last 13
+    months..."; the nearest preceding cue ("drawdown") claimed "13" across
+    the intervening preposition, and the unmatched value failed with the
+    misleading reason "differs from the tool's drawdown".
+    """
+    text = (
+        "A volatility reading of 37.12% and a drawdown of -36.09% within the "
+        "last 13 months describe a volatile name."
+    )
+    claim = _claim(text, BYD, "13")
+    assert not claim.verified and claim.field == "drawdown"
+    assert claim.reason == "derived value; only compute-tool results verify"
+    weeks = _claim("The drawdown was -36.09% over the past 6 weeks.", BYD, "6")
+    assert not weeks.verified and weeks.reason == "derived value; only compute-tool results verify"
+    hyphen = _claim("A -36.09% drawdown over a 6-month span.", BYD, "6")
+    assert not hyphen.verified and hyphen.reason == "derived value; only compute-tool results verify"
+
+
 def test_currency_must_agree() -> None:
     usd = _claim("1211.HK closed at USD 75.6.", PAIR, "75.6")
     assert not usd.verified and usd.reason == "the tool reports close in HKD"

@@ -274,6 +274,12 @@ _CHANGE_CUE = re.compile(
     r"increase[ds]?|decrease[ds]?|more\s+than|less\s+than|compared|spread|premium|discount)\b",
     re.IGNORECASE,
 )
+#: TP-024 live finding (DE-15): a calendar-duration unit right after the number
+#: ("~13 months", "a 6-week") marks a span computed from two evidence dates,
+#: not a field value - without this, the nearest preceding field cue in the
+#: clause claims it (a live BYD session attributed "13" months to a nearby
+#: drawdown figure, reason "differs from the tool's drawdown").
+_DURATION_UNIT = re.compile(r"[\s-]*(?:calendar[\s-]+)?(?:days?|weeks?|months?|quarters?|years?)\b", re.IGNORECASE)
 
 # ---- reasons (ADR-008 Am1 decision 9) -----------------------------------------
 
@@ -1341,7 +1347,7 @@ def _verify_quantity(
     if mismatch in {"rise", "decline"}:
         return _verdict(False, reason=f"the tool's {label} is a {mismatch}", kind="sign")
     clause_start, _clause_end = answer.clause(item.start)
-    if _CHANGE_CUE.search(answer.text[clause_start : item.start]):
+    if _CHANGE_CUE.search(answer.text[clause_start : item.start]) or _DURATION_UNIT.match(reading.after):
         return _verdict(False, reason=R_DERIVED, kind="derived")
     return _verdict(
         False, reason=f"differs from the tool's {label}" + (f" for {subject}" if subject else ""), kind="differs"

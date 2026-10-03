@@ -3081,3 +3081,39 @@ sessions:
       migrating the test_numbers_pipeline assertion. The held-out labels
       await owner review in the PR.
     status: applied
+  - id: AILOG-0072
+    date: "2026-10-03"
+    agent_task: >-
+      Live-session finding on feat/tp024-typed-claims, before the PR opened
+      (DE-15 repayment trigger: "a live false flag... traced to the
+      vocabulary"). A BYD recommendation turn wrote "...a drawdown of
+      -36.09% within the last 13 months..."; the clause-cue field rule
+      (ADR-008 decision 5, "nearest field cue in the same clause, on either
+      side") let "drawdown" reach across the intervening preposition and
+      claim "13", which then failed with the misleading reason "differs
+      from the tool's drawdown" instead of being recognized as a value
+      derived from two evidence dates. Reproduced against
+      guardrail_claims.scan_claims with a standalone script before changing
+      anything. Fix: a calendar-duration unit immediately after a number
+      ("13 months", "a 6-month span") now routes to the existing "derived
+      value; only compute-tool results verify" reason (decision 9's
+      R_DERIVED bucket), alongside the pre-existing change-cue trigger; the
+      clause-cue attribution rule itself (and every other reason branch) is
+      unchanged. The new check sits at the same final-fallback position the
+      "differs" line already occupied, so it can only relabel a claim that
+      was going to be unverified either way: no claim that verified before
+      now fails, and none that failed before now verifies. Added
+      test_duration_span_is_derived_not_misattributed (the live phrasing,
+      "over the past N weeks", "a N-month span") to
+      test_tp024_typed_claims.py. Full offline suite re-run: 590 passed,
+      1 failed (test_ingest_news_sync.py::test_store_filter_dedup_and_quarantine,
+      confirmed pre-existing on the unmodified tree via git stash - unrelated
+      news-ingestion dedup count, not touched by this change).
+    artifacts:
+      - src/stockinsider/agent/guardrail_claims.py
+      - test/offline/test_tp024_typed_claims.py
+    human_decision: >-
+      Owner reviewed the live transcript and the traced root cause in
+      session (2026-10-03) and chose "fix now, same branch, before the PR
+      opens" over logging-only or no action.
+    status: applied
