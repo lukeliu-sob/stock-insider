@@ -144,8 +144,9 @@ Owner decisions, 2026-10-02:
      false flags of the probe table, flags its four misattributions,
      and closes DE-12, DE-10(c) and DE-13.
    - Phase 3 (TP-025): tools declare the semantics of their result
-     fields in `shared/` (ADR-004 amendment), replacing heuristic field
-     typing.
+     fields in `shared/` (ADR-005 Amendment 4, not ADR-004 - ADR-004
+     deferred tool I/O schema design to ADR-005 by its own §4; corrected
+     2026-10-03), replacing heuristic field typing.
 
 ## 2. Alternatives Considered
 
