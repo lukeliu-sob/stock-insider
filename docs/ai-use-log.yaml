@@ -3149,7 +3149,7 @@ sessions:
       - docs/ai-use-log.yaml
     human_decision: >-
       Owner reviewed the CI failure, the traced root cause and the planned
-      fix in session (2026-10-03, "修了" / "fix it", translated) and
-      approved proceeding as its own change set, separate from the
-      debt-register remediation plan and from PR #61.
+      fix in session (2026-10-03, "fix it", translated) and approved
+      proceeding as its own change set, separate from the debt-register
+      remediation plan and from PR #61.
     status: applied
