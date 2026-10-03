@@ -204,7 +204,12 @@ def test_store_filter_dedup_and_quarantine(tmp_path) -> None:
     non_english = _article("Tencent results beat", language="Chinese")
     stub = _GdeltStub({SYMBOL_QUERY_0700: [keep, key_a, key_a_variant, key_b, promo, non_english]})
 
-    report = run_news_sync(conn, GdeltNewsAdapter(transport=stub), sleep_fn=lambda s: None)
+    # BD-029: frozen well inside the 14-day near-title dedup window around the
+    # fixtures' 2026-09-18 seendate (not at its edge) - the real clock drifted
+    # the fixed seendate out of that window and failed this test with no code
+    # change.
+    now = datetime(2026, 9, 25, 9, 0, 0, tzinfo=timezone.utc)
+    report = run_news_sync(conn, GdeltNewsAdapter(transport=stub), now=now, sleep_fn=lambda s: None)
 
     symbol_query = next(q for q in report["queries"] if q["bucket"] == "0700.HK")
     assert symbol_query["status"] == "ok"

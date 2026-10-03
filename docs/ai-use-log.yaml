@@ -3081,3 +3081,39 @@ sessions:
       migrating the test_numbers_pipeline assertion. The held-out labels
       await owner review in the PR.
     status: applied
+  - id: AILOG-0073
+    date: "2026-10-03"
+    agent_task: >-
+      TP-027 (BD-029): PR #61's CI "regression" job failed on
+      test_ingest_news_sync.py::test_store_filter_dedup_and_quarantine,
+      unrelated to that PR's own change (agent/guardrail_claims.py). Traced to
+      a test-fixture time bomb, not a product defect: _article()'s default
+      seendate is the fixed date 20260918T090000Z; the test never passes
+      run_news_sync()'s optional now:, so it defaults to the real clock; the
+      near-title dedup gate only applies inside a rolling 14-day window
+      (DUP_WINDOW_DAYS, news.py:63), and 2026-09-18 + 14 days = 2026-10-02 -
+      the test passed through that boundary day (confirmed green in PR #60's
+      own CI run, headSha 4ea1c64, 2026-10-02) and was certain to fail on
+      2026-10-03 regardless of any code change. Confirmed independent of PR
+      #61 by git-stashing its diff and reproducing the identical failure
+      (kept_new=3 instead of 2, the extra row being "Tencent Holdings buys
+      back shares now") on the unmodified tree. Reserved AILOG-0072 for the
+      sibling PR #61 (same ai-use-log.yaml append point on a different
+      branch forked from the same main commit) to avoid a duplicate id once
+      both merge. Fix: the one run_news_sync(...) call in that test now
+      passes a frozen now= comfortably inside the 14-day window, with an
+      inline comment naming BD-029; no change to news.py's dedup logic,
+      which is correct as written; no new test added (a fixture repair, not
+      a coverage gap). Order: TP-027 + BD-029 committed first (GOV-006),
+      then the one-line fixture fix.
+    artifacts:
+      - test/offline/test_ingest_news_sync.py
+      - docs/test-plans/TP-027.md
+      - docs/bug-diary.md
+      - docs/ai-use-log.yaml
+    human_decision: >-
+      Owner reviewed the CI failure, the traced root cause and the planned
+      fix in session (2026-10-03, "修了" / "fix it", translated) and
+      approved proceeding as its own change set, separate from the
+      debt-register remediation plan and from PR #61.
+    status: applied
