@@ -3252,3 +3252,71 @@ sessions:
       formal amendment; stage 1 is scoped narrowly (the contract only) so
       the owner can review the mechanism before any tool migrates to it.
     status: applied
+  - id: AILOG-0076
+    date: "2026-10-03"
+    agent_task: >-
+      TP-028: the debt-register remediation plan's Phase 3a (DE-08) and
+      3b (DE-11), done together per the plan's own sequencing note (both
+      independent of Phase 4, run opportunistically alongside it). Order:
+      TP-028 committed first (GOV-006), then DE-08's code, then DE-11's.
+      DE-08: empty_attempts counted per sync run, not per calendar day
+      (three quick re-runs during a vendor hiccup could close a fillable
+      gap after three same-day attempts), and the gap-repair budget share
+      reset to a fresh half-cap allowance every run instead of persisting
+      for the day. Fix: migration v7 adds sync_gaps.empty_attempts_date,
+      gating the increment to once per day; CallBudget gains an optional
+      track parameter (default unchanged) and sync.py uses a second
+      instance under track "gap-repair-daily" to persist gap_spent the
+      same way the real daily cap already persists - reusing the existing
+      lazy-reset-by-date mechanism rather than inventing a parallel one.
+      test_zero_bar_gap_repair_three_attempts_then_terminal migrated from
+      a hand-rolled fake connection (which matched SQL by string prefix
+      with positional params - broke the moment the per-day gating added
+      a bind parameter) to a real sqlite connection with explicit
+      backdated empty_attempts_date values simulating three distinct
+      days; new sibling test proves three same-day calls count as one.
+      test_gap_repair_budget_share_persists_across_same_day_runs stubs
+      _plan/_completeness_pass/_enqueue_detected_gaps to a fixed 3-item
+      gap plan (the benchmark indices otherwise need a fresh incremental
+      call every run against this fixture's fixed-date canned bars, since
+      real "today" keeps moving - that would have coupled the budget
+      arithmetic to the wall-clock date instead of only the gap-share
+      logic under test); confirmed by mutation check (reverted the fix,
+      watched the test fail with the predicted 2-ok-then-1-deferred
+      pattern instead of the fixed version's 0-ok-3-deferred, restored
+      the fix). DE-11: migration v6 demoted secondary-exchange rows to
+      verified=0, but a symbol already active on the watchlist stayed
+      active and kept syncing with no report surfacing the mismatch.
+      Fix: WatchlistService.list() selects symbols.verified (visibility
+      only, no change to what stays active or synced); the watch list
+      CLI prints "[unverified resolution]" for such a row; the
+      watchlist.list agent tool's description mentions verification
+      status (same dict, no new registry enforcement). The description
+      string change broke the golden plain-REPL transcript's exact-text
+      comparison (test_plain_output_byte_identical /
+      test_tui_without_terminal_falls_back_explicitly); migrated the one
+      fixture line to the new description text. Verification: 5 new/
+      migrated tests; full offline suite 604 passed; ruff, mypy and every
+      structural gate pass.
+    artifacts:
+      - src/stockinsider/data/ingest/budget.py
+      - src/stockinsider/data/ingest/sync.py
+      - src/stockinsider/data/store/schema.py
+      - src/stockinsider/data/store/watchlist.py
+      - src/stockinsider/cli/app.py
+      - src/stockinsider/agent/registry.py
+      - test/offline/test_ingest_market.py
+      - test/offline/test_tp018_remediation.py
+      - test/offline/test_watchlist.py
+      - test/offline/test_cli_surface.py
+      - test/offline/fixtures/plain_repl_golden.txt
+      - docs/test-plans/TP-028.md
+      - docs/debt-register.md
+      - docs/review-memo.md
+      - docs/ai-use-log.yaml
+    human_decision: >-
+      Owner said "continue" (translated) in session (2026-10-03),
+      following the remediation plan's own recommended order (Phase 1,
+      then open the Phase 4 ADR conversation, then Phase 3a/3b/Phase 2
+      opportunistically) rather than a fresh per-item approval.
+    status: applied
