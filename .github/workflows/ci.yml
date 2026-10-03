@@ -26,6 +26,8 @@ jobs:
         run: python tools/checks/registry_schema.py
       - name: Trace-matrix coverage (R1)
         run: python tools/checks/trace_coverage.py
+      - name: Cross-file ID reference validity (DE-06)
+        run: python tools/checks/reference_lint.py
       - name: Language gate (GOV-001)
         run: python tools/checks/language_policy.py
       - run: python tools/checks/tautology_gate.py

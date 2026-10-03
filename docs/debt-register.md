@@ -15,7 +15,7 @@
 | Hidden dependencies | 0 |
 | Agent-induced bloat | 0 |
 | Evaluation debt | 2 (DE-01, DE-09) |
-| Guardrail debt | 7 (DE-03, DE-06, DE-08, DE-10, DE-11, DE-15, DE-16) |
+| Guardrail debt | 5 (DE-03, DE-08, DE-11, DE-15, DE-16) |
 | Human/cognitive debt | 1 |
 
 Categories at zero have no current entries; the category opens the moment its first entry appears — do not pre-register speculative debt.
@@ -26,7 +26,7 @@ Categories at zero have no current entries; the category opens the moment its fi
 - **Category**: evaluation debt
 - **Description**: PERF-001..003 hold `status: future` with TBD thresholds; no latency budgets anywhere in CI.
 - **Repayment trigger**: real workloads exist (first working pipeline); set thresholds via requirement change, then move rows to active.
-- **Status**: open (2026-09-15)
+- **Status**: open (2026-09-15). Partially instrumented by TP-026 (2026-10-03): `test_cli_info.py`, `test_ingest_market.py` and `test/live/test_eval_set.py` now print a `time.perf_counter()` duration for the operation each PERF row names, so the next several runs accumulate real numbers. No threshold is asserted and `status: future` is unchanged - the trigger (real workload data) still has not fired.
 
 ### DE-02 — Zero empirical evaluation evidence
 - **Category**: evaluation debt
@@ -56,7 +56,7 @@ Categories at zero have no current entries; the category opens the moment its fi
 - **Category**: guardrail debt
 - **Description**: references between artifacts (ADR ↔ AI-log ↔ registry ↔ blueprint baselines) are human-maintained; BD-4 showed the class of error. No `reference_lint.py` exists.
 - **Repayment trigger**: second incident of this class, or reference count grows past ~30 → add a reference-lint structural script.
-- **Status**: open (2026-09-15)
+- **Status**: repaid by TP-026 (2026-10-03): `tools/checks/reference_lint.py` collects every DE-NN/TP-NNN/RM-NN/ADR-NNN/REQ-SI-\* token cited under `docs/` and fails on one with no matching entry in its home artifact, wired into the CI `structural` job. First real run found no genuine dangling reference, only pre-existing letter-suffix shorthand (TP-011a/b, TP-012a/b, TP-013a/b, TP-018b citing a plan filed only under its bare number, now accepted by matching on the shared 3-digit base) and one deliberate forward reference (TP-025, pinned by name, ADR-008's already-planned phase 3).
 
 ## DE-07 — Provider dotenv reader duplicates shared/envfile
 - **Opened**: 2026-09-18 (BD-009 fix round)
@@ -82,7 +82,7 @@ Categories at zero have no current entries; the category opens the moment its fi
 - **Category**: guardrail debt
 - **Description**: counts and tickers absent from the evidence ledger ("Your watchlist now holds 3 symbols", "No data is stored for 9988.HK yet"), integer-rounded percents ("about 8%" for 0.0809) and the model's own tool-call arguments ("k=10 requested, 4 returned") quarantine whole answers by design (TP-017 PR-3a standing decision; BD-012/BD-015 match semantics; arguments stay outside the ledger because a fabricated argument would otherwise become citable). The live runs keep hitting these classes.
 - **Repayment trigger**: owner decision on (a) list-length counts entering the ledger, (b) ticker tokens as structural references regardless of the ledger, (c) whether "about N%" is an allowed display form, (d) an identity-prompt rule against citing request parameters (prompts/ change, owner approval).
-- **Status**: open (2026-09-30). (c) decided 2026-10-02 (ADR-008): rounding to any written precision, whole numbers included, is an allowed rendering, implemented against typed candidates in phase 2 (TP-024); until then such numbers are flagged, no longer withheld. (a), (b) and (c) repaid by TP-024 (2026-10-02, ADR-008 Am1): counts verify against list lengths, symbol-shaped tickers are identifiers, rounding to the written precision is implemented for typed candidates. (d) remains open.
+- **Status**: repaid. (c) decided 2026-10-02 (ADR-008): rounding to any written precision, whole numbers included, is an allowed rendering, implemented against typed candidates in phase 2 (TP-024); until then such numbers are flagged, no longer withheld. (a), (b) and (c) repaid by TP-024 (2026-10-02, ADR-008 Am1): counts verify against list lengths, symbol-shaped tickers are identifiers, rounding to the written precision is implemented for typed candidates. (d) repaid by TP-026 (2026-10-03): `prompts/identity.md` v7 adds "Tool-call arguments are not evidence" next to the existing citable-evidence rule; `test_model_citing_request_arguments_fails_postcheck` confirms the ledger-side defense (request arguments were never added to it) catches the citation even if the prompt rule were ignored.
 
 ### DE-11 — Watchlist entries on secondary venues from before migration v6
 - **Category**: guardrail debt

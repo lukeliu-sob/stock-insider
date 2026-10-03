@@ -5,6 +5,7 @@ Implements: REQ-SI-FR-005, REQ-SI-INV-003 (ADR-002)
 
 import json
 import re
+import time
 
 import pytest
 from typer.testing import CliRunner
@@ -80,7 +81,11 @@ def test_info_renders_from_db_only(store) -> None:
     assert "fundamentals (quarter ending 2026-06-30)" in joined
     assert "revenue 161.00B" in joined
     # providers unreachable by construction: no provider is ever imported here
+    # DE-01 (TP-026): timing recorded only, no assertion - PERF-001 stays
+    # status: future until real workload data sets a threshold.
+    started = time.perf_counter()
     result = runner.invoke(app, ["info", "0700.HK"])
+    print(f"[DE-01/PERF-001] cli info duration: {time.perf_counter() - started:.4f}s")
     assert result.exit_code == 0
     assert "quote (2026-08-29" in result.output
 

@@ -17,6 +17,7 @@ from __future__ import annotations
 import json
 import os
 import re
+import time
 from typing import Callable
 
 import pytest
@@ -119,6 +120,11 @@ def test_evaluation_set_pass_rate() -> None:
     provider = _provider()
     by_name = {name: (prompt, checker) for name, prompt, checker in CASES}
     results: list[tuple[str, bool, str]] = []
+    # DE-01 (TP-026): timing recorded only, no assertion - PERF-002 stays
+    # status: future until real workload data sets a threshold. This replay
+    # is a provider-call proxy for the full analysis-session duration the
+    # requirement names (the report-level agent loop is not built yet).
+    started = time.perf_counter()
     for name, prompt, checker in CASES:
         response, _usage = provider.chat([{"role": "user", "content": prompt}])
         results.append((name, checker(response), response.strip()[:80]))
@@ -126,6 +132,7 @@ def test_evaluation_set_pass_rate() -> None:
     prompt, checker = by_name["yes-no-stability"]
     response, _usage = provider.chat([{"role": "user", "content": prompt}])
     results.append(("yes-no-stability-2nd", checker(response), response.strip()[:80]))
+    print(f"[DE-01/PERF-002] evaluation-set replay duration: {time.perf_counter() - started:.4f}s")
     passed = sum(1 for _name, ok, _ in results if ok)
     rate = passed / len(results)
     report = "\n".join(f"  {'PASS' if ok else 'FAIL'} {name}: {excerpt!r}" for name, ok, excerpt in results)
