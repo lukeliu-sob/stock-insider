@@ -629,3 +629,37 @@ test-plan gate's safety-path attestation).
 - Risk: none new. DE-01 adds no enforced threshold (status stays `future`); DE-10(d) is a
   prompt-only mitigation backed by a ledger that already excluded request arguments before
   this change.
+
+### RM-64 — TP-025 stage 1: declared result-field semantics, the contract only (ADR-005 Am4)
+
+- Verdict: APPROVE pending owner merge (owner approved the ADR-005 Amendment 4 design in
+  session, 2026-10-03, after it was presented via AskUserQuestion - "direction is right,
+  write the formal amendment"; ADR-005 Am4 and TP-025 committed before any implementation
+  change, GOV-006 ordering).
+- Spec alignment: REQ-SI-INV-001, REQ-SI-SEC-002 (unchanged scope - a declared-metadata
+  contract, not a behavior change). `FieldSemantics` and the two new `ToolSpec` fields
+  default empty; every existing `ToolSpec(...)` call site is unaffected
+  (`test_toolspec_defaults_are_empty_and_backward_compatible`), and a populated declaration
+  changes no validation outcome (`test_declaring_result_fields_does_not_change_validation`).
+  No tool declares either field yet - stages 2-5 (guardrail consumption, per-module
+  migration, DE-16's `official_name`, the P6 remeasurement) are TP-025's own listed
+  follow-ups, each amending this plan before its own code.
+- Architecture: one file changed (`shared/tools.py`, inside the safety-critical prefix,
+  hence this memo entry). `agent/registry.py`'s `Registry.execute()` is untouched - the
+  four-stage fail-closed order (ADR-005 ruling 3) and the write gate are unchanged; the new
+  fields are metadata for `agent/guardrail_claims.py` to read later, not a new registry
+  enforcement point (ADR-005 Amendment 1's lesson: keep the registry's job to dispatch and
+  the wire checks). ADR-008's phase-3 cross-reference corrected in the same change set
+  (ADR-005 Amendment 4, not ADR-004 - ADR-004 explicitly deferred tool I/O schema design to
+  ADR-005 by its own §4).
+- Test quality: 3 new tests in `test_inv3_failsafe.py` (ADR-005 §3's named home for the
+  fail-closed wire matrix), including a negative/adversarial case proving the declaration
+  is inert to `validate_result_payload`. Full offline suite 600 green (597 + 3 new, zero
+  migrated assertions - stage 1 is additive-only); ruff, mypy and every structural gate
+  pass.
+- Security/efficiency: no new dependency (the reopen condition's jsonschema/pydantic
+  alternative was explicitly rejected in ADR-005 Am4 as oversized for a semantic-labeling
+  problem).
+- Risk: none new in stage 1. Residual risk recorded in ADR-005 Am4, not this memo: a
+  company absent from a session's ledger entirely still cannot be recognized as a subject
+  even once DE-16's stage lands.
