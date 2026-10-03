@@ -67,10 +67,34 @@ class ToolWireError(RuntimeError):
 
 
 @dataclass(frozen=True)
+class FieldSemantics:
+    """A declared meaning for one result field (ADR-005 Am4, DE-15/16).
+
+    Metadata only - consumed by `agent/guardrail_claims.py`'s evidence
+    typing (TP-025 stage 2+), never validated by the registry: the four
+    stage fail-closed order in `Registry.execute` (ADR-005 ruling 3) is
+    unchanged by a tool declaring this.
+
+    Implements: REQ-SI-INV-001 (ADR-005 Am4)
+    """
+
+    field: str
+    unit: str = ""  # "" | "fraction" | "percent" | "currency" | "count"
+    subject_bearing: bool = False
+
+
+@dataclass(frozen=True)
 class ToolSpec:
     """Immutable tool declaration: schemas, effect class, provenance rule.
 
-    Implements: REQ-SI-SEC-002 (ADR-005)
+    `result_fields` and `result_discriminators` are optional declared
+    semantics for the result payload's fields (ADR-005 Am4): a direct key
+    (`result_fields["close"]`) or a discriminator-tagged key, where a
+    sibling field's value selects the semantics (`result_discriminators["metric"]["volatility"]`
+    for `{"metric": "volatility", "value": ...}` rows). Both default empty;
+    no tool declares either yet (TP-025 stage 1 is the contract only).
+
+    Implements: REQ-SI-SEC-002, REQ-SI-INV-001 (ADR-005, ADR-005 Am4)
     """
 
     name: str
@@ -80,6 +104,8 @@ class ToolSpec:
     result_spec: str = "dict"
     effect_class: EffectClass = EffectClass.READ
     source_kind: SourceKind = SourceKind.COMPUTED
+    result_fields: dict[str, FieldSemantics] = field(default_factory=dict)
+    result_discriminators: dict[str, dict[str, FieldSemantics]] = field(default_factory=dict)
 
 
 @dataclass(frozen=True)
