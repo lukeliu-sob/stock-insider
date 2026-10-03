@@ -178,3 +178,23 @@ def test_watch_remove_unknown_symbol_explicit() -> None:
     result = runner.invoke(app, ["watch", "remove", "9999.HK"])
     assert result.exit_code == 1
     assert "not on the watchlist" in result.output
+
+
+def test_watch_list_flags_a_demoted_verified_symbol() -> None:
+    """DE-11 (TP-026 plan): `watch list` surfaces a symbol whose
+    resolution a migration (e.g. v6, ADR-005 Am2 secondary-venue scope)
+    demoted after it was added - it stays active and keeps syncing, but
+    is no longer invisible to the one report that lists it."""
+    from stockinsider.data import open_data_store
+    from stockinsider.data.store.resolver import Resolution
+
+    ds = open_data_store()
+    ds.record(Resolution(canonical_symbol="0700.HK", exchange="HK", official_name="Tencent Holdings"))
+    ds.watchlist.add_verified("0700.HK", user_confirmed=True, via="cli")
+    with ds._conn:  # noqa: SLF001 — test seam, simulating a migration demotion
+        ds._conn.execute("UPDATE symbols SET verified = 0 WHERE canonical_symbol = '0700.HK'")  # noqa: SLF001
+    ds.close()
+    result = runner.invoke(app, ["watch", "list"])
+    assert result.exit_code == 0
+    assert "0700.HK" in result.output
+    assert "[unverified resolution]" in result.output

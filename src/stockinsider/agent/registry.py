@@ -79,7 +79,7 @@ def register_data_tools(registry: Registry, data_store: Any) -> None:
     registry.register(
         ToolSpec(
             name="watchlist.list",
-            description="List active watchlist symbols with names and exchanges.",
+            description="List active watchlist symbols with names, exchanges, and verification status.",
             arguments_spec={},
             result_spec="list",
             effect_class=EffectClass.READ,

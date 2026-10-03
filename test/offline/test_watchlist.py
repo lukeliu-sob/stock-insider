@@ -112,6 +112,27 @@ def test_remove_list_roundtrip(tmp_path) -> None:
     ds.close()
 
 
+def test_list_surfaces_a_demoted_verified_flag(tmp_path) -> None:
+    """DE-11 (TP-026 plan): a symbol added while verified, then later
+    demoted by a migration like v6 (ADR-005 Am2 secondary-venue scope),
+    stays active and keeps syncing - that was already true before this
+    fix. What changes: `list()` surfaces the flag instead of staying
+    silent about the mismatch."""
+    ds = _store(tmp_path)
+    cand = ds.resolver.search("Tencent Holdings")[0]
+    ds.record(cand)
+    ds.watchlist.add_verified("0700.HK", user_confirmed=True, via="cli")
+    before = ds.watchlist.list()[0]
+    assert before["canonical_symbol"] == "0700.HK"
+    assert before["verified"]
+    with ds._conn:  # noqa: SLF001 — test seam, simulating a migration demotion
+        ds._conn.execute("UPDATE symbols SET verified = 0 WHERE canonical_symbol = '0700.HK'")  # noqa: SLF001
+    after = ds.watchlist.list()
+    assert [row["canonical_symbol"] for row in after] == ["0700.HK"]  # still active, still listed
+    assert not after[0]["verified"]
+    ds.close()
+
+
 def test_benchmark_index_add_refused(tmp_path) -> None:
     ds = _store(tmp_path)
     with pytest.raises(WatchlistError, match="built-in benchmark index"):

@@ -201,8 +201,13 @@ def watch(
                 typer.echo("watchlist is empty")
                 return
             for row in rows:
+                # DE-11 (TP-026 plan): a row whose resolution migration v6
+                # demoted (secondary-venue, ADR-005 Am2) stays active and
+                # keeps syncing - visible here, not silently trusted.
+                flag = "  [unverified resolution]" if not row["verified"] else ""
                 typer.echo(
-                    f"{row['canonical_symbol']}  {row['official_name']}  {row['exchange']}  added {row['added_at']}"
+                    f"{row['canonical_symbol']}  {row['official_name']}  {row['exchange']}  "
+                    f"added {row['added_at']}{flag}"
                 )
             return
         if action == "add":

@@ -11,7 +11,7 @@ symbol.search [read] Resolve a security mention against the symbol map and the E
 sync.run [write] Run one market-data sync (indices first, gap queue, incrementals) under the daily call budget. The report lists per-symbol outcomes and deferred items.
 sync.status [read] Budget usage, pending gap queue, and tracked-symbol counts.
 watchlist.add [write] Add a verified symbol to the watchlist. Requires a prior symbol.search whose candidate the user explicitly confirmed; propose the addition; the harness collects the human's one-time confirmation token — you never confirm on their behalf.
-watchlist.list [read] List active watchlist symbols with names and exchanges.
+watchlist.list [read] List active watchlist symbols with names, exchanges, and verification status.
 watchlist.remove [write] Remove a symbol from the watchlist; propose it and show the user what will be removed — the harness collects their one-time confirmation token.
 stockinsider> ok: {'profile': 'quick', 'max_session_tokens': 30000} (provenance: computed @ <TS>)
 stockinsider> error: unknown tool 'nope.tool'; registered: ['budget.query', 'context.estimate', 'fundamentals.summary', 'market.indicators', 'market.quote', 'news.recent', 'session.list', 'symbol.search', 'sync.run', 'sync.status', 'watchlist.add', 'watchlist.list', 'watchlist.remove']
