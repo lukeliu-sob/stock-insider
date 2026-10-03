@@ -10,11 +10,13 @@ import pytest
 from stockinsider.agent.registry import Registry, RegistryError
 from stockinsider.shared.tools import (
     EffectClass,
+    FieldSemantics,
     SourceKind,
     ToolCall,
     ToolSpec,
     ToolWireError,
     validate_arguments,
+    validate_result_payload,
 )
 
 
@@ -131,3 +133,37 @@ def test_list_tools_sorted_by_name() -> None:
     registry = make_registry(make_spec(name="zeta.tool"), lambda args: {})
     registry.register(make_spec(name="alpha.tool"), lambda args: {})
     assert [spec.name for spec in registry.list_tools()] == ["alpha.tool", "zeta.tool"]
+
+
+# ---- TP-025 stage 1: declared result-field semantics are inert metadata (ADR-005 Am4) ------
+
+
+def test_field_semantics_is_a_frozen_value_type() -> None:
+    a = FieldSemantics(field="close", unit="currency")
+    b = FieldSemantics(field="close", unit="currency")
+    assert a == b
+    with pytest.raises(AttributeError):
+        a.field = "open"  # type: ignore[misc]
+
+
+def test_toolspec_defaults_are_empty_and_backward_compatible() -> None:
+    spec = make_spec()  # built with no new arguments, same as every pre-TP-025 call site
+    assert spec.result_fields == {}
+    assert spec.result_discriminators == {}
+
+
+def test_declaring_result_fields_does_not_change_validation() -> None:
+    """A populated declaration is inert to the existing wire checks (R7): stage 1
+    must not silently start enforcing something the registry didn't before."""
+    bare = make_spec(result_spec="dict")
+    declared = ToolSpec(
+        name=bare.name,
+        description=bare.description,
+        arguments_spec=bare.arguments_spec,
+        result_spec="dict",
+        result_fields={"close": FieldSemantics(field="close", unit="currency")},
+        result_discriminators={"metric": {"volatility": FieldSemantics(field="volatility", unit="fraction")}},
+    )
+    payload = {"close": 75.6, "metric": "volatility", "value": 0.37}
+    validate_result_payload(bare, payload)  # does not raise
+    validate_result_payload(declared, payload)  # does not raise either - same outcome

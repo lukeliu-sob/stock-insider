@@ -118,3 +118,83 @@ out-of-scope listing (INV-004 requires verified resolution for
 watchlist additions; scope is HK + US).
 
 Implements (with ADR-006 Am5/Am6, ADR-004 Am2): REQ-SI-INV-004.
+
+## Amendment 4 (2026-10-03, TP-025) — Declared result-field semantics (DE-15, DE-16)
+
+§4's reopen condition ("nested schemas may trigger the jsonschema/pydantic
+adoption") has fired, concretely: `agent/guardrail_claims.py`'s INV-001
+typed-claim engine (ADR-008 Am1, TP-024) types a cited number's field by a
+hand-maintained cue vocabulary (`_KEY_FIELDS`, `_METRIC_FIELDS`,
+`_CUE_PATTERNS`) guessing at what a tool result's keys mean, because
+`ToolSpec` carries no field-level semantics today — `result_spec` is only
+a top-level type tag ("dict"/"list"); `validate_result_payload` never
+looks inside. DE-15 (field/subject typing is heuristic) and DE-16
+(company names resolve only when the ledger happens to carry one) are
+this gap's two debt entries. ADR-008 §9's own "Change sets" row already
+scopes this as its phase 3 (TP-025); one of its cross-references
+(decision log, "tools declare the semantics of their result fields in
+`shared/` (ADR-004 amendment)") names the wrong ADR — ADR-004 explicitly
+deferred tool I/O schema design to this one (§4 Reopen Conditions: "Tool
+I/O schema design (TP-005/ADR-005) may extend `shared/` with a
+tool-envelope module"), which is exactly `shared/tools.py`. Corrected here
+and at the citing line.
+
+**Decision: a metadata declaration, not a schema-validation library.**
+The reopen condition's named alternative (jsonschema/pydantic) buys
+structural validation of result *shape*; what DE-15/DE-16 need is
+*semantic* labels on fields whose shape is already fine. Adopting a
+schema library now would add a dependency (AGENTS.md §8 stop-and-ask) to
+solve a problem one level up from where it lives. Instead, `ToolSpec`
+gains two optional fields that mirror the two shapes the existing
+heuristic vocabulary already separately encodes - a direct key and a
+discriminator-tagged key (`market.indicators`' `{metric, value}` rows,
+where `value`'s meaning depends on its sibling `metric`):
+
+```python
+@dataclass(frozen=True)
+class FieldSemantics:
+    field: str              # canonical field name, e.g. "close", "volatility", "roe"
+    unit: str = ""           # "" | "fraction" | "percent" | "currency" | "count"
+    subject_bearing: bool = False  # this field's value is itself a subject identifier (e.g. official_name)
+
+@dataclass(frozen=True)
+class ToolSpec:
+    ...
+    result_fields: dict[str, FieldSemantics] = field(default_factory=dict)
+    result_discriminators: dict[str, dict[str, FieldSemantics]] = field(default_factory=dict)
+```
+
+A tool declares `result_fields={"close": FieldSemantics("close", unit="currency"), ...}`
+for direct keys, and `result_discriminators={"metric": {"volatility": FieldSemantics("volatility", unit="fraction"), ...}}`
+for the metric/value pattern. Neither is validated by `Registry.execute()`
+(§1 ruling 3's four-stage order is unchanged) - this is declared metadata
+for `agent/guardrail_claims.py`'s evidence-typing to consume, not a new
+registry enforcement point (Amendment 1's lesson: the registry's job
+stays dispatch and the fail-closed wire checks, not creeping scope).
+Consumption, the per-module migration (data/ingest/market.py, fundamentals.py,
+indicators.py, news.py, eodnews.py, sync.py, watchlist.py, resolver.py,
+and the `data/store/__init__.py` facade that assembles composite
+payloads), the heuristic-fallback rule for anything not yet migrated, and
+`official_name` reaching `market.quote`/`market.indicators`/
+`fundamentals.summary`/`news.*` for DE-16, are TP-025's implementation
+(this amendment records the wire-format decision; the guardrail-side
+consumption is recorded as ADR-008's own phase 3 amendment once that code
+lands).
+
+**Alternatives considered:**
+- Full jsonschema/pydantic adoption now (the reopen condition's own
+  suggestion): rejected as oversized for a semantic-labeling problem;
+  revisit if result *shapes* (not just field meaning) start needing
+  structural validation.
+- Leave the heuristic in `guardrail_claims.py` permanently: rejected -
+  that is DE-15/DE-16 staying open by design, not a decision.
+- Fix DE-15/DE-16 ad hoc, tool by tool, without a declared mechanism:
+  rejected - the next new tool reintroduces the same gap.
+
+**Residual risk**: a company absent from a session's ledger entirely
+still cannot be recognized as a subject, even after `official_name`
+flows everywhere a result carries one (DE-16's own trigger text already
+names this). TP-025 closes the two named debt entries; this residual is
+recorded there, not claimed closed.
+
+Implements: REQ-SI-INV-001, REQ-SI-SEC-002 (with ADR-008's phase 3).

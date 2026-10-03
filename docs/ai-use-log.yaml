@@ -3211,3 +3211,44 @@ sessions:
       presented in session (2026-10-03) and said to continue per the plan,
       after the PR #61/#62 CI and merge-conflict detour was resolved.
     status: applied
+  - id: AILOG-0075
+    date: "2026-10-03"
+    agent_task: >-
+      TP-025 stage 1 (ADR-005 Amendment 4): the debt-register remediation
+      plan's Phase 4 (DE-15, DE-16), opened in session by presenting the
+      design via AskUserQuestion - FieldSemantics, ToolSpec.result_fields/
+      result_discriminators mirroring the two shapes guardrail_claims.py's
+      heuristic vocabulary already separately encodes (_KEY_FIELDS direct,
+      _METRIC_FIELDS discriminator-tagged), and the ADR-004->005 correction
+      (ADR-004 explicitly deferred tool I/O schema design to ADR-005 by its
+      own §4; ADR-005's own reopen condition - "nested schemas may trigger
+      the jsonschema/pydantic adoption" - is what DE-15/DE-16 actually
+      fired). Owner chose "direction is right, write the formal amendment"
+      over the jsonschema/pydantic alternative or doing DE-16 alone first.
+      Order: ADR-005 Am4 + the ADR-008 cross-reference fix + TP-025
+      (stage 1 scoped fully, stages 2-5 listed as follow-ups each amending
+      this plan before their own code) committed first (GOV-006), then the
+      stage-1 code: FieldSemantics and the two new ToolSpec fields, both
+      defaulting empty. Registry.execute() untouched by design (ADR-005
+      Am1's lesson: the registry's job is dispatch and the wire checks,
+      not creeping scope) - the declaration is metadata for
+      guardrail_claims.py to consume starting stage 2, not a new
+      enforcement point. Verification: 3 new tests in test_inv3_failsafe.py
+      (ADR-005 §3's named home for the fail-closed wire matrix), including
+      an adversarial case proving a populated declaration is inert to
+      validate_result_payload. Full offline suite 600 passed (597 + 3 new,
+      zero migrated assertions); ruff, mypy and every structural gate pass.
+    artifacts:
+      - docs/architecture/adr/005-tool-registry.md
+      - docs/architecture/adr/008-numeric-verification-v2.md
+      - docs/test-plans/TP-025.md
+      - src/stockinsider/shared/tools.py
+      - test/offline/test_inv3_failsafe.py
+      - docs/review-memo.md
+      - docs/ai-use-log.yaml
+    human_decision: >-
+      Owner approved the ADR-005 Amendment 4 design direction in session
+      (2026-10-03) via AskUserQuestion, then confirmed to write it as a
+      formal amendment; stage 1 is scoped narrowly (the contract only) so
+      the owner can review the mechanism before any tool migrates to it.
+    status: applied
