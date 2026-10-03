@@ -566,3 +566,32 @@ test-plan gate's safety-path attestation).
   - Company names (DE-16).
   - The post-fix held-out numbers are not independent.
   - An unfielded number keeps v1 semantics (P2), so its escapes are v1's.
+
+### RM-62 — PR #61: duration spans no longer misattributed to a nearby field cue (DE-15)
+
+- Verdict: APPROVE pending owner merge (owner reviewed the live transcript and the traced
+  root cause in session, 2026-10-03, and chose "fix now, same branch, before the PR opens"
+  over logging-only or no action; no new test plan needed, since DE-15's own repayment
+  trigger - "a live false flag... traced to the vocabulary" - names exactly this case, and
+  TP-024 already covers `agent/guardrail_claims.py`).
+- Spec alignment: REQ-SI-INV-001 (unchanged scope) - a duration span computed from two
+  evidence dates ("13 months" between two window dates) no longer inherits a nearby field
+  cue's identity when it fails to match; it is checked as a derived value instead (decision
+  9's `R_DERIVED` reason), same as a change-cued comparison already was. The clause-cue
+  attribution rule itself (ADR-008 decision 5) is unchanged, and no claim's verified or
+  unverified outcome changes - only the reason text of claims that were already unverified.
+- Architecture: one file changed (`agent/guardrail_claims.py`: one new module-level regex,
+  one widened condition in `_verify_quantity`'s final fallback). No schema change, no new
+  dependency; `shared/`, `prompts/` and CI workflows untouched.
+- Test quality: new `test_duration_span_is_derived_not_misattributed` (the live phrasing,
+  "over the past N weeks", "a N-month span"); reproduced against the live session's exact
+  values with a standalone script before changing anything. Full offline suite: 590 passed,
+  1 pre-existing failure unrelated to this change
+  (`test_ingest_news_sync.py::test_store_filter_dedup_and_quarantine`; confirmed via `git
+  stash` to fail identically on the unmodified tree). ruff, mypy and the structural gates
+  pass.
+- Risk: none new. The change can only relabel a claim already headed for unverified (the
+  new check sits at the same final-fallback position the old "differs" line occupied), so
+  it cannot turn a correct number unverified or a wrong one verified. DE-15 itself stays
+  open (heuristic field/subject typing generally); this repays one named instance, tracked
+  for full repayment at TP-025.
