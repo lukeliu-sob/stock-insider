@@ -3153,3 +3153,61 @@ sessions:
       proceeding as its own change set, separate from the debt-register
       remediation plan and from PR #61.
     status: applied
+  - id: AILOG-0074
+    date: "2026-10-03"
+    agent_task: >-
+      TP-026: Phase 1 of the debt-register remediation plan drafted earlier
+      in this session (after PR #61 repaid one DE-15 instance, the owner
+      asked for the full open-debt inventory and a repayment plan; this is
+      the plan's own recommended first phase - the three independent,
+      low-risk items, bundled under one test plan per the TP-017 PR-1..3b
+      precedent). Order: TP-026 committed first (GOV-006), then DE-06, then
+      DE-01, then DE-10d, matching the plan's own listing. DE-06: new
+      tools/checks/reference_lint.py collects every DE-NN/TP-NNN/RM-NN/
+      ADR-NNN/REQ-SI-* token cited under docs/ and fails on one with no
+      matching entry in its home artifact; wired into the CI structural
+      job. Refined twice against the real tree before it passed clean: RM
+      definitions can be a "### RM-NN" heading or (for the earliest
+      entries) a "- RM-N -" backfill index line; a letter-suffixed TP
+      citation (TP-011a) is accepted when only the bare-numbered file
+      exists (TP-011.md) and the reverse (TP-007 cited, only TP-007a.md/
+      TP-007b.md exist), matched on the shared 3-digit base rather than
+      hand-allowlisted case by case; TP-025 (ADR-008's already-named,
+      not-yet-written phase 3) is the one genuine forward reference,
+      pinned by name like a detector's accepted residual elsewhere in this
+      repo. DE-01: time.perf_counter() duration added to
+      test_cli_info.py, test_ingest_market.py and test/live/test_eval_set.py
+      at the exact operation each PERF-00N row names (PERF-001 cli info,
+      PERF-002 the eval-set replay as a provider-call proxy for the
+      not-yet-built agent loop, PERF-003 a one-symbol sync run as a proxy
+      for the 100-symbol watchlist the requirement names) - printed, never
+      asserted; requirements.yaml text and status: future unchanged. DE-10d:
+      prompts/identity.md v6 -> v7, one new Disciplines bullet ("Tool-call
+      arguments are not evidence") immediately after "Numbers come from
+      tools"; test_model_citing_request_arguments_fails_postcheck proves
+      the real guardrail already catches the citation via the real
+      session-ledger typing, independent of whether the model follows the
+      prompt rule. Migrated assertion (version-bump's direct consequence):
+      test_tp018b_fourth_audit.py::test_identity_prompt_is_v6_with_non_relay_rules,
+      renamed ..._is_v7_..., "identity-v6" -> "identity-v7". Full offline
+      suite 597 passed (591 + 6 new); ruff, mypy and every structural gate
+      (including the new one) pass; CI_BASE_SHA simulation before pushing.
+    artifacts:
+      - tools/checks/reference_lint.py
+      - test/offline/test_reference_lint.py
+      - .github/workflows/ci.yml
+      - test/offline/test_cli_info.py
+      - test/offline/test_ingest_market.py
+      - test/live/test_eval_set.py
+      - prompts/identity.md
+      - test/offline/test_identity_prompt.py
+      - test/offline/test_tp018b_fourth_audit.py
+      - docs/debt-register.md
+      - docs/test-plans/TP-026.md
+      - docs/review-memo.md
+      - docs/ai-use-log.yaml
+    human_decision: >-
+      Owner reviewed the Phase 1 scope and the prompts/identity.md wording
+      presented in session (2026-10-03) and said to continue per the plan,
+      after the PR #61/#62 CI and merge-conflict detour was resolved.
+    status: applied

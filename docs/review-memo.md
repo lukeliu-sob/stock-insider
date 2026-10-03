@@ -595,3 +595,37 @@ test-plan gate's safety-path attestation).
   it cannot turn a correct number unverified or a wrong one verified. DE-15 itself stays
   open (heuristic field/subject typing generally); this repays one named instance, tracked
   for full repayment at TP-025.
+
+### RM-63 — TP-026: Phase 1 debt-register quick wins (DE-01 instrumentation, DE-06, DE-10d)
+
+- Verdict: APPROVE pending owner merge (owner reviewed the full debt inventory and the
+  remediation plan, including this exact Phase 1 scope and the prompts/identity.md
+  wording, in session 2026-10-03, then said to continue per the plan; TP-026 committed
+  before any implementation change, GOV-006 ordering).
+- Spec alignment: REQ-SI-GOV-002 and REQ-SI-INV-001 (unchanged scope, a debt repayment
+  rather than a feature). DE-01: PERF-001..003's text and `status: future` are
+  byte-identical before and after - only measurement was added, no threshold. DE-06: a
+  dangling DE/TP/RM/ADR/REQ-SI citation under `docs/` now fails CI; the first real run
+  found none, only pre-existing letter-suffix shorthand and one pinned forward reference
+  (TP-025). DE-10(d): the new identity-prompt rule is reinforced by the existing INV-001
+  post-check, verified by an adversarial test that never touches the prompt text itself.
+- Architecture: `tools/checks/reference_lint.py` (new, not a safety-critical path) wired
+  into the CI `structural` job (`.github/workflows/ci.yml`). `prompts/identity.md` v6 ->
+  v7 (one new Disciplines bullet; safety-critical prefix, hence this memo entry).
+  `test/offline/test_cli_info.py`, `test/offline/test_ingest_market.py` and
+  `test/live/test_eval_set.py` print a duration; no assertion added. No schema, registry
+  or `agent/guardrail_claims.py` change. `agent/registry` and `shared/` untouched.
+- Test quality: 6 new tests across `test_reference_lint.py` (4) and `test_identity_prompt.py`
+  (2), each with a negative/adversarial case (a synthetic dangling citation; a synthetic
+  answer citing a tool-call argument). One migrated assertion:
+  `test_tp018b_fourth_audit.py::test_identity_prompt_is_v6_with_non_relay_rules`, renamed
+  `..._is_v7_...`, `"identity-v6"` -> `"identity-v7"` (the version bump's direct, expected
+  consequence; the confirmation-token and `user_confirmed`-absence assertions in the same
+  test are untouched). Full offline suite 597 green (591 + 6 new); ruff, mypy and every
+  structural gate (including the new one) pass.
+- Security/efficiency: `reference_lint.py` reads only tracked files (`git ls-files`), so it
+  never sees the local, gitignored `proposals/` tree; no new dependency (pyyaml is already
+  installed for the `structural` job).
+- Risk: none new. DE-01 adds no enforced threshold (status stays `future`); DE-10(d) is a
+  prompt-only mitigation backed by a ledger that already excluded request arguments before
+  this change.
