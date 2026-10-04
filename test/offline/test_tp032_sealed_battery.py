@@ -3,7 +3,7 @@
 The battery was written by a separately briefed session (TP-032, P6). This module checks its
 structure, its independence from the development battery (TP-030), and its seal: the
 LF-normalized SHA-256 must match the value recorded in TP-032. It runs no measurement. The
-baseline is recorded in TP-032, and the post-fix measurement is the acceptance test of TP-033.
+baseline is recorded in TP-032, and the post-fix measurement is the fix's acceptance test.
 
 Implements: REQ-SI-INV-002 (ADR-006 Am8; TP-032)
 """
