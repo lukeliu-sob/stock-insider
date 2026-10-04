@@ -112,7 +112,7 @@ Categories at zero have no current entries; the category opens the moment its fi
 - **Category**: guardrail debt
 - **Description**: field classes come from result key names and a cue vocabulary, and subjects from text proximity (TP-024 Appendix A). A misread cue flags a correct number. Keys outside the vocabulary stay compatible with any field, so a value under an unknown key can verify a fielded claim.
 - **Repayment trigger**: TP-025 (ADR-008 phase 3), where tools declare result-field semantics in `shared/`; or a live false flag or escape traced to the vocabulary.
-- **Status**: open (2026-10-02; recorded by owner approval with TP-024)
+- **Status**: open. Stage 2 of TP-025 (2026-10-04, same change set as AILOG-0079): a tool's declared field semantics now replace the heuristic field class for that tool. No tool declares fields yet, so every tool is still typed by the heuristic. Stages 3-5 open.
 
 ### DE-16 — Company names resolve only when the ledger carries them
 - **Category**: guardrail debt
@@ -122,4 +122,4 @@ Categories at zero have no current entries; the category opens the moment its fi
   - A company absent from the ledger entirely ("a 46.49% gross margin at BYD" in an Apple-only session) is not recognized as a subject at all.
   - Five held-out claims escape this way (E-010). The owner waived them for TP-024.
 - **Repayment trigger**: TP-025 (ADR-008 phase 3). Tools return `official_name` with each subject-bearing result and declare field semantics in `shared/`. An unresolvable company name can then count as a subject without evidence.
-- **Status**: open (2026-10-02; recorded by owner decision during TP-024)
+- **Status**: open. Stage 2 of TP-025 (2026-10-04) adds the declared-typing hook but no subject source: `official_name` is not added to any tool yet, so stage 4 is still open.
