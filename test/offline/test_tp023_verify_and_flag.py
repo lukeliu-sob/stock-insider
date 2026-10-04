@@ -140,7 +140,7 @@ def test_unmarkable_number_withholds(store, prompts_dir, monkeypatch) -> None:
     # text cannot be marked, and the answer is withheld
     real = guardrail.postcheck_numbers
 
-    def misplaced(candidate, snapshot_values):
+    def misplaced(candidate, snapshot_values, specs=None):
         check = real(candidate, snapshot_values)
         claims = [c if c.verified else dataclasses.replace(c, start=0, end=len(c.raw)) for c in check.claims]
         return dataclasses.replace(check, claims=claims)

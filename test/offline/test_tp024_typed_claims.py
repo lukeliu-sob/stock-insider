@@ -413,7 +413,7 @@ def test_every_digit_is_classified() -> None:
 def test_fail_closed_guard_still_withholds(monkeypatch) -> None:
     real = guardrail.postcheck_numbers
 
-    def misplaced(candidate, snapshot_values):
+    def misplaced(candidate, snapshot_values, specs=None):
         check = real(candidate, snapshot_values)
         claims = [c if c.verified else dataclasses.replace(c, start=0, end=len(c.raw)) for c in check.claims]
         return dataclasses.replace(check, claims=claims)
