@@ -28,6 +28,7 @@ class EventKind(str, Enum):
     TOOL_CALL = "tool-call"
     TOOL_RESULT = "tool-result"
     ERROR = "error"
+    TURN_INCOMPLETE = "turn-incomplete"
     SESSION_CLOSE = "session-close"
 
 

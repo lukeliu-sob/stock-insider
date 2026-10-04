@@ -151,6 +151,7 @@ class TurnEngine:
     ) -> None:
         """Bind the store, registry membrane, and provider; load the identity prompt."""
         self._aborted: str | None = None  # H4: sticky session abort
+        self._open_turn: str | None = None  # DE-14: turn id until its answer is recorded
         self.confirmations = ConfirmationBroker()  # H3: write-token broker
         self._ledgers: dict[str, dict[str, Any]] = {}  # cross-turn INV-001 pools
 
@@ -208,12 +209,18 @@ class TurnEngine:
         an assistant message whose question was cut off; truncation is
         announced to the model instead of left for it to guess.
 
-        Implements: REQ-SI-FR-011, REQ-SI-COST-001 (ADR-001 Am1; TP-019)
+        A turn interrupted before its answer (DE-14) is left out before the
+        window is applied: it neither replays nor takes a window slot.
+
+        Implements: REQ-SI-FR-011, REQ-SI-COST-001, REQ-SI-FR-023 (ADR-001 Am1, Am2; TP-019, TP-029)
         """
+        events = self._store.read_events(session_id)
+        answered = {event.get("turn") for event in events if event.get("event") == "assistant-message"}
+        interrupted = {event.get("turn") for event in events if event.get("event") == "turn-incomplete"} - answered
         conversational = [
             event
-            for event in self._store.read_events(session_id)
-            if event.get("event") in ("user-message", "assistant-message")
+            for event in events
+            if event.get("event") in ("user-message", "assistant-message") and event.get("turn") not in interrupted
         ]
         window = conversational[-HISTORY_WINDOW:]
         while window and window[0].get("event") != "user-message":
@@ -270,9 +277,44 @@ class TurnEngine:
         present, they alter neither the buffering, the post-check, nor
         what reaches render and stream_sink.
 
+        An interruption before the answer is marked (DE-14, see _run_turn).
+
         Implements: REQ-SI-FR-008, REQ-SI-FR-019, REQ-SI-COST-002,
         REQ-SI-INV-001, REQ-SI-INV-002, REQ-SI-FR-026 (ADR-001, ADR-007, ADR-008)
         """
+        self._open_turn = None
+        try:
+            return self._run_turn(
+                session_id,
+                user_text,
+                profile=profile,
+                render=render,
+                progress=progress,
+                stream_sink=stream_sink,
+                on_phase=on_phase,
+                on_pending_write=on_pending_write,
+            )
+        except KeyboardInterrupt:
+            # DE-14: the open turn gets a marker, so replay leaves its question out
+            if self._open_turn is not None:
+                self._store.append_event(session_id, {"event": "turn-incomplete", "turn": self._open_turn})
+            raise
+        finally:
+            self._open_turn = None
+
+    def _run_turn(
+        self,
+        session_id: str,
+        user_text: str,
+        *,
+        profile: str,
+        render: RenderFn,
+        progress: ProgressFn,
+        stream_sink: SinkFn | None = None,
+        on_phase: PhaseFn | None = None,
+        on_pending_write: PendingWriteFn | None = None,
+    ) -> TurnOutcome:
+        """The turn body behind run_turn, which adds the interruption marker (TP-029)."""
         if getattr(self, "_aborted", None):
             refusal = (
                 f"session aborted ({self._aborted} threshold): this session no longer "
@@ -296,6 +338,7 @@ class TurnEngine:
         # the model context (the model literally saw it twice).
         history = self._history_messages(session_id)
         self._store.append_event(session_id, {"event": "user-message", "text": user_text, "turn": turn_id})
+        self._open_turn = turn_id  # DE-14: from here an interruption leaves the turn open
         usage_total: dict[str, int] = {}
         messages: list[dict[str, Any]] = [
             {"role": "system", "content": self._identity},
@@ -671,6 +714,7 @@ class TurnEngine:
             # ADR-008 Am1: per-claim class, subject, field and reason
             message_event["unverified_detail"] = unverified_detail(flag_check)
         self._store.append_event(session_id, message_event)
+        self._open_turn = None  # DE-14: answered; an interruption from here on leaves the turn complete
         # ADR-008: the unverified streak counts the answer as shown (for a
         # regeneration, its recheck); the INV-002 budget is fed as before
         abort_reason = self._counter.record(replace(verdict, number_check=flag_check))
