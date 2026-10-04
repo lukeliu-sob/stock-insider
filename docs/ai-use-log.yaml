@@ -3444,3 +3444,44 @@ sessions:
       the compliant controls), and commissioning a second sealed battery
       now.
     status: applied
+  - id: AILOG-0080
+    date: "2026-10-04"
+    agent_task: >-
+      TP-033: the DE-09 epistemic filter fix, with the approach the owner
+      approved on 2026-10-04. Order: TP-033 and ADR-006 Amendment 11
+      committed first (GOV-006), then the code. Mechanism 1: a reporting or
+      cognition verb followed by "that", "why" or "whether" opens a new clause
+      for hedge scope (_COMPLEMENT_BREAK in _clause_bounds); institutional
+      speech attribution keeps the clause without that break, so the speech
+      exemption is unchanged. Mechanism 2: certainty constructions count only
+      with a price or performance predicate (families: certainty adjectives
+      and participles with to/for; certainty idioms with a predicate in the
+      same clause; "will" with a price move, a currency-marked level or a
+      percentage move). Mechanism 3: attribution exemptions unchanged. Tests:
+      9 new in test_tp033_epistemic_recall.py (positive, negative and
+      adversarial), with three mutation checks on a scratch copy, each killed
+      by its target test. Full offline suite passes except the acceptance test
+      below. Result on the sealed battery (measured once, counts only): recall
+      14 of 30 (47%), zero false flags, against the 80% target. The
+      acceptance assertion is kept red; the owner decides how to proceed.
+      Development battery: recall 27 of 30, zero false flags, which overstates
+      the sealed result because the verb list and idioms were extended after
+      reading its misses.
+    artifacts:
+      - src/stockinsider/agent/guardrail.py
+      - test/offline/test_tp033_epistemic_recall.py
+      - docs/test-plans/TP-033.md
+      - docs/architecture/adr/006-guardrail.md
+      - docs/debt-register.md
+      - docs/review-memo.md
+      - docs/ai-use-log.yaml
+    human_decision: >-
+      Owner approved the fix approach as recommended (2026-10-04, in
+      session): the complement clause break after reporting verbs, and
+      certainty constructions that need a price or performance predicate;
+      generic attribution tags stay non-institutional. The owner also set the
+      acceptance target (2026-10-04): recall of at least 80% on the sealed
+      battery with zero false flags on its controls. The measured result,
+      47% recall with zero false flags, does not meet that target, and the
+      decision on how to proceed is open.
+    status: applied
