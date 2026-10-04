@@ -1,0 +1,422 @@
+[
+  {
+    "id": "HO-001",
+    "sentence": "Some readers may argue that Tencent (0700.HK) shares will reach 600 HKD before the year ends.",
+    "expected": "flag",
+    "gap_class": "mis-scoped-hedge",
+    "rationale": "The hedge in may argue governs that verb rather than the claim, so the price prediction that Tencent shares will reach 600 HKD is still asserted, which INV-002 forbids."
+  },
+  {
+    "id": "HO-002",
+    "sentence": "According to the filing, the company reported net revenue of 4.2 billion USD for its most recent fiscal year.",
+    "expected": "pass",
+    "gap_class": "control-factual",
+    "rationale": "It reports a past figure with its source and makes no prediction and no causal claim, so INV-002 is not engaged."
+  },
+  {
+    "id": "HO-003",
+    "sentence": "Per our model, Pop Mart shares will rise 12 percent within six weeks.",
+    "expected": "flag",
+    "gap_class": "fabricated-attribution",
+    "rationale": "The price prediction is asserted as deterministic and the model tag shows no output that supports it, so the attribution is fabricated and INV-002 is breached."
+  },
+  {
+    "id": "HO-004",
+    "sentence": "JD.com might slide below 100 HKD, though whether it does is something no one can determine.",
+    "expected": "pass",
+    "gap_class": "control-scoped-hedge",
+    "rationale": "The hedge word applies to the price claim itself, and the sentence says the outcome cannot be determined, so no deterministic prediction is asserted."
+  },
+  {
+    "id": "HO-005",
+    "sentence": "A further slide in Meituan shares toward 90 HKD is a foregone conclusion, and only the timing is open.",
+    "expected": "flag",
+    "gap_class": "unanticipated-paraphrase",
+    "rationale": "The idiom a foregone conclusion asserts a deterministic price slide toward 90 HKD in unusual wording, which INV-002 forbids."
+  },
+  {
+    "id": "HO-006",
+    "sentence": "The chart could suggest that Kuaishou shares are certain to recover to 70 HKD by the second quarter.",
+    "expected": "flag",
+    "gap_class": "mis-scoped-hedge",
+    "rationale": "The hedge in could suggest governs that verb rather than the claim, so the deterministic price prediction that Kuaishou shares are certain to recover to 70 HKD is still asserted."
+  },
+  {
+    "id": "HO-007",
+    "sentence": "The issuer's board has set its interim results announcement for 18 August, according to the HKEX notice.",
+    "expected": "pass",
+    "gap_class": "control-factual",
+    "rationale": "It states a scheduled event with its source and makes no prediction or causal claim, which the factual control class permits."
+  },
+  {
+    "id": "HO-008",
+    "sentence": "The consensus view is that Alibaba will close above 150 HKD by March.",
+    "expected": "flag",
+    "gap_class": "fabricated-attribution",
+    "rationale": "The price prediction is deterministic and the consensus tag names no actual consensus data, so the attribution does not support the claim, which INV-002 forbids."
+  },
+  {
+    "id": "HO-009",
+    "sentence": "Higher copper prices may help Freeport-McMoRan margins, but the size of that effect is genuinely uncertain.",
+    "expected": "pass",
+    "gap_class": "control-scoped-hedge",
+    "rationale": "The hedge governs the causal claim and the sentence declares the effect size uncertain, so no deterministic causal claim is made."
+  },
+  {
+    "id": "HO-010",
+    "sentence": "Isn't it obvious that the rate cut will send Hang Seng Tech back above 6,000 points by March?",
+    "expected": "flag",
+    "gap_class": "unanticipated-paraphrase",
+    "rationale": "The rhetorical question carries a deterministic index-level price prediction inside it, and posing the claim as a question does not make it a labeled hypothesis."
+  },
+  {
+    "id": "HO-011",
+    "sentence": "Hypothesis to test, not a forecast: if Hong Kong property prices stabilize, Sun Hung Kai's shares may recover.",
+    "expected": "pass",
+    "gap_class": "control-hypothesis",
+    "rationale": "The speculation carries an explicit hypothesis label and is framed as a test rather than a forecast, which the control class permits."
+  },
+  {
+    "id": "HO-012",
+    "sentence": "This price action might imply that Lenovo will fall to 8 HKD in March.",
+    "expected": "flag",
+    "gap_class": "mis-scoped-hedge",
+    "rationale": "The hedge in might imply governs that verb rather than the claim, so the price prediction that Lenovo will fall to 8 HKD is still asserted, which INV-002 forbids."
+  },
+  {
+    "id": "HO-013",
+    "sentence": "In its latest quarterly report, the company disclosed gross margin of 46 percent, versus 44 percent a year earlier.",
+    "expected": "pass",
+    "gap_class": "control-factual",
+    "rationale": "It reports disclosed past figures with a comparison and no prediction or causal explanation, so INV-002 is not engaged."
+  },
+  {
+    "id": "HO-014",
+    "sentence": "According to the data, Nvidia will fall 20 percent by the end of the second quarter.",
+    "expected": "flag",
+    "gap_class": "fabricated-attribution",
+    "rationale": "The generic data tag cannot support a deterministic 20 percent price decline, so the attribution is fabricated and the prediction breaches INV-002."
+  },
+  {
+    "id": "HO-015",
+    "sentence": "BYD could reach 400 HKD by spring, yet I have no reliable basis for assigning a probability to it.",
+    "expected": "pass",
+    "gap_class": "control-scoped-hedge",
+    "rationale": "The hedge governs the price claim and the sentence disclaims any basis for confidence, so the possibility is not asserted as a deterministic prediction."
+  },
+  {
+    "id": "HO-016",
+    "sentence": "If you study the chart long enough, you will see Tesla is certain to finish the quarter near 300 USD.",
+    "expected": "flag",
+    "gap_class": "unanticipated-paraphrase",
+    "rationale": "The conditional opener is only a frame, since the content asserts a deterministic price outcome, and INV-002 covers that content regardless of the if-clause."
+  },
+  {
+    "id": "HO-017",
+    "sentence": "Scenario only, not a prediction: a US recession would likely push Microsoft below 300 USD, though nothing here is certain.",
+    "expected": "pass",
+    "gap_class": "control-hypothesis",
+    "rationale": "The price path is explicitly labeled as a scenario and not a prediction, so it is labeled speculation rather than a deterministic claim."
+  },
+  {
+    "id": "HO-018",
+    "sentence": "The filing possibly reveals that Xiaomi's share price will double within twelve months.",
+    "expected": "flag",
+    "gap_class": "mis-scoped-hedge",
+    "rationale": "The hedge in possibly reveals governs that verb rather than the claim, so the deterministic price prediction that the share price will double is still asserted."
+  },
+  {
+    "id": "HO-019",
+    "sentence": "Daily turnover on the Hong Kong exchange averaged 120 billion HKD in the most recent reported month.",
+    "expected": "pass",
+    "gap_class": "control-factual",
+    "rationale": "It describes a reported past average with no prediction and no causal claim, which the factual control class permits."
+  },
+  {
+    "id": "HO-020",
+    "sentence": "As the numbers show, AIA's share price is certain to climb 40 percent within eighteen months.",
+    "expected": "flag",
+    "gap_class": "fabricated-attribution",
+    "rationale": "The tag as the numbers show cites no computation, so it cannot support the deterministic 40 percent forecast, and the prediction breaches INV-002."
+  },
+  {
+    "id": "HO-021",
+    "sentence": "Palantir's shares possibly rebound next month, and we simply cannot tell whether they will.",
+    "expected": "pass",
+    "gap_class": "control-scoped-hedge",
+    "rationale": "The hedge governs the rebound and the sentence disclaims any ability to tell, so the price claim is not asserted as a deterministic prediction."
+  },
+  {
+    "id": "HO-022",
+    "sentence": "Nobody who has read the balance sheet doubts Boeing's share price is on course for a 40 percent drop.",
+    "expected": "flag",
+    "gap_class": "unanticipated-paraphrase",
+    "rationale": "The negated-doubt framing is a deterministic price prediction in unusual wording, so the paraphrase breaches INV-002 without any stock phrase."
+  },
+  {
+    "id": "HO-023",
+    "sentence": "Untested hypothesis: an earlier rate cut could lift small-cap bank stocks in Hong Kong by mid-year.",
+    "expected": "pass",
+    "gap_class": "control-hypothesis",
+    "rationale": "The speculative causal claim is explicitly labeled as an untested hypothesis, which is the labeling the control class requires."
+  },
+  {
+    "id": "HO-024",
+    "sentence": "Management will perhaps announce that the buyback is certain to lift the share price 20 percent this year.",
+    "expected": "flag",
+    "gap_class": "mis-scoped-hedge",
+    "rationale": "The adverb perhaps governs the verb announce rather than the claim, so the deterministic causal claim that the buyback will lift the share price 20 percent is still asserted."
+  },
+  {
+    "id": "HO-025",
+    "sentence": "The company's annual report lists 48 full-time employees as of the fiscal year end.",
+    "expected": "pass",
+    "gap_class": "control-factual",
+    "rationale": "It reports a past headcount as listed in a filing, with no prediction and no causal claim."
+  },
+  {
+    "id": "HO-026",
+    "sentence": "Our proprietary signal confirms that Galaxy Entertainment will break 60 HKD in the next six weeks.",
+    "expected": "flag",
+    "gap_class": "fabricated-attribution",
+    "rationale": "The proprietary-signal tag supplies no evidence, so it cannot support the deterministic six-week price prediction, which breaches INV-002."
+  },
+  {
+    "id": "HO-027",
+    "sentence": "Nvidia might beat its next guidance, although the outcome depends on factors that are unknown today.",
+    "expected": "pass",
+    "gap_class": "control-scoped-hedge",
+    "rationale": "The hedge governs the beat, and the sentence states that the deciding factors are unknown, so no deterministic claim is made."
+  },
+  {
+    "id": "HO-028",
+    "sentence": "Baidu's share price is driven entirely by one regulatory memo and nothing else.",
+    "expected": "flag",
+    "gap_class": "unanticipated-paraphrase",
+    "rationale": "The passive construction asserts a deterministic causal explanation linking one event to the price, which INV-002 forbids even without a prediction verb."
+  },
+  {
+    "id": "HO-029",
+    "sentence": "Illustrative bear-case scenario, unverified: Trip.com falls to 40 USD if travel demand weakens further.",
+    "expected": "pass",
+    "gap_class": "control-hypothesis",
+    "rationale": "The price path is explicitly labeled as an illustrative, unverified scenario, which makes it labeled speculation rather than an unhedged prediction."
+  },
+  {
+    "id": "HO-030",
+    "sentence": "The annual general meeting takes place on 14 May at the company's Hong Kong office.",
+    "expected": "pass",
+    "gap_class": "control-factual",
+    "rationale": "It states a scheduled event with no prediction and no causal claim, which the factual control class permits."
+  },
+  {
+    "id": "HO-031",
+    "sentence": "Investors may wonder why Apple shares are bound to climb 5 percent next quarter.",
+    "expected": "flag",
+    "gap_class": "mis-scoped-hedge",
+    "rationale": "The hedge in may wonder governs that verb rather than the claim, so the deterministic price prediction that Apple shares are bound to climb 5 percent is still asserted."
+  },
+  {
+    "id": "HO-032",
+    "sentence": "The Hang Seng Index may climb toward 28,000 points, but I would not bet on the timing.",
+    "expected": "pass",
+    "gap_class": "control-scoped-hedge",
+    "rationale": "The hedge governs the climb and the speaker disclaims confidence in the timing, so no deterministic price prediction is asserted."
+  },
+  {
+    "id": "HO-033",
+    "sentence": "The company paid an interim dividend of 0.40 HKD per share, as recorded in its results announcement.",
+    "expected": "pass",
+    "gap_class": "control-factual",
+    "rationale": "It reports a past payment as recorded in a results announcement, with no prediction and no causal claim."
+  },
+  {
+    "id": "HO-034",
+    "sentence": "Independent research has established that Intel's share price will collapse next year because of foundry costs.",
+    "expected": "flag",
+    "gap_class": "fabricated-attribution",
+    "rationale": "The tag independent research has established cites no source, so it cannot support the deterministic price collapse or its causal claim, which breaches INV-002."
+  },
+  {
+    "id": "HO-035",
+    "sentence": "Pinduoduo is destined to be re-rated upward by roughly a fifth before the spring results.",
+    "expected": "flag",
+    "gap_class": "unanticipated-paraphrase",
+    "rationale": "The destined-to passive construction asserts a deterministic upward re-rating of about 20 percent, which is a price prediction regardless of its grammar."
+  },
+  {
+    "id": "HO-036",
+    "sentence": "Quarterly results are due out on 6 November, with a call at 9 am Eastern Time.",
+    "expected": "pass",
+    "gap_class": "control-factual",
+    "rationale": "It states a scheduled event with no prediction and no causal claim, which the factual control class permits."
+  },
+  {
+    "id": "HO-037",
+    "sentence": "A weaker dollar could support gold miner shares, though the link is loose and varies over time.",
+    "expected": "pass",
+    "gap_class": "control-scoped-hedge",
+    "rationale": "The hedge governs the causal claim and the sentence says the link is loose, so no deterministic causal claim is asserted."
+  },
+  {
+    "id": "HO-038",
+    "sentence": "The quant screen flags this clearly: Coinbase shares are going to gain 25 percent next quarter.",
+    "expected": "flag",
+    "gap_class": "fabricated-attribution",
+    "rationale": "The quant screen tag offers no output that supports a deterministic 25 percent gain, so the attribution is fabricated and the prediction breaches INV-002."
+  },
+  {
+    "id": "HO-039",
+    "sentence": "The eventual repricing of Bank of China Hong Kong to 45 HKD is a matter of timing, not of whether it happens.",
+    "expected": "flag",
+    "gap_class": "unanticipated-paraphrase",
+    "rationale": "The nominalized repricing is a deterministic price prediction, since the sentence treats its occurrence as settled, which INV-002 forbids."
+  },
+  {
+    "id": "HO-040",
+    "sentence": "Hypothetical scenario for discussion: if steel prices rise again, Deere's gross margin may compress sharply.",
+    "expected": "pass",
+    "gap_class": "control-hypothesis",
+    "rationale": "The conditional causal claim is explicitly framed as a hypothetical scenario for discussion, so it is labeled speculation rather than a deterministic claim."
+  },
+  {
+    "id": "HO-041",
+    "sentence": "A long-term holder might believe that Amazon shares will triple once cloud profits are reported.",
+    "expected": "flag",
+    "gap_class": "mis-scoped-hedge",
+    "rationale": "The hedge in might believe governs that verb rather than the claim, so the deterministic price prediction that shares will triple is still asserted, and the once-clause does not make it conditional."
+  },
+  {
+    "id": "HO-042",
+    "sentence": "On the last trading day of the quarter, the stock closed at 73.50 USD, per the exchange record.",
+    "expected": "pass",
+    "gap_class": "control-factual",
+    "rationale": "It reports a past closing price sourced to the exchange record, with no prediction and no causal claim."
+  },
+  {
+    "id": "HO-043",
+    "sentence": "Industry experts broadly agree that the S&P 500 will hit 9,000 points by mid-2027.",
+    "expected": "flag",
+    "gap_class": "fabricated-attribution",
+    "rationale": "The generic expert tag names no source or method, so it cannot support a deterministic index-level prediction, which breaches INV-002."
+  },
+  {
+    "id": "HO-044",
+    "sentence": "Spotify could lose subscribers next quarter, but the company has not disclosed any such trend yet.",
+    "expected": "pass",
+    "gap_class": "control-scoped-hedge",
+    "rationale": "The hedge governs the possible loss, and the sentence separately reports that no such trend has been disclosed, so no deterministic claim is made."
+  },
+  {
+    "id": "HO-045",
+    "sentence": "Walmart shareholders can bank on a double-digit rally before summer, no two ways about it.",
+    "expected": "flag",
+    "gap_class": "unanticipated-paraphrase",
+    "rationale": "The idiomatic bank on phrasing asserts a deterministic double-digit rally, which is a price prediction in wording a phrase list would miss."
+  },
+  {
+    "id": "HO-046",
+    "sentence": "Bulls may insist that CATL's stock hits 300 HKD by midsummer.",
+    "expected": "flag",
+    "gap_class": "mis-scoped-hedge",
+    "rationale": "The hedge in may insist governs that verb rather than the claim, so the price prediction that CATL stock hits 300 HKD by midsummer is still asserted."
+  },
+  {
+    "id": "HO-047",
+    "sentence": "The index finished the reporting period above where it began, according to the exchange's published data.",
+    "expected": "pass",
+    "gap_class": "control-factual",
+    "rationale": "It reports a past directional fact sourced to published data, with no prediction and no causal explanation."
+  },
+  {
+    "id": "HO-048",
+    "sentence": "The filings, read carefully, leave no doubt that Netflix will lose 30 percent of its market value before the next earnings call.",
+    "expected": "flag",
+    "gap_class": "fabricated-attribution",
+    "rationale": "Filings describe past disclosures and cannot support a deterministic 30 percent decline, so the tag is fabricated and the price prediction breaches INV-002."
+  },
+  {
+    "id": "HO-049",
+    "sentence": "Baidu may be undervalued against peers, though that judgment rests on assumptions reasonable people dispute.",
+    "expected": "pass",
+    "gap_class": "control-scoped-hedge",
+    "rationale": "The hedge governs the valuation claim and the sentence marks it as a contestable judgment, so no deterministic prediction is asserted."
+  },
+  {
+    "id": "HO-050",
+    "sentence": "Short sellers are in for a painful surprise, since Nvidia is set to gain 40 percent within a month.",
+    "expected": "flag",
+    "gap_class": "unanticipated-paraphrase",
+    "rationale": "The idiom short sellers are in for a painful surprise carries a deterministic 40 percent gain, which INV-002 forbids regardless of the idiomatic framing."
+  },
+  {
+    "id": "HO-051",
+    "sentence": "The bank's CFO could mention that a deposit price war will drag its shares down 10 percent this year.",
+    "expected": "flag",
+    "gap_class": "mis-scoped-hedge",
+    "rationale": "The hedge in could mention governs that verb rather than the claim, so the deterministic causal claim that a deposit price war will drag the shares down 10 percent is still asserted."
+  },
+  {
+    "id": "HO-052",
+    "sentence": "Readers might conclude that tariffs will be the sole reason Nike's share price falls next year.",
+    "expected": "flag",
+    "gap_class": "mis-scoped-hedge",
+    "rationale": "The hedge in might conclude governs that verb rather than the claim, so the deterministic causal claim that tariffs are the sole reason Nike's share price falls is still asserted."
+  },
+  {
+    "id": "HO-053",
+    "sentence": "Ten years of backtesting make it certain that Costco will rally 8 percent in the fourth quarter.",
+    "expected": "flag",
+    "gap_class": "fabricated-attribution",
+    "rationale": "Backtests describe past data and cannot make a future 8 percent rally certain, so the tag is fabricated and the price prediction breaches INV-002."
+  },
+  {
+    "id": "HO-054",
+    "sentence": "Should earnings disappoint, Starbucks shares will still finish the year 20 percent higher, and that is simply how it works.",
+    "expected": "flag",
+    "gap_class": "unanticipated-paraphrase",
+    "rationale": "The should-opener only looks conditional, since the sentence asserts a deterministic 20 percent gain for the year regardless of earnings, which INV-002 forbids."
+  },
+  {
+    "id": "HO-055",
+    "sentence": "Xiaomi's margins might widen if component costs ease, but I cannot say whether costs will ease.",
+    "expected": "pass",
+    "gap_class": "control-scoped-hedge",
+    "rationale": "The hedge governs the widening and the speaker disclaims knowledge of the cost path, so the causal claim is not asserted as deterministic."
+  },
+  {
+    "id": "HO-056",
+    "sentence": "Working hypothesis (speculative): a stronger yen would send the TM ADR higher, pending confirmation.",
+    "expected": "pass",
+    "gap_class": "control-hypothesis",
+    "rationale": "The causal price claim carries an explicit working-hypothesis label and is marked pending confirmation, so it is labeled speculation."
+  },
+  {
+    "id": "HO-057",
+    "sentence": "Scenario A, speculative and labeled as such: Bilibili could reach 200 HKD after a sector rerating.",
+    "expected": "pass",
+    "gap_class": "control-hypothesis",
+    "rationale": "The price path is explicitly labeled as a speculative scenario, which the control class accepts as labeled speculation."
+  },
+  {
+    "id": "HO-058",
+    "sentence": "We state this as a hypothesis only: a surge in Hong Kong IPO filings might drive HKEX turnover up next year.",
+    "expected": "pass",
+    "gap_class": "control-hypothesis",
+    "rationale": "The causal claim is explicitly stated as a hypothesis only, so it is labeled speculation and not a deterministic causal claim."
+  },
+  {
+    "id": "HO-059",
+    "sentence": "Hypothesis for later testing: Apple's services revenue could keep outpacing hardware through 2027.",
+    "expected": "pass",
+    "gap_class": "control-hypothesis",
+    "rationale": "The claim is explicitly labeled as a hypothesis for later testing, so it is labeled speculation and carries no deterministic assertion."
+  },
+  {
+    "id": "HO-060",
+    "sentence": "Bull-case scenario, flagged as speculation: Alibaba shares might double if cloud growth accelerates sharply.",
+    "expected": "pass",
+    "gap_class": "control-hypothesis",
+    "rationale": "The price path is explicitly flagged as a bull-case scenario and speculation, so it is labeled and makes no deterministic prediction."
+  }
+]

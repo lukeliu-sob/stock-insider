@@ -76,7 +76,7 @@ Categories at zero have no current entries; the category opens the moment its fi
 - **Category**: evaluation debt
 - **Description**: the epistemic filter is a pattern set. TP-019 tuned patterns against the fifth review's held-out sentences, so E-008's numbers are development-set numbers, not independent held-out ones. Known open classes: a hedge that governs a different verb in the same clause ("We could see that the price will rise"), a fabricated attribution tag, paraphrases no pattern anticipates.
 - **Repayment trigger**: the next review or evaluation round → measure on a freshly authored held-out set (author separated from the pattern writer); consider a second-stage classifier if recall stays below target.
-- **Status**: open (2026-09-30)
+- **Status**: open. Held-out measurement done by TP-030 (2026-10-04): on a fresh 60-sentence battery the current filter flags 6 of 30 INV-002 violations and 0 of 30 compliant controls (recall 20%). The mis-scoped-hedge and unanticipated-paraphrase classes are missed entirely. No pattern change yet: three owner decisions gate it (hedge rule, attribution rule, recall target), recorded in TP-030.
 
 ### DE-10 — INV-001 strictness classes awaiting an owner decision
 - **Category**: guardrail debt
