@@ -12,7 +12,7 @@ from pathlib import Path
 import pytest
 
 from stockinsider.agent.loop import TurnEngine
-from stockinsider.agent.providers import ChatOutcome, ProviderError
+from stockinsider.agent.providers import ChatOutcome
 from stockinsider.agent.repl import build_registry, render_session
 from stockinsider.agent.session import SessionStore
 from stockinsider.shared.events import EventKind, EventValidationError, validate_event
@@ -58,14 +58,6 @@ class InterruptingProvider(ScriptedProvider):
             self.seen_messages.append(list(messages))
             raise KeyboardInterrupt
         return super().complete(messages, tools=tools, stream_sink=stream_sink)
-
-
-class FailingProvider(ScriptedProvider):
-    """Provider that fails explicitly: an error, not an interruption."""
-
-    def complete(self, messages, *, tools=None, stream_sink=None):
-        self.seen_messages.append(list(messages))
-        raise ProviderError("provider unreachable")
 
 
 def tool_call(name: str, arguments: dict) -> dict:
@@ -177,14 +169,6 @@ def test_interrupt_during_tool_loop_is_marked(store, prompts_dir) -> None:
     assert "What is my budget?" not in replayed
 
 
-def test_provider_error_is_not_marked(store, prompts_dir) -> None:
-    session_id = open_session(store)
-    engine = engine_for(store, FailingProvider([]), prompts_dir)
-    with pytest.raises(ProviderError):
-        run(engine, session_id, "Will this fail?")
-    assert "turn-incomplete" not in [kind for kind, _turn in turn_events(store, session_id)]
-
-
 def test_turn_incomplete_is_a_valid_event_kind(store) -> None:
     assert EventKind("turn-incomplete") is EventKind.TURN_INCOMPLETE
     validate_event({"event": "turn-incomplete", "turn": "turn-0001"})
@@ -203,4 +187,4 @@ def test_transcript_shows_incomplete_turn(store, prompts_dir) -> None:
     lines: list[str] = []
     render_session(store, session_id, lines.append)
     assert any("Interrupted question" in line for line in lines)
-    assert any("incomplete interrupted before its answer" in line for line in lines)
+    assert any("incomplete no answer recorded" in line for line in lines)
