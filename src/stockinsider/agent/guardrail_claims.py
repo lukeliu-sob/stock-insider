@@ -26,12 +26,13 @@ Implements: REQ-SI-INV-001 (ADR-008)
 from __future__ import annotations
 
 import re
-from collections.abc import Callable
+from collections.abc import Callable, Mapping
 from dataclasses import dataclass, field, replace
 from datetime import date, datetime, timedelta, timezone
 from typing import Any
 
 from stockinsider.agent import guardrail as v1
+from stockinsider.shared.tools import ToolSpec
 
 # ---- vocabulary (TP-024 Appendix A; heuristic until TP-025) ----------------
 
@@ -343,6 +344,7 @@ class Evidence:
     names: dict[str, str] = field(default_factory=dict)
     pool: set[str] = field(default_factory=set)
     floats: list[float] = field(default_factory=list)
+    specs: dict[str, ToolSpec] = field(default_factory=dict)  # TP-025 stage 2: declared typing, by tool
 
 
 _SYMBOL_SHAPE = re.compile(r"^(?:\d{1,5}\.[A-Za-z]{1,4}|[A-Za-z]{1,6}\.(?:US|HK))$")
@@ -440,12 +442,15 @@ def _normalize_quote(text: str) -> str:
     return re.sub(r"\s+", " ", text).strip().casefold()
 
 
-def index_evidence(snapshot_values: object) -> Evidence:
+def index_evidence(snapshot_values: object, specs: Mapping[str, ToolSpec] | None = None) -> Evidence:
     """Type the session ledger: values by subject, field and unit; times; free text.
 
-    Implements: REQ-SI-INV-001 (ADR-008 Am1)
+    `specs` maps dotted tool names to their declarations (TP-025 stage 2): a
+    declared field replaces the heuristic field class for that tool only.
+
+    Implements: REQ-SI-INV-001 (ADR-008 Am1; ADR-005 Am4; TP-025)
     """
-    evidence = Evidence()
+    evidence = Evidence(specs=dict(specs or {}))
     if isinstance(snapshot_values, dict):
         for key, result in snapshot_values.items():
             tool = _tool_of(str(key))
@@ -548,11 +553,34 @@ def _walk(
             evidence.free_digits.update(v1._canon_token(token) for token in v1.extract_numbers(text))
 
 
+def _declared_field(evidence: Evidence, tool: str, key: str, siblings: dict[str, Any]) -> str | None:
+    """The field class a tool declares for this leaf, or None to keep the heuristic (TP-025 stage 2).
+
+    A direct key matches `result_fields` exactly. A `{metric, value}` row
+    (ADR-005 Am4) types its `value` through the discriminator that a sibling
+    field selects. Tools without a declaration keep the heuristic.
+
+    Implements: REQ-SI-INV-001 (ADR-005 Am4; TP-025)
+    """
+    spec = evidence.specs.get(tool)
+    if spec is None:
+        return None
+    direct = spec.result_fields.get(key)
+    if direct is not None and direct.field:
+        return direct.field
+    if key == "value":
+        for discriminator, selected in spec.result_discriminators.items():
+            selector = siblings.get(discriminator)
+            if isinstance(selector, str) and selector in selected and selected[selector].field:
+                return selected[selector].field
+    return None
+
+
 def _add_entry(
     evidence: Evidence, value: float, key: str, parent: str, siblings: dict[str, Any], tool: str,
     subject: str | None,
 ) -> None:
-    field_class = _evidence_field(key, parent, siblings, tool)
+    field_class = _declared_field(evidence, tool, key, siblings) or _evidence_field(key, parent, siblings, tool)
     unit = siblings.get("unit") if key.lower() == "value" else ""
     currency = _norm_currency(siblings.get("currency")) if field_class in _PRICE_FIELDS else None
     evidence.entries.append(_Entry(value, field_class, subject, unit if isinstance(unit, str) else "", currency))
@@ -826,12 +854,12 @@ def _valid_time(hour: str, minute: str, second: str | None) -> bool:
     return int(hour) <= 23 and int(minute) <= 59 and int(second or 0) <= 59
 
 
-def scan_claims(candidate: str, snapshot_values: object) -> Scan:
+def scan_claims(candidate: str, snapshot_values: object, specs: Mapping[str, ToolSpec] | None = None) -> Scan:
     """Classify and verify every number of an answer (ADR-008 Am1).
 
-    Implements: REQ-SI-INV-001 (ADR-008)
+    Implements: REQ-SI-INV-001 (ADR-008; ADR-005 Am4; TP-025)
     """
-    evidence = index_evidence(snapshot_values)
+    evidence = index_evidence(snapshot_values, specs)
     answer = _Answer(candidate, evidence)
     work = list(candidate)
     exempt: list[tuple[int, int, str]] = []
@@ -1466,12 +1494,12 @@ def _verify_time(item: _Pending, raw: str, answer: _Answer, pending: list[_Pendi
 # ---- the post-check result -----------------------------------------------------------
 
 
-def check(candidate: str, snapshot_values: object) -> v1.NumberCheck:
+def check(candidate: str, snapshot_values: object, specs: Mapping[str, ToolSpec] | None = None) -> v1.NumberCheck:
     """The INV-001 verdict over typed claims, in the v1 NumberCheck shape.
 
-    Implements: REQ-SI-INV-001 (ADR-008)
+    Implements: REQ-SI-INV-001 (ADR-008; ADR-005 Am4; TP-025)
     """
-    scan = scan_claims(candidate, snapshot_values)
+    scan = scan_claims(candidate, snapshot_values, specs)
     matched: list[str] = []
     rounded: list[str] = []
     failed: list[str] = []

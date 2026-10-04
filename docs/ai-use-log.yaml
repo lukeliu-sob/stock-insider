@@ -3403,4 +3403,44 @@ sessions:
       (2026-10-04) for the residual question on iteration-cap and
       provider-error turns. That answer approves covering both exits
       with the scope in TP-031.
+  - id: AILOG-0079
+    date: "2026-10-04"
+    agent_task: >-
+      TP-025 stage 2: the guardrail's evidence typing reads a tool's
+      declared result_fields and result_discriminators, falling back to
+      the heuristic per tool. Order: the stage-2 amendment to TP-025
+      committed first (GOV-006), then the code, then the records. Fix:
+      index_evidence, scan_claims, check, postcheck_numbers and
+      run_postcheck take an optional specs mapping (default None); the
+      Evidence object carries it; _add_entry asks _declared_field first
+      (a direct key, or a {metric, value} row's value through its
+      discriminator, ADR-005 Am4); agent/loop.py builds the map from
+      Registry.list_tools() at both post-check call sites. No tool
+      declares fields yet, so the change is behavior-neutral until stage
+      3. Tests: 6 new in test_tp025_stage2_declared_typing.py, including
+      an equivalence test and an adversarial cross-tool test. Mutation
+      checks on a scratch copy: disabling the declared lookup fails five
+      tests; ignoring the tool name fails the cross-tool test. Four
+      existing monkeypatch stubs accept the optional argument; no
+      assertion changed (recorded in TP-025). Full offline suite 620
+      passed; ruff and mypy pass.
+    artifacts:
+      - src/stockinsider/agent/guardrail.py
+      - src/stockinsider/agent/guardrail_claims.py
+      - src/stockinsider/agent/loop.py
+      - test/offline/test_tp025_stage2_declared_typing.py
+      - test/offline/test_guardrail_pipeline.py
+      - test/offline/test_tp023_verify_and_flag.py
+      - test/offline/test_tp024_typed_claims.py
+      - docs/test-plans/TP-025.md
+      - docs/debt-register.md
+      - docs/review-memo.md
+      - docs/ai-use-log.yaml
+    human_decision: >-
+      Owner approved the stage-2 scope as recommended, in session
+      (2026-10-04), from a four-question round. The same round settled
+      the DE-09 attribution rule (generic attribution tags are flags), the
+      recall target (flag-set recall at least 80% with zero false flags on
+      the compliant controls), and commissioning a second sealed battery
+      now.
     status: applied
