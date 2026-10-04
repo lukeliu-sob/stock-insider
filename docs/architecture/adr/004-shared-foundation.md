@@ -143,3 +143,32 @@ Fifth-audit corrections to Am3:
    closed (TP-019 negative suite).
 
 Implements: REQ-SI-SEC-003, REQ-SI-FR-014, REQ-SI-GOV-001.
+
+## Amendment 5 (2026-10-04, TP-029) — the interrupted-turn marker: `turn-incomplete`
+
+DE-14 (runtime policy P-17, memory-design §3): a turn interrupted
+before its answer is recorded with status `incomplete` and left out of
+context reconstruction. The loop recorded nothing, so the dangling
+question replayed on the next turn.
+
+Decision: `EventKind` gains `TURN_INCOMPLETE = "turn-incomplete"`. The
+event carries the turn id and nothing else. The turn engine appends it
+only when a `KeyboardInterrupt` arrives after the turn's user message
+and before its answer (TP-029). The change is additive under the
+forward-only rule above: no existing kind or field changes, and
+sessions written before this amendment read unchanged. Like the other
+kinds, the marker gets no payload checks beyond the kind itself.
+
+Alternatives considered (owner decision, 2026-10-04, from a three-option
+question):
+- Reuse `error` with `kind: "interrupted"`: no new kind, but `error`
+  means a failure, and a user interrupt is not one. Not chosen.
+- A reader-side rule with no marker: covers a hard crash too, but
+  writes nothing to session.jsonl, so the record stays implicit. Not
+  chosen as the sole mechanism.
+
+Residual, not closed here: a hard crash (process killed, power loss)
+runs no handler, so it writes no marker. P-17 names crashes; covering
+them is a separate decision.
+
+Implements: REQ-SI-FR-011, REQ-SI-INV-003.
