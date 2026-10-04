@@ -692,3 +692,12 @@ test-plan gate's safety-path attestation).
 - Risk: none new. Both fixes can only relabel/re-time accounting that was already
   happening - no claim that was previously accepted now gets rejected outside the
   intended per-day window, and no watchlist entry's active/sync status changes.
+
+### RM-66 — TP-029: DE-14, an interrupted turn is marked incomplete and left out of replay (ADR-004 Am5, ADR-001 Am2)
+
+- Verdict: APPROVE pending owner merge. The owner chose the explicit `turn-incomplete` event (recommended) in session on 2026-10-04 from a three-option question; that choice approves the `shared/events.py` change. TP-029 and both amendments were committed before any code (GOV-006 ordering).
+- Spec alignment: REQ-SI-FR-011, REQ-SI-FR-023, REQ-SI-INV-003, and P-17 for interruptions. The new kind is additive (ADR-004 Am5). Sessions written before it read unchanged, and `validate_event` gets no payload checks beyond the kind, like every other kind.
+- Architecture: `shared/events.py` touched (safety-critical prefix, hence this entry): one `EventKind` member and nothing else. `agent/loop.py` is outside the safety-critical prefix, but `run_turn` now wraps the unchanged body `_run_turn`. The marker is written only when a `KeyboardInterrupt` arrives while a turn is open, and a turn that has its answer is never marked. `agent/guardrail*`, `agent/registry*`, the post-check, and `prompts/` are untouched.
+- Test quality: 8 new tests in `test_tp029_incomplete_turns.py`. Three adversarial tests were mutation-checked on a scratch copy: removing the history filter fails the replay tests, writing the marker after the answer fails the completed-turn test, and removing the answered guard fails the defensive test. Each mutant was killed by its target test. Full offline suite 612 passed; ruff, mypy and every non-PR structural gate pass on a clean clone.
+- Security/efficiency: no new dependency; no change to egress, the watchlist, or the INV-001/INV-002 checks. The history filter reads the same event list once.
+- Risk: no regression found. One behavior change, by design: an interrupted question is no longer re-sent to the model. Residuals are recorded in TP-029 and DE-14 and are not claimed closed: a hard crash writes no marker, and the iteration-cap and provider-error paths still replay their question (owner decision pending).

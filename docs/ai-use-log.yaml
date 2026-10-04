@@ -3320,3 +3320,49 @@ sessions:
       then open the Phase 4 ADR conversation, then Phase 3a/3b/Phase 2
       opportunistically) rather than a fresh per-item approval.
     status: applied
+  - id: AILOG-0077
+    date: "2026-10-04"
+    agent_task: >-
+      TP-029: the debt-register remediation plan's Phase 3c (DE-14), an
+      interrupted turn is marked incomplete and left out of replay.
+      Order: TP-029 with ADR-004 Amendment 5 and ADR-001 Amendment 2
+      committed first (GOV-006), then the code. The kickoff check
+      corrected the plan's premise: the plan guessed ADR-007 as owner,
+      but ADR-007 section 3 records DE-14 as a gap it does not own, and
+      validate_event checks only the top-level kind, so the amendments
+      went to ADR-001 (context reconstruction) and ADR-004 (event
+      schema). Fix: EventKind gains turn-incomplete; run_turn becomes a
+      wrapper around the unchanged body _run_turn, which records the
+      open turn id after the user message and clears it after the
+      answer; a KeyboardInterrupt while a turn is open appends the
+      marker and re-raises; _history_messages leaves out a turn that
+      has a marker and no answer before the window is applied; the
+      session transcript prints one line for the marker. Tests: 8 new in
+      test_tp029_incomplete_turns.py, three adversarial (replay
+      exclusion, interrupt after the answer, answered turn with a
+      marker). Each adversarial test was mutation-checked on a scratch
+      copy: removing the history filter fails the replay tests; writing
+      the marker after the answer fails the completed-turn test;
+      removing the answered guard fails the defensive test. Full offline
+      suite 612 passed (604 before); ruff, mypy and every non-PR
+      structural gate pass on a clean clone. Residuals left open and
+      recorded in DE-14: a hard crash writes no marker, and the
+      iteration-cap and provider-error paths still replay their question.
+    artifacts:
+      - src/stockinsider/shared/events.py
+      - src/stockinsider/agent/loop.py
+      - src/stockinsider/agent/repl.py
+      - test/offline/test_tp029_incomplete_turns.py
+      - docs/test-plans/TP-029.md
+      - docs/architecture/adr/004-shared-foundation.md
+      - docs/architecture/adr/001-runtime-architecture-and-context-engineering.md
+      - docs/debt-register.md
+      - docs/review-memo.md
+      - docs/ai-use-log.yaml
+    human_decision: >-
+      Owner chose the explicit turn-incomplete event (recommended) in
+      session (2026-10-04), from a three-option question on the DE-14
+      design. That choice explicitly approves the shared/events.py
+      change and ADR-004 Amendment 5. Owner also asked for the remaining
+      plan to be carried forward (2026-10-04).
+    status: applied
