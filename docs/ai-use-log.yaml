@@ -3366,3 +3366,41 @@ sessions:
       change and ADR-004 Amendment 5. Owner also asked for the remaining
       plan to be carried forward (2026-10-04).
     status: applied
+  - id: AILOG-0078
+    date: "2026-10-04"
+    agent_task: >-
+      TP-031: the residual of DE-14 (TP-029). Two exits end a turn
+      without an answer and still replayed their question: the tool-
+      iteration cap (an error event, then return) and a ProviderError
+      escaping the turn. The owner chose, 2026-10-04, to cover them with
+      a separate TP (recommended option). Order: TP-031 with ADR-004
+      Amendment 6 and ADR-001 Amendment 3 committed first (GOV-006), then
+      the code. Fix: loop.py gains _mark_incomplete, which appends the
+      turn-incomplete marker for the open turn; run_turn calls it when a
+      ProviderError escapes (the error still propagates); the iteration-
+      cap branch calls it after its error event. _history_messages is
+      unchanged. The transcript line now reads generically ("no answer
+      recorded"). Tests: test_tp031_no_answer_turns.py, six tests (two
+      replay adversarial tests); the TP-029 scope-pin test
+      test_provider_error_is_not_marked is removed and superseded, and its
+      transcript assertion is migrated to the generic text. Mutation
+      checks on a scratch copy: removing the ProviderError handling fails
+      the provider-error marker test, the replay test and the transcript
+      test; removing the cap marker fails both cap tests. Full offline
+      suite 619 passed; ruff and mypy pass. A hard crash stays open.
+    artifacts:
+      - src/stockinsider/agent/loop.py
+      - src/stockinsider/agent/repl.py
+      - test/offline/test_tp031_no_answer_turns.py
+      - test/offline/test_tp029_incomplete_turns.py
+      - docs/test-plans/TP-031.md
+      - docs/architecture/adr/004-shared-foundation.md
+      - docs/architecture/adr/001-runtime-architecture-and-context-engineering.md
+      - docs/debt-register.md
+      - docs/ai-use-log.yaml
+    human_decision: >-
+      Owner chose "open a separate TP" (recommended) in session
+      (2026-10-04) for the residual question on iteration-cap and
+      provider-error turns. That answer approves covering both exits
+      with the scope in TP-031.
+    status: applied
