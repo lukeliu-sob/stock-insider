@@ -21,11 +21,12 @@ from __future__ import annotations
 
 import re
 from collections import Counter
-from collections.abc import Callable, Sequence
+from collections.abc import Callable, Mapping, Sequence
 from dataclasses import dataclass, field
 from typing import Any
 
 from stockinsider.shared.language import is_english_only
+from stockinsider.shared.tools import ToolSpec
 
 # ---- INV-001: numeric provenance post-check ---------------------------------
 
@@ -583,7 +584,9 @@ class NumberCheck:
     claims: list[Any] = field(default_factory=list)
 
 
-def postcheck_numbers(candidate: str, snapshot_values: object) -> NumberCheck:
+def postcheck_numbers(
+    candidate: str, snapshot_values: object, specs: Mapping[str, ToolSpec] | None = None
+) -> NumberCheck:
     """Verify every numeric claim of an answer against the session ledger.
 
     ADR-008 Amendment 1 (TP-024): numbers are typed claims. A claim with
@@ -598,7 +601,7 @@ def postcheck_numbers(candidate: str, snapshot_values: object) -> NumberCheck:
     """
     from stockinsider.agent import guardrail_claims
 
-    return guardrail_claims.check(candidate, snapshot_values)
+    return guardrail_claims.check(candidate, snapshot_values, specs)
 
 
 def postcheck_numbers_v1(candidate: str, snapshot_values: object) -> NumberCheck:
@@ -1177,7 +1180,9 @@ class GuardrailVerdict:
     flagged: bool = False
 
 
-def run_postcheck(candidate: str, snapshot_values: object) -> GuardrailVerdict:
+def run_postcheck(
+    candidate: str, snapshot_values: object, specs: Mapping[str, ToolSpec] | None = None
+) -> GuardrailVerdict:
     """Run INV-001 + INV-002 + language in one authoritative verdict.
 
     Unverified numbers flag the response: the display text carries the
@@ -1189,7 +1194,7 @@ def run_postcheck(candidate: str, snapshot_values: object) -> GuardrailVerdict:
     Implements: REQ-SI-INV-001, REQ-SI-INV-002, REQ-SI-INV-003 (ADR-006, ADR-008)
     """
     language_ok = is_english_only(candidate)
-    numbers = postcheck_numbers(candidate, snapshot_values)
+    numbers = postcheck_numbers(candidate, snapshot_values, specs)
     epi = epistemic_filter(candidate)
     unverified = list(dict.fromkeys(numbers.failed))
     unmarkable = unlocatable_unverified(candidate, numbers) if unverified else []

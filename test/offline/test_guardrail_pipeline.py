@@ -70,7 +70,7 @@ def test_h1_quarantine_never_replays_original(tmp_path, monkeypatch) -> None:
     engine = _engine(tmp_path, [ChatOutcome(text="close 436.6 cited", usage={})])
     record = engine._store.create(profile="quick")  # noqa: SLF001
 
-    def fake_postcheck(candidate, snapshot_values):
+    def fake_postcheck(candidate, snapshot_values, specs=None):
         return GuardrailVerdict(
             display_text="data unavailable for: 436.6",
             quarantined=True,
@@ -114,7 +114,7 @@ def test_h4_abort_is_sticky(tmp_path, monkeypatch) -> None:
     from stockinsider.agent import loop as loop_mod
     from stockinsider.agent.guardrail import PostCheckCounter
 
-    def fake_postcheck(candidate, snapshot_values):
+    def fake_postcheck(candidate, snapshot_values, specs=None):
         return GuardrailVerdict(
             display_text="response withheld",
             quarantined=True,

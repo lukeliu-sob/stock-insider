@@ -42,7 +42,7 @@ from stockinsider.agent.profiles import tool_loop_limit
 from stockinsider.agent.registry import Registry
 from stockinsider.agent.session import SessionStore
 from stockinsider.agent.confirm import ConfirmationBroker
-from stockinsider.shared.tools import EffectClass, ToolCall, ToolResult
+from stockinsider.shared.tools import EffectClass, ToolCall, ToolResult, ToolSpec
 
 #: Conversation-history window mapped into provider messages: the last
 #: HISTORY_WINDOW user/assistant MESSAGES (10 turns). Fifth-audit fix
@@ -302,6 +302,13 @@ class TurnEngine:
         finally:
             self._open_turn = None
 
+    def _tool_specs(self) -> dict[str, ToolSpec]:
+        """Declared tool specs by dotted name, for the guardrail's declared typing (TP-025 stage 2).
+
+        Implements: REQ-SI-INV-001, REQ-SI-FR-013 (ADR-005 Am4; TP-025)
+        """
+        return {spec.name: spec for spec in self._registry.list_tools()}
+
     def _run_turn(
         self,
         session_id: str,
@@ -515,7 +522,7 @@ class TurnEngine:
         combined = "\n".join([*preludes, candidate]) if preludes else candidate
         if on_phase is not None:
             on_phase("verifying", "")
-        verdict = run_postcheck(combined, ledger)
+        verdict = run_postcheck(combined, ledger, self._tool_specs())
 
         def _replay() -> None:
             if stream_sink is not None:
@@ -629,7 +636,7 @@ class TurnEngine:
             # H2b (TP-018): the recheck runs against the SESSION LEDGER —
             # the turn snapshot alone wrongly quarantined restatements of
             # earlier turns' correct numbers inside a regeneration.
-            recheck = run_postcheck(epi.displayed, ledger)
+            recheck = run_postcheck(epi.displayed, ledger, self._tool_specs())
             # ADR-008: the answer as shown decides its flag and the streak
             flag_check = recheck.number_check
             deferred.reset()  # the violating original never reaches the screen
