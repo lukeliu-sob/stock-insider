@@ -126,3 +126,20 @@ Compaction (§6.3) is unchanged; the full record stays in
 `session.jsonl` (FR-011).
 
 Implements: REQ-SI-FR-011, REQ-SI-COST-001.
+
+## Amendment 2 (2026-10-04, TP-029) — an interrupted turn is left out of context
+
+§6.1 layer L4 replayed every user and assistant message in its window,
+including the question of a turn the user interrupted before its
+answer (DE-14). On the next turn the model received that dangling
+question again.
+
+Correction: a turn that has a `turn-incomplete` event and no assistant
+message is left out of L4 before the window is applied. It does not
+replay, does not take a window slot, and does not trigger the
+truncation note. A turn that has an answer is never left out, even if
+a marker for it exists. Turns that end without an answer on other paths
+(the iteration cap, a provider error) are unchanged by this amendment;
+they are not interruptions.
+
+Implements: REQ-SI-FR-011, REQ-SI-FR-023.
