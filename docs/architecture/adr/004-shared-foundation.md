@@ -172,3 +172,14 @@ runs no handler, so it writes no marker. P-17 names crashes; covering
 them is a separate decision.
 
 Implements: REQ-SI-FR-011, REQ-SI-INV-003.
+
+## Amendment 6 (2026-10-04, TP-031) — the marker also covers turns that end without an answer
+
+Amendment 5 limited the marker's use to a `KeyboardInterrupt`. The kind
+is unchanged. TP-031 extends its use to two more exits that end a turn
+without an answer: a `ProviderError` escaping the turn, and the
+tool-iteration cap. Each records `turn-incomplete` for the turn that did
+not answer. The schema and `validate_event` do not change. A hard crash,
+which runs no handler, still writes no marker.
+
+Implements: REQ-SI-FR-011, REQ-SI-INV-003.
