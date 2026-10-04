@@ -1132,6 +1132,8 @@ def render_session(store: SessionStore, session_id: str, echo: Callable[[str], N
             # ADR-008 Am1: each unverified number with the reason it did not verify
             for detail in event.get("unverified_detail") or []:
                 echo(f"  unverified {detail.get('claim', '?')} - {detail.get('reason', '?')}")
+        elif kind == "turn-incomplete":
+            echo("  incomplete interrupted before its answer; left out of context")
         elif kind == "error":
             original = event.get("original")
             if event.get("kind") == "epistemic":
