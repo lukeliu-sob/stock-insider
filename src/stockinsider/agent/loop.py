@@ -39,6 +39,7 @@ from stockinsider.agent.guardrail import (
     unverified_notice,
 )
 from stockinsider.agent.profiles import tool_loop_limit
+from stockinsider.agent.providers import ProviderError
 from stockinsider.agent.registry import Registry
 from stockinsider.agent.session import SessionStore
 from stockinsider.agent.confirm import ConfirmationBroker
@@ -209,10 +210,10 @@ class TurnEngine:
         an assistant message whose question was cut off; truncation is
         announced to the model instead of left for it to guess.
 
-        A turn interrupted before its answer (DE-14) is left out before the
-        window is applied: it neither replays nor takes a window slot.
+        A turn that ends without an answer (DE-14, TP-031) is left out before
+        the window is applied: it neither replays nor takes a window slot.
 
-        Implements: REQ-SI-FR-011, REQ-SI-COST-001, REQ-SI-FR-023 (ADR-001 Am1, Am2; TP-019, TP-029)
+        Implements: REQ-SI-FR-011, REQ-SI-COST-001, REQ-SI-FR-023 (ADR-001 Am1, Am2, Am3; TP-019, TP-029, TP-031)
         """
         events = self._store.read_events(session_id)
         answered = {event.get("turn") for event in events if event.get("event") == "assistant-message"}
@@ -277,7 +278,7 @@ class TurnEngine:
         present, they alter neither the buffering, the post-check, nor
         what reaches render and stream_sink.
 
-        An interruption before the answer is marked (DE-14, see _run_turn).
+        A turn that ends without an answer is marked (DE-14, TP-031; see _run_turn).
 
         Implements: REQ-SI-FR-008, REQ-SI-FR-019, REQ-SI-COST-002,
         REQ-SI-INV-001, REQ-SI-INV-002, REQ-SI-FR-026 (ADR-001, ADR-007, ADR-008)
@@ -294,12 +295,20 @@ class TurnEngine:
                 on_phase=on_phase,
                 on_pending_write=on_pending_write,
             )
-        except KeyboardInterrupt:
-            # DE-14: the open turn gets a marker, so replay leaves its question out
-            if self._open_turn is not None:
-                self._store.append_event(session_id, {"event": "turn-incomplete", "turn": self._open_turn})
+        except (KeyboardInterrupt, ProviderError):
+            # DE-14, TP-031: an interrupted or failed turn keeps its question out of replay
+            self._mark_incomplete(session_id)
             raise
         finally:
+            self._open_turn = None
+
+    def _mark_incomplete(self, session_id: str) -> None:
+        """Record the open turn as having no answer, so replay leaves its question out.
+
+        Implements: REQ-SI-FR-011, REQ-SI-FR-023 (ADR-001 Am2, Am3; ADR-004 Am6; TP-029, TP-031)
+        """
+        if self._open_turn is not None:
+            self._store.append_event(session_id, {"event": "turn-incomplete", "turn": self._open_turn})
             self._open_turn = None
 
     def _tool_specs(self) -> dict[str, ToolSpec]:
@@ -497,6 +506,7 @@ class TurnEngine:
                 f"{profile}; no response was fabricated (INV-003)"
             )
             self._store.append_event(session_id, {"event": "error", "kind": "iteration-cap", "turn": turn_id})
+            self._mark_incomplete(session_id)  # TP-031: no answer, so the question stays out of replay
             render(stop)
             progress(_footer(tools_used, None, usage_total))
             return TurnOutcome(

@@ -143,3 +143,15 @@ a marker for it exists. Turns that end without an answer on other paths
 they are not interruptions.
 
 Implements: REQ-SI-FR-011, REQ-SI-FR-023.
+
+## Amendment 3 (2026-10-04, TP-031) — turns that end without an answer are left out of context too
+
+Amendment 2 left the iteration cap and provider errors unchanged. That
+was a scope decision, and the owner has since chosen to cover them
+(TP-031). A turn that ends with a provider error or at the iteration cap
+now receives a `turn-incomplete` marker, so L4 leaves its question out
+as it does for an interrupted turn. The window rule, the answered-turn
+guard, and the truncation note are unchanged. A hard crash still writes
+no marker; it stays open.
+
+Implements: REQ-SI-FR-011, REQ-SI-FR-023.

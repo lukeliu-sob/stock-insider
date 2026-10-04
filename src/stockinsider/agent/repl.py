@@ -1133,7 +1133,7 @@ def render_session(store: SessionStore, session_id: str, echo: Callable[[str], N
             for detail in event.get("unverified_detail") or []:
                 echo(f"  unverified {detail.get('claim', '?')} - {detail.get('reason', '?')}")
         elif kind == "turn-incomplete":
-            echo("  incomplete interrupted before its answer; left out of context")
+            echo("  incomplete no answer recorded; left out of context")
         elif kind == "error":
             original = event.get("original")
             if event.get("kind") == "epistemic":
