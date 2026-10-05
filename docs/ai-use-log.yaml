@@ -3463,7 +3463,7 @@ sessions:
       by its target test. Full offline suite passes except the acceptance test
       below. Result on the sealed battery (measured once, counts only): recall
       14 of 30 (47%), zero false flags, against the 80% target. The
-      acceptance assertion is kept red; the owner decides how to proceed.
+      acceptance assertion is marked expected-failure (strict) by the owner's decision of 2026-10-05.
       Development battery: recall 27 of 30, zero false flags, which overstates
       the sealed result because the verb list and idioms were extended after
       reading its misses.
@@ -3483,5 +3483,5 @@ sessions:
       acceptance target (2026-10-04): recall of at least 80% on the sealed
       battery with zero false flags on its controls. The measured result,
       47% recall with zero false flags, does not meet that target, and the
-      decision on how to proceed is open.
+      owner decided on 2026-10-05 to stop DE-09 at this residual, keeping the assertion as an expected failure.
     status: applied

@@ -14,6 +14,8 @@ Implements: REQ-SI-INV-002 (ADR-006 Am8, Am11; TP-033)
 import json
 from pathlib import Path
 
+import pytest
+
 from stockinsider.agent.guardrail import epistemic_filter
 
 DEVELOPMENT = Path(__file__).parent / "fixtures" / "inv002_heldout_tp030.json"
@@ -62,10 +64,16 @@ def test_development_battery_controls_keep_zero_false_flags() -> None:
     assert not false_flags
 
 
+@pytest.mark.xfail(
+    strict=True,
+    reason="owner decision 2026-10-05: DE-09 stops at this residual; target not met (14/30)",
+)
 def test_sealed_battery_meets_target() -> None:
     # Acceptance target set by the owner on 2026-10-04. Measured once after the fix:
-    # 14 of 30 (47%) with zero false flags (TP-033 Result). This assertion is red until
-    # the owner decides how to proceed; it is not to be weakened to pass.
+    # 14 of 30 (47%) with zero false flags (TP-033 Result). Owner decision on 2026-10-05
+    # (in session): stop DE-09 at this residual. The assertion is kept as written and
+    # marked expected-failure (strict), so the unmet target shows in every run. If it
+    # ever passes, the marker must be removed on purpose.
     sealed = json.loads(SEALED.read_text(encoding="utf-8"))
     flag_items = [item for item in sealed if item["expected"] == "flag"]
     pass_items = [item for item in sealed if item["expected"] == "pass"]
