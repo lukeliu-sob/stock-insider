@@ -3485,3 +3485,26 @@ sessions:
       47% recall with zero false flags, does not meet that target, and the
       owner decided on 2026-10-05 to stop DE-09 at this residual, keeping the assertion as an expected failure.
     status: applied
+  - id: AILOG-0081
+    date: "2026-10-05"
+    agent_task: >-
+      TP-034: a fixed reliability notice shown after every answered turn, as the visible part
+      of the accepted INV-002 residual (DE-09), and the DE-09 record: ADR-006 Amendment 12 and
+      the debt-register status. Display only: the notice is printed on the progress channel
+      directly after the post-check footer, and it is kept out of the answer text, the session
+      record and the next turn's model input. Tests: 3 new in test_tp034_fixed_notice.py
+      (positive, negative, adversarial). The footer-dependent suites (agent loop, terminal UI,
+      post-check footer assertions) pass unchanged.
+    artifacts:
+      - src/stockinsider/agent/loop.py
+      - test/offline/test_tp034_fixed_notice.py
+      - docs/test-plans/TP-034.md
+      - docs/architecture/adr/006-guardrail.md
+      - docs/debt-register.md
+      - docs/ai-use-log.yaml
+    human_decision: >-
+      Owner, in session, 2026-10-05: add the fixed sentence "Agent is a probability
+      machine, which may make mistakes" as a visible notice, and stop further DE-09 work
+      (no pattern changes). The 80% target stays on record as not met, with its acceptance
+      assertion kept as a strict expected failure (TP-033). The owner set the notice wording.
+    status: applied
