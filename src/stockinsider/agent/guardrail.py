@@ -853,6 +853,51 @@ _CAUSAL_VERBS = (
     "increased|decreased|doubled|tripled|soared|tumbled|crashed|plunged|"
     "rebounded|outperformed|underperformed|will"
 )
+#: Reporting and cognition verbs (TP-033, mechanism 1): a hedge on one of these
+#: does not excuse the claim its "that", "why" or "whether" complement introduces.
+_COMPLEMENT_VERBS = (
+    r"argue|argues|argued|suggest|suggests|suggested|insist|insists|insisted|believe|believes|believed|"
+    r"think|thinks|thought|expect|expects|expected|note|notes|noted|imply|implies|implied|show|shows|"
+    r"showed|shown|wonder|wonders|wondered|claim|claims|claimed|conclude|concludes|concluded|say|says|"
+    r"said|state|states|stated|announce|announces|announced|mention|mentions|mentioned|predict|predicts|"
+    r"predicted|forecast|forecasts|hope|hopes|hoped|assume|assumes|assumed|point\s+out|points\s+out|"
+    r"pointed\s+out|reveal|reveals|revealed|signal|signals|signalled|signaled|warn|warns|warned|hint|"
+    r"hints|hinted|see|sees|saw|seen|bet|bets|confirm|confirms|confirmed"
+)
+_COMPLEMENT_BREAK = re.compile(rf"\b(?:{_COMPLEMENT_VERBS})\s+(?:that|why|whether)\b", re.IGNORECASE)
+#: Price and performance predicates (TP-033, mechanism 2): a certainty construction
+#: is a deterministic claim only when one of these follows it. A level is a price
+#: when it is currency-marked, or a points level of four or more digits.
+_LB = r"(?<![A-Za-z])"
+_PRICE_NOUN = r"(?:shares?|stock|prices?|index|market|Hang\s+Seng)"
+_PRICE_LEVEL = (
+    r"(?:HK\$|US\$|\$)\s?\d[\d,]*(?:\.\d+)?"
+    r"|\d[\d,]*(?:\.\d+)?\s?(?:HKD|USD)\b"
+    r"|\d{1,3}(?:,\d{3})+(?:\.\d+)?\s?points?\b|\d{4,}(?:\.\d+)?\s?points?\b"
+)
+_PCT_CHANGE = (
+    r"(?:an?\s+|about\s+|roughly\s+|nearly\s+|almost\s+|some\s+)?\d[\d.]*\s?(?:percent|%)\s*"
+    r"(?:(?:gains?|loss|rally|drop|rise|fall|declines?|increase|decrease|slide|surge|plunge|climb|jump|slump)\b"
+    r"|higher\b|lower\b|up\b|down\b|more\b|less\b)"
+    r"|(?:gains?|loses?|rises?|falls?|drops?|climbs?|jumps?|slides?|surges?|plunges?|tumbles?|declines?|"
+    r"rallies?|soars?|slumps?|doubles?|triples?)\s+(?:an?\s+|about\s+|roughly\s+|nearly\s+|almost\s+)?"
+    r"\d[\d.]*\s?(?:percent|%)"
+)
+_MOVER = (
+    r"break|breaks|hit|hits|touch|touches|reach|reaches|close|closes|trade|trades|finish|finishes|"
+    r"settle|settles|end|ends|stay|stays|remain|remains|hold|holds|move|moves|go|goes|lift|lifts|push|"
+    r"pushes|drive|drives|send|sends|drag|drags|pull|pulls|boost|boosts|sink|sinks|bounce|bounces|"
+    r"retest|test|top|tops|breach|dip|dips|spike|spikes|slip|slips|hover|hovers|float|floats"
+)
+_PREDICATE = (
+    rf"(?:{_VERBS}|higher|lower|upward|downward|re-?rated|{_PRICE_LEVEL}|{_PCT_CHANGE}"
+    rf"|(?:{_MOVER})\b[^.!?;]{{0,40}}?\b{_PRICE_NOUN}\b)"
+)
+#: Certainty idioms (TP-033): counted only with a predicate in the same clause.
+_CERTAINTY_IDIOM = (
+    r"foregone\s+conclusion|no\s+doubt|beyond\s+doubt|matter\s+of\s+timing|bank\s+on|"
+    r"no\s+two\s+ways\s+about\s+it|can'?t\s+miss|done\s+deal"
+)
 EPISTEMIC_PATTERNS: tuple[tuple[str, re.Pattern[str]], ...] = (
     (
         "deterministic-prediction",
@@ -973,6 +1018,38 @@ EPISTEMIC_PATTERNS: tuple[tuple[str, re.Pattern[str]], ...] = (
             re.IGNORECASE,
         ),
     ),
+    (
+        # TP-033 mechanism 2, family (a): a certainty adjective or participle with
+        # "to" or "for" is a claim only when a price or performance predicate follows.
+        "certainty-construction",
+        re.compile(
+            rf"\b(?:bound|destined|set|going|on\s+course|poised|primed|headed|certain|sure|guaranteed)\s+(?:to|for)\b"
+            rf"[^.!?;]{{0,40}}?{_LB}{_PREDICATE}",
+            re.IGNORECASE,
+        ),
+    ),
+    (
+        # TP-033 mechanism 2, family (b): a certainty idiom counts when a predicate
+        # sits in the same clause, on either side of it.
+        "certainty-idiom",
+        re.compile(
+            rf"{_LB}{_PREDICATE}[^.!?;]{{0,80}}?\b(?:{_CERTAINTY_IDIOM})\b"
+            rf"|\b(?:{_CERTAINTY_IDIOM})\b[^.!?;]{{0,80}}?{_LB}{_PREDICATE}",
+            re.IGNORECASE,
+        ),
+    ),
+    (
+        # TP-033 mechanism 2, family (c): "will" with a price move, a price level or a
+        # percentage move counts when a price context is in the same sentence.
+        "will-price-outcome",
+        re.compile(
+            rf"\bwill\s+(?:{_VERBS}|{_MOVER}|above|below|under|over|past|beyond|back\s+above|back\s+below)\b"
+            rf"[^.!?;]{{0,30}}?{_LB}(?:{_PRICE_LEVEL})"
+            rf"|\bwill\b(?=[^.!?;]{{0,80}}?\b{_PRICE_NOUN}\b)[^.!?;]{{0,40}}?{_LB}{_PCT_CHANGE}"
+            rf"|\b{_PRICE_NOUN}\b[^.!?;]{{0,40}}?\bwill\b[^.!?;]{{0,40}}?{_LB}{_PCT_CHANGE}",
+            re.IGNORECASE,
+        ),
+    ),
 )
 
 #: REPORTED speech is factual reporting, not the product's own
@@ -1032,14 +1109,23 @@ def _sentences(text: str) -> list[str]:
     return [s for s in re.split(r"(?<=[.!?])\s+", text.strip()) if s.strip()]
 
 
-def _clause_bounds(sentence: str, position: int) -> tuple[int, int]:
-    """Start/end offsets of the clause that contains ``position``."""
+def _clause_bounds(sentence: str, position: int, *, complements: bool = True) -> tuple[int, int]:
+    """Start/end offsets of the clause that contains ``position``.
+
+    With ``complements`` (TP-033), a reporting verb followed by "that", "why" or
+    "whether" opens a new clause at the complementizer, so a hedge on the verb
+    does not excuse the claim the complement introduces. Institutional speech
+    acts keep the clause without that break: they govern their complement.
+    """
+    breaks = [brk.span() for brk in _CLAUSE_BREAK.finditer(sentence)]
+    if complements:
+        breaks += [(brk.end(), brk.end()) for brk in _COMPLEMENT_BREAK.finditer(sentence)]
     start, end = 0, len(sentence)
-    for brk in _CLAUSE_BREAK.finditer(sentence):
-        if brk.end() <= position:
-            start = brk.end()
-        elif brk.start() > position:
-            end = brk.start()
+    for brk_start, brk_end in sorted(breaks):
+        if brk_end <= position:
+            start = brk_end
+        elif brk_start > position:
+            end = brk_start
             break
     return start, end
 
@@ -1053,6 +1139,7 @@ def _claim_is_excused(sentence: str, claim_start: int) -> bool:
     clause = sentence[start:end]
     if _MODAL_HEDGE.search(clause) or _MODAL_MAY.search(clause):
         return True
+    start, _ = _clause_bounds(sentence, claim_start, complements=False)
     for attribution in (*_SPEECH_ACT.finditer(sentence), *_ACCORDING_TO_SOURCE.finditer(sentence)):
         if start <= attribution.start() and attribution.end() <= claim_start:
             return True

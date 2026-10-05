@@ -338,3 +338,41 @@ a number that cannot be marked. The three-strike abort becomes a
 notice. Detection (rulings 1-3 and Am1-Am9) is unchanged in phase 1
 (TP-023); ADR-008 phase 2 replaces the match rules with typed claim
 verification.
+
+## Amendment 11 (2026-10-04, TP-033) — clause scope after reporting verbs; certainty constructions need a price or performance predicate
+
+DE-09, measured on the held-out batteries (TP-030 and TP-032): the epistemic
+filter misses mis-scoped hedges and unanticipated paraphrases. A hedge on a
+reporting verb ("may argue that X will rise") excused the claim that X
+introduced, because the clause ran on to the next break mark. Certainty
+constructions ("is set to", "bound to", "a foregone conclusion") were not
+checked for a predicate, so a construction with no price or performance
+outcome counted the same as one with it.
+
+Decision:
+
+1. A reporting or cognition verb followed by "that", "why" or "whether" opens
+   a new clause for hedge scope. A hedge in the matrix clause no longer
+   excuses the complement's claim. A hedge inside the complement still
+   excuses it.
+2. A certainty construction counts as a deterministic claim only with a price
+   or performance predicate after it: a movement verb (the existing list), a
+   currency-marked level, or a percentage move with a price noun. Three
+   families: certainty adjectives and participles with "to" or "for"; certainty
+   idioms with a predicate in the same clause; "will" with a price level or a
+   percentage move and a price noun in the same sentence. A scheduled event with
+   no predicate is not a claim.
+3. The speech exemptions are unchanged. A generic attribution tag is not an
+   institutional source (Am8), so it never excuses a claim.
+
+Alternatives considered: a semantic classifier (a second stage of DE-09,
+deferred until these mechanisms are measured); a sentence-level hedge rule
+(rejected: it would flag the direct-hedge controls); a certainty family with no
+predicate requirement (rejected: it would flag scheduled events).
+
+Consequences: more sentences are flagged. The false-flag risk is measured on
+the controls of the sealed battery. Known residual: a causal claim without a
+certainty construction ("the price is driven entirely by one memo") is not
+covered by this amendment.
+
+Implements: REQ-SI-INV-002 (TP-033).
