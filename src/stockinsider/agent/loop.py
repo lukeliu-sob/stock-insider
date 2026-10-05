@@ -748,6 +748,7 @@ class TurnEngine:
             self._store.abort(session_id, abort_reason)
             render(f"session aborted: {abort_reason} threshold reached (invariant fallback)")
         progress(_footer(tools_used, verdict.quarantined, usage_total, flagged=bool(unverified)))
+        progress(AGENT_NOTICE)
         return TurnOutcome(
             displayed=displayed,
             quarantined=verdict.quarantined,
@@ -788,6 +789,12 @@ class _DeferredSink:
         Implements: REQ-SI-INV-001 (ADR-001; TP-017 PR-1)
         """
         self.buffer.clear()
+
+
+#: Shown after every answer (TP-034, DE-09 residual): a fixed reliability notice. It is
+#: display only; it is never part of the answer text, the session record, or the next
+#: turn's model input.
+AGENT_NOTICE = "Agent is a probability machine, which may make mistakes."
 
 
 def _footer(tools_used: int, quarantined: bool | None, usage: dict[str, int], *, flagged: bool = False) -> str:
