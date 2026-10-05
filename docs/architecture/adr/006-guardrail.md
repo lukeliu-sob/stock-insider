@@ -376,3 +376,18 @@ certainty construction ("the price is driven entirely by one memo") is not
 covered by this amendment.
 
 Implements: REQ-SI-INV-002 (TP-033).
+
+## Amendment 12 (2026-10-05, TP-034) — DE-09: residual INV-002 risk accepted; work stopped at the measured recall
+
+Context. DE-09 measured the epistemic filter on the sealed battery (TP-032), once before and once after the TP-033 change set. After that change set (Amendment 11), flag-set recall is 14 of 30 (47%) against the 80% target set on 2026-10-04. Control false flags are 0 of 30. The sealed battery is consumed.
+
+Decision (owner, 2026-10-05, in session):
+1. DE-09 stops at this residual. There is no further pattern work. The filter as amended in Amendment 11 remains the detection layer.
+2. The 80% target stays on record as not met. Its acceptance assertion is kept as written and marked as a strict expected failure, so the gap shows in every run.
+3. Accepted residual: an INV-002 violation the filter does not detect is displayed without a marker. The unverified marker of ADR-008 covers numbers only and is not an INV-002 signal. Eight of the sixteen sealed-battery misses that remain after the fix contain no number.
+4. Mitigations relied on: the speculation rule in `prompts/identity.md` (speculation carries a "hypothesis:" label); the filter's stripping and single regeneration (`run_with_regeneration`); a fixed notice after every answered turn, "Agent is a probability machine, which may make mistakes." (TP-034; display only).
+5. Re-open when a live INV-002 violation is reported or found in a review round, or when a review measures a fresh sealed battery under a new TP, written by a separate author.
+
+Consequences. INV-002 is enforced by the speculation rule, by a filter whose partial coverage is measured here, and by the notice. The residual is recorded here and in the debt register, and it is not claimed closed anywhere.
+
+Implements: REQ-SI-INV-002 (ADR-006; TP-030, TP-032, TP-033, TP-034).
