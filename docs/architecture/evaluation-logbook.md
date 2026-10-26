@@ -233,3 +233,43 @@ decision (2026-10-26): land the suite with the relevance assertion as
 a strict expected failure (DE-17), and try a retrieval improvement
 under its own plan (TP-037). The D1 v2 precondition stays unmet, so
 TP-035 stays blocked.
+
+### E-012 — Retrieval variants on a held-out query set (TP-037 stage 1)
+
+Date: 2026-10-26 - Model(s): qwen3.7-text-embedding-flash (1024 dims; corpus vectors from E-011, query vectors frozen once per variant)
+
+Sets:
+- Development: the 25 TP-036 queries (looked at in E-011).
+- Held-out: 25 queries written by a separately briefed subagent from the
+  corpus, the family partition, the classes and the labeling rule
+  only; committed before any variant vector. Two queries match
+  development text exactly (held-out 11, 17); the 23-query subset
+  without them is reported alongside.
+
+Variants (fixed in TP-037 before measurement): V0 baseline; V1
+retrieval instruction prefix on queries; V2 production-shaped entity
+expansion (ticker / official-name head / index alias -> "<official
+name> (<code>)"); V3 = V1 on V2.
+
+Scores (k = 5; relevance@5 / hit@5):
+
+| Variant | Development | Held-out | Held-out (23) |
+|---|---|---|---|
+| V0 | 0.768 / 0.920 | 0.720 / 1.000 | 0.748 / 1.000 |
+| V1 | 0.776 / 0.920 | 0.712 / 1.000 | 0.730 / 1.000 |
+| V2 | 0.768 / 0.960 | 0.736 / 1.000 | 0.765 / 1.000 |
+| V3 | 0.784 / 0.960 | 0.728 / 1.000 | 0.748 / 1.000 |
+
+Per class on the held-out set (V0 -> best variant): official name
+0.96 -> 1.00 (V2), ticker 1.00 throughout, alias 0.52 -> 0.56,
+macro 0.56 throughout, paraphrase 0.56 throughout. The macro class is
+capped at 0.76 by its families (two of five macro queries aim at
+2-item families); the set's reachable mean is 0.952.
+
+Verdict: blocked (gate). No variant reaches relevance@5 0.8 on the
+held-out set; the best, V2, gains 0.016. V3 leads on the development
+set but not on the held-out set, so the development gain does not
+transfer. hit@5 passes for every variant. The gap is in alias,
+paraphrase and macro queries, which query-side changes do not reach:
+the top 5 is filled with headlines from neighbouring families. Owner
+decision pending (TP-037 stage 2).

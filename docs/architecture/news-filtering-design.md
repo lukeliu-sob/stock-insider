@@ -42,11 +42,11 @@ gated separately).
 - **v2 activation (owner decision 2026-10-26, decisions D5–D10;
   TP-035, ADR-002 Am2, ADR-004 Am7)**: v2 is activated in design.
   Implementation lands only with the approved TP-035 change set, after
-  three gates: TP-035 approval, the owner-added topical-bucket
-  registry row, and a passing QA-002 suite. The v2 precondition above
-  (QA-002 passes on the title corpus) is not met yet: QA-002 is still
-  conceptual. Owner decision D10: no waiver; QA-002 is implemented
-  first under TP-036. Content: body fetching for the probe-gated body
+  TP-035 approval. The v2 precondition above (QA-002 passes on the
+  title corpus) was measured and not met (E-011, E-012); owner
+  decision D10a (2026-10-26) accepts the residual for v2, with QA-002
+  kept unmet and visible (DE-17) and re-measured when body-inclusive
+  embedding is decided. Content: body fetching for the probe-gated body
   whitelist candidates (cnbc.com, marketwatch.com and the HK English
   local sources) via per-domain templates — the FR-015 mechanism
   applied at ingestion; tier-A domains behind bot walls stay

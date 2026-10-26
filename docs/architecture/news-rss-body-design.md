@@ -8,7 +8,7 @@
 | Registry baseline | `docs/req/requirements.yaml` v0.6.2 (REQ-SI-FR-027 appended, §12) |
 | Governs | planned `data/ingest/newsrss.py`, `data/ingest/newsbody.py`; FR-003 (Must), FR-007 input side, FR-015 mechanism (Should), the proposed topical-feed row (§12), INV-003, SEC-003 |
 | Related | `news-filtering-design.md` (D1 v2, decisions D1–D4); ADR-002 + Amendment 2; ADR-004 Amendment 7 (egress); ADR-003; `memory-design.md` §2/§4; TP-036 (QA-002) |
-| Status | **Proposed** — owner decisions D5–D10 recorded (§10); implementation gated on TP-035 approval and a passing TP-036 |
+| Status | **Proposed** — owner decisions D5–D10 and D10a recorded (§10); implementation gated on TP-035 approval |
 
 ## 1. Purpose
 
@@ -29,6 +29,16 @@ implemented as its own feature under TP-036, not waived. TP-035
 implementation starts only after the TP-036 suite has merged and
 passes both gates; a TP-036 miss keeps TP-035 blocked pending an
 owner decision.
+
+Decision D10a (owner, 2026-10-26): QA-002 was measured and missed
+(E-011 relevance@5 0.768; E-012 held-out 0.720, no query-side variant
+reaches 0.8), and the owner accepts the residual for D1 v2. Reasons:
+FR-007 (Must) passes its fit criterion (hit@5 0.920, held-out 1.000);
+QA-002 is a Should; and the most promising improvement, body-inclusive
+embedding, needs the bodies TP-035 collects, so blocking TP-035 on
+QA-002 would be circular. QA-002 stays unmet, its assertion stays a
+strict expected failure (DE-17), and it is re-measured when
+body-inclusive embedding is decided (D8 follow-up).
 
 ## 2. Verified External Facts (2026-10, reference-implementation evidence)
 
@@ -310,6 +320,7 @@ it is allowed through the owner's `EGRESS_EXTRA_HOSTS` entry in
 | D8 | Embeddings stay title-only and `news.search` / `news.recent` output shapes stay unchanged; bodies and topical rows are stored but not yet read by the agent; agent-facing access is a follow-up plan |
 | D9 | Both tracks run once per daily sync; no scheduler, no ad-hoc CLI surface in v1 |
 | D10 | The D1 v2 precondition (§1) is met by implementing QA-002 (TP-036) before TP-035 implementation; no waiver. Embedding model for TP-036: `qwen3.7-text-embedding-flash` (owner-tested) at `https://maas.qianwenaiapi.com/compatible-mode/v1`, with its own key `EMBEDDING_API_KEY`, filled in by the owner |
+| D10a | **Owner-decided 2026-10-26**: QA-002 missed (E-011, E-012); the residual is accepted for D1 v2 (§1). TP-035 may proceed on its own approval; QA-002 stays unmet (DE-17) and is re-measured with the body-inclusive embedding decision |
 
 ## 11. Test Mapping (TP-035)
 

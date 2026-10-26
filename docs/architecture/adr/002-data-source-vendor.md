@@ -79,9 +79,10 @@ collection, body extraction, source health, backfill state machine)
 ported under this project's governance. Full design:
 `news-rss-body-design.md` (owner decisions D5–D10, 2026-10-26).
 Status: **proposed** — the decisions are recorded, but no code lands
-before TP-035 is approved, the owner has added the topical-bucket
-registry row (design §12), and the TP-036 QA-002 suite passes (D10:
-the D1 v2 precondition is met by implementing QA-002, not waived).
+before TP-035 is approved. The topical-bucket registry row is in
+registry 0.6.2. The D1 v2 precondition was measured (TP-036, TP-037:
+QA-002 not met) and the owner accepted the residual (D10a); QA-002
+stays unmet and visible (DE-17).
 This amendment, ADR-004 Amendment 7, the design note, and the D1
 activation record are the documentation change set.
 
