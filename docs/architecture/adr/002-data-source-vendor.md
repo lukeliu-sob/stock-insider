@@ -82,8 +82,8 @@ the owner decision is recorded only when TP-035 is approved; no code
 lands before that. This amendment, ADR-004 Amendment 7, the design
 note, and the D1 activation proposal are the documentation change
 set. D1 v2's own precondition (QA-002 passes on the title corpus) is
-not yet met; activation requires either that pass or the explicit
-owner waiver D10.
+not yet met; per owner decision D10 it is met by implementing QA-002
+first (TP-036), not waived.
 
 1. **RSS listing track**: curated English feeds on tier-A /
    general-news domains join GDELT and EODHD as a third listing

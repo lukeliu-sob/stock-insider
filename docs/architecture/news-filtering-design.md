@@ -44,8 +44,9 @@ gated separately).
   TP-035 is approved; implementation lands only with the approved
   TP-035 change set. The v2 precondition above (QA-002 passes on the
   title corpus) is not met: QA-002 is still conceptual and its
-  verification suite does not exist yet, so activation needs either
-  that pass or an explicit owner waiver (design D10). Proposed
+  verification suite does not exist yet. Owner decision D10
+  (2026-10-26): no waiver; QA-002 is implemented first under TP-036,
+  and TP-035 implementation waits for that suite to pass. Proposed
   content: body fetching for the initial body whitelist candidates
   (cnbc.com, marketwatch.com), which join the whitelist only after
   the TP-035 live probe confirms fetchability and terms, via

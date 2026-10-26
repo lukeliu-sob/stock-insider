@@ -8,7 +8,7 @@
 | Registry baseline | `docs/req/requirements.yaml` v0.6.1 |
 | Governs | planned `data/ingest/newsrss.py`, `data/ingest/newsbody.py`; FR-003 (Must), FR-007 input side, FR-015 mechanism (Should), INV-003, SEC-003 |
 | Related | `news-filtering-design.md` (D1 v2, decisions D1–D4); ADR-002 + Amendment 2; ADR-004 Amendment 7 (egress); ADR-003; `memory-design.md` §2/§4 |
-| Status | **Proposed** — awaiting owner decisions D5–D10 (§10) |
+| Status | **Proposed** — awaiting owner decisions D5–D9 (§10); D10 decided (QA-002 first, TP-036) |
 
 ## 1. Purpose
 
@@ -24,9 +24,11 @@ lands only in the TP-035 change set, after plan approval.
 Precondition gap: D1 v2 is defined to follow a QA-002 pass on the
 title corpus. QA-002 is still `conceptual` and its verification suite
 (`test/offline/test_retrieval.py`) does not exist, so the precondition
-is not met. Activation therefore needs decision D10 (§10): either the
-QA-002 suite lands and passes first, or the owner waives the
-precondition explicitly, with the reason recorded.
+is not met. Decision D10 (§10, owner, 2026-10-26): QA-002 is
+implemented as its own feature under TP-036, not waived. TP-035
+implementation starts only after the TP-036 suite has merged and
+passes both gates; a TP-036 miss keeps TP-035 blocked pending an
+owner decision.
 
 ## 2. Verified External Facts (2026-10, reference-implementation evidence)
 
@@ -238,7 +240,7 @@ set, not before.
 | D7 | Stdlib-only implementation; all reference dependencies rejected (§9) |
 | D8 | Embeddings and `news.search` / `news.recent` output shapes unchanged; body-inclusive embedding deferred as an option-ledger entry |
 | D9 | Both tracks run in the daily sync cadence; no scheduler, no ad-hoc CLI surface in v1 |
-| D10 | D1 v2 precondition (§1): either (a) the QA-002 suite lands and passes on the title corpus before TP-035 implementation, or (b) the owner waives the precondition for this activation, with the reason recorded in the D1 activation entry |
+| D10 | **Owner-decided 2026-10-26**: the D1 v2 precondition (§1) is met by implementing QA-002 (TP-036: retrieval relevance suite on the title corpus) before TP-035 implementation; no waiver |
 
 ## 11. Test Mapping (TP-035)
 
