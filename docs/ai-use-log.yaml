@@ -3548,3 +3548,30 @@ sessions:
       (DE-17) and to attempt a retrieval improvement under a separate plan (TP-037). The query
       labels were written by the agent and fixed before measurement; they await owner review.
     status: applied
+  - id: AILOG-0083
+    date: "2026-10-26"
+    agent_task: >-
+      TP-037 stage 1: offline experiment on retrieval variants. A held-out query set
+      (25 queries) written by a separately briefed subagent from the corpus, the family
+      partition, the classes and the labeling rule only, committed unedited before any
+      variant vector. Variant definitions (V1 retrieval instruction, V2 production-shaped
+      entity expansion, V3 both) fixed in TP-037 and test/offline/retrieval_variants.py
+      before measurement. The live generator gains --variants (query vectors only; the
+      E-011 corpus vectors are reused). Measured (E-012): held-out relevance@5 V0 0.720,
+      V1 0.712, V2 0.736, V3 0.728; no variant reaches 0.8. No src/ change.
+    artifacts:
+      - test/offline/retrieval_variants.py
+      - test/offline/test_retrieval_variants.py
+      - test/offline/fixtures/retrieval_queries_heldout_v1.json
+      - test/offline/fixtures/retrieval_query_vectors_tp037.json
+      - test/live/gen_retrieval_vectors.py
+      - docs/test-plans/TP-037.md
+      - docs/architecture/evaluation-logbook.md
+      - docs/debt-register.md
+      - docs/ai-use-log.yaml
+    human_decision: >-
+      Owner, in session, 2026-10-26: approved TP-037 and chose a separate subagent as the
+      held-out author. The subagent's set is committed unedited; two of its queries match
+      development text exactly and are reported as a subset. Stage 2 (adopt a variant,
+      stop, or a further plan) is the owner's decision on E-012.
+    status: applied

@@ -128,4 +128,4 @@ Categories at zero have no current entries; the category opens the moment its fi
 - **Category**: evaluation debt
 - **Description**: the TP-036 suite measures relevance@5 = 0.768 against the 0.8 QA-002 threshold (E-011; hit@5 = 0.920 passes FR-007). Alias, paraphrase and small-family macro queries fill the top 5 with items from other topic families. The assertion stays in `test/offline/test_retrieval.py` as a strict expected failure. While it stands, the news-filtering-design D1 v2 precondition is unmet and TP-035 cannot start.
 - **Repayment trigger**: TP-037 (retrieval improvement, its own plan), or an owner decision to accept the residual for D1 v2.
-- **Status**: open (2026-10-26).
+- **Status**: open. TP-037 stage 1 (2026-10-26, E-012): no query-side variant reaches 0.8 on a separately authored held-out set (best V2 0.736, baseline 0.720). Stage 2 awaits an owner decision.
