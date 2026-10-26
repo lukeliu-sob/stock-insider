@@ -77,19 +77,23 @@ Proposed activation of news-filtering-design.md D1 v2, with the
 approach of a reference news-corpus implementation (curated-feed
 collection, body extraction, source health, backfill state machine)
 ported under this project's governance. Full design:
-`news-rss-body-design.md` (decisions D5–D10). Status: **proposed** —
-the owner decision is recorded only when TP-035 is approved; no code
-lands before that. This amendment, ADR-004 Amendment 7, the design
-note, and the D1 activation proposal are the documentation change
-set. D1 v2's own precondition (QA-002 passes on the title corpus) is
-not yet met; per owner decision D10 it is met by implementing QA-002
-first (TP-036), not waived.
+`news-rss-body-design.md` (owner decisions D5–D10, 2026-10-26).
+Status: **proposed** — the decisions are recorded, but no code lands
+before TP-035 is approved, the owner has added the topical-bucket
+registry row (design §12), and the TP-036 QA-002 suite passes (D10:
+the D1 v2 precondition is met by implementing QA-002, not waived).
+This amendment, ADR-004 Amendment 7, the design note, and the D1
+activation record are the documentation change set.
 
-1. **RSS listing track**: curated English feeds on tier-A /
-   general-news domains join GDELT and EODHD as a third listing
-   source, through the unchanged S1–S5 pipeline; per-feed health in
-   `news_feed_health`. FR-003's filter-at-ingestion rule is not
-   relaxed for named sources.
+1. **RSS listing track**: curated English feeds (international plus
+   HK English local sources; all but SCMP probe-gated) join GDELT and
+   EODHD as a third listing source, through the unchanged S1–S5
+   pipeline; per-feed health in `news_feed_health`. For symbol and
+   macro buckets FR-003's filter-at-ingestion rule is not relaxed.
+   Unmatched items from curated feeds go to a separate `topical`
+   bucket (current-affairs context) — capped per feed, never fed by
+   GDELT/EODHD, not embedded and not agent-retrievable in v1; this
+   needs its own registry row (design §12).
 2. **Body backfill track**: stored rows on the body whitelist gain a
    fetched body via the shared Transport seam; per-domain template
    extraction (the FR-015 mechanism, ingestion side); row state
@@ -98,22 +102,28 @@ first (TP-036), not waived.
    counted); per-domain pause after 5 consecutive failures. Bodies
    stored raw with `crawled` provenance; SEC-002 stays at the egress
    boundary. Embeddings unchanged (D8).
-3. **Rejected from the reference**: FTS5 (FR-007 vector-only
+3. **Dependencies** (owner approval D7): `feedparser` and
+   `beautifulsoup4` (stdlib `html.parser` backend) are added. Both
+   receive only bytes fetched by the Transport seam and never open a
+   connection; the seam stays the only network path.
+4. **Rejected from the reference**: FTS5 (FR-007 vector-only
    tradeoff), Google-News URL decoding (non-vendor scraping), the
-   resident scheduler (deployment shape), the real-browser fallback
-   (instability), and the dependency set feedparser / trafilatura /
-   BeautifulSoup / httpx / tenacity / asyncio (stdlib satisfies the
-   fit criteria; one-shot no-retry stands).
-4. **Egress**: the whitelist additions are a `shared/` change and are
+   resident scheduler (deployment shape; both tracks run once per
+   daily sync, D9), the real-browser fallback (instability, a second
+   egress path), trafilatura (not selected), and httpx / tenacity /
+   asyncio (transport concerns; the seam's one-shot no-retry rule
+   stands).
+5. **Egress**: the whitelist additions are a `shared/` change and are
    governed by ADR-004 Amendment 7 (owner approval), not by this
    amendment; the code hunk ships with the implementation change set.
-5. **Storage**: append-only migration v8 (news body columns +
+6. **Storage**: append-only migration v8 (news body columns +
    `news_feed_health`); schema version 8 under the existing
-   memory-design §4 rules.
+   memory-design §4 rules. The topical bucket is a bucket value, not
+   a schema change.
 
 Reopen conditions: template drift below the fixture threshold →
-recalibrate; persistent extraction-quality failure → the trafilatura
-dependency reopen; a whitelisted domain's terms forbid storage →
+recalibrate; persistent extraction-quality failure → reconsider
+trafilatura; a whitelisted domain's terms forbid storage →
 remove the domain (robots.txt / terms are also checked by the TP-035
 live probe before a domain joins the body whitelist).
 
