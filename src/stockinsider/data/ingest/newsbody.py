@@ -43,13 +43,15 @@ from stockinsider.shared.egress import EgressViolationError
 
 #: Body whitelist (design D5): candidates that passed the TP-035 live probe
 #: (server-side fetchable, robots.txt allows the article paths), 2026-10-26.
-BODY_WHITELIST: tuple[str, ...] = ("cnbc.com", "hongkongfp.com", "news.gov.hk", "rthk.hk")
+#: cnbc.com passed the probe but is excluded: its terms prohibit
+#: downloadable copies of content other than caching, and the body track
+#: keeps copies (D5 requires the terms to permit local storage).
+BODY_WHITELIST: tuple[str, ...] = ("hongkongfp.com", "news.gov.hk", "rthk.hk")
 
 #: Per-domain extraction templates (FR-015): CSS selectors whose matched
 #: elements' text, in document order, is the body. Calibrated on the
 #: version-controlled fixture pages; drift recalibrates, never degrades silently.
 EXTRACTION_TEMPLATES: dict[str, tuple[str, ...]] = {
-    "cnbc.com": ("div.ArticleBody-articleBody div.group > p",),
     "hongkongfp.com": ("div.entry-content > p",),
     "news.gov.hk": ("div.newsdetail-content p",),
     "rthk.hk": ("div.itemFullText",),

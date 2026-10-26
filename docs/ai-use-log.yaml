@@ -3614,6 +3614,9 @@ sessions:
       end-to-end live run on a temporary store confirmed all ten feeds and all four body
       templates. The offline conftest now blocks DNS, outbound connections and proxy
       discovery. Registry 0.6.3: REQ-SI-FR-027 regression_scope drops its future/ prefix.
+      Follow-up in the same change set: the CLI run summary and the REPL /sync status render
+      the RSS and body tracks; a terms review removed cnbc.com from the body whitelist (its
+      terms prohibit downloadable copies).
     artifacts:
       - src/stockinsider/data/ingest/newsrss.py
       - src/stockinsider/data/ingest/newsbody.py
@@ -3623,6 +3626,8 @@ sessions:
       - src/stockinsider/data/store/schema.py
       - src/stockinsider/data/store/vector.py
       - src/stockinsider/shared/egress.py
+      - src/stockinsider/cli/render.py
+      - src/stockinsider/agent/repl.py
       - pyproject.toml
       - uv.lock
       - test/offline/conftest.py

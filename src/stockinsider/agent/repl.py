@@ -495,6 +495,26 @@ def _cmd_sync(registry: Registry, args: list[str], echo: Callable[[str], None]) 
             echo(f"confirmed no-data ranges (vendor returned no bars after repeated attempts): {len(no_data)}")
             for gap in no_data:
                 echo(f"  no-data: {gap['canonical_symbol']} {gap['from_date']}..{gap['to_date']}")
+        # TP-035 (INV-003): feed health and article-body states stay visible
+        rss = status.get("news_rss") or {}
+        feeds = rss.get("feeds", [])
+        if feeds or rss.get("topical_articles"):
+            failing = [feed for feed in feeds if feed.get("consecutive_failures")]
+            echo(
+                f"news feeds: {len(feeds) - len(failing)} healthy, {len(failing)} failing; "
+                f"topical articles: {rss.get('topical_articles', 0)}"
+            )
+            for feed in failing:
+                echo(
+                    f"  feed: {feed['feed_id']} failing {feed['consecutive_failures']} run(s) in a row "
+                    f"(last ok {feed.get('last_ok_at') or 'never'}; {feed.get('last_error')})"
+                )
+        states = (status.get("news_body") or {}).get("by_status", {})
+        if states:
+            order = ("extracted", "pending", "failed", "unavailable", "not_applicable")
+            labels = {"not_applicable": "title-only"}
+            parts = [f"{labels.get(name, name)}={states[name]}" for name in order if name in states]
+            echo("article bodies: " + " ".join(parts))
         return
     if action != "run":
         echo(f"error: unknown sync action {action!r} (run | status)")

@@ -205,7 +205,7 @@ limited to the entries whose source passes the live probe.
    | `scmp.com` | RSS listing | `www.scmp.com` |
    | `bbci.co.uk` | RSS listing | `feeds.bbci.co.uk` |
    | `theguardian.com` | RSS listing | `www.theguardian.com` |
-   | `cnbc.com` | RSS listing + body fetch | `www.cnbc.com` |
+   | `cnbc.com` | RSS listing (bodies excluded by its terms, TP-035) | `www.cnbc.com` |
    | `rthk.hk` | RSS listing + body fetch | `rthk9.rthk.hk` (feeds, HTTPS), `news.rthk.hk` (articles) |
    | `hongkongfp.com` | RSS listing + body fetch | `hongkongfp.com` |
    | `news.gov.hk` | RSS listing + body fetch | `www.news.gov.hk` |

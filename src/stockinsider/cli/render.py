@@ -102,7 +102,7 @@ def sync_verbose_lines(report: dict[str, Any]) -> list[str]:
 
 
 def news_track_lines(report: dict[str, Any]) -> list[str]:
-    """News-track outcome lines, both sources (TP-015 P0-5).
+    """News-track outcome lines: GDELT and EODHD (TP-015 P0-5), RSS and bodies (TP-035).
 
     Implements: REQ-SI-FR-006 (ADR-002)
     """
@@ -136,6 +136,61 @@ def news_track_lines(report: dict[str, Any]) -> list[str]:
                 f"quarantined={query.get('quarantined', 0)}"
             )
             lines.append(chrome(f"{query['status']:8} {query['bucket']:16} {detail}"))
+    lines += _rss_track_lines(news.get("rss"))
+    lines += _body_track_lines(news.get("body"))
+    return lines
+
+
+def _rss_track_lines(track: Any) -> list[str]:
+    """RSS track outcome: totals, then one line per feed (TP-035, INV-003)."""
+    if track is None:
+        return []
+    if isinstance(track, dict) and track.get("failed"):
+        return [chrome(f"news/rss FAILED: {track['failed']}")]
+    if not isinstance(track, dict) or "feeds" not in track:
+        return [chrome("news/rss: no report (unavailable)")]
+    feeds = track["feeds"]
+    ok = [feed for feed in feeds if feed.get("status") == "ok"]
+    keys = ("kept_new", "topical_new", "dups", "quarantined", "topical_overflow")
+    total = {key: sum(int(feed.get(key, 0)) for feed in ok) for key in keys}
+    lines = [
+        chrome(
+            f"news/rss {track['ran_at']}: {len(ok)}/{len(feeds)} feeds ok | new {total['kept_new']} | "
+            f"topical {total['topical_new']} | dup {total['dups']} | quarantined {total['quarantined']} | "
+            f"topical overflow {total['topical_overflow']}"
+        )
+    ]
+    for feed in feeds:
+        detail = feed.get("error") or (
+            f"new={feed.get('kept_new', 0)} topical={feed.get('topical_new', 0)} dup={feed.get('dups', 0)} "
+            f"quarantined={feed.get('quarantined', 0)}"
+        )
+        lines.append(chrome(f"{feed['status']:8} {feed['feed']:16} {detail}"))
+    return lines
+
+
+def _body_track_lines(track: Any) -> list[str]:
+    """Body track outcome: one summary line, paused domains, failure kinds (TP-035, INV-003)."""
+    if track is None:
+        return []
+    if isinstance(track, dict) and isinstance(track.get("failed"), str):
+        return [chrome(f"news/body FAILED: {track['failed']}")]
+    if not isinstance(track, dict) or "extracted" not in track:
+        return [chrome("news/body: no report (unavailable)")]
+    lines = [
+        chrome(
+            f"news/body {track['ran_at']}: extracted {track['extracted']} | failed {track['failed']} | "
+            f"unavailable {track['unavailable']} | not counted {track['uncounted']} | "
+            f"paused {track['paused']} | deferred {track['deferred']} | stale {track.get('stale', 0)}"
+        )
+    ]
+    if track.get("paused_domains"):
+        lines.append(chrome(f"paused   domains: {', '.join(track['paused_domains'])}"))
+    kinds: dict[str, int] = {}
+    for failure in track.get("failures", []):
+        kinds[failure["kind"]] = kinds.get(failure["kind"], 0) + 1
+    if kinds:
+        lines.append(chrome("failures " + " ".join(f"{kind}={count}" for kind, count in sorted(kinds.items()))))
     return lines
 
 

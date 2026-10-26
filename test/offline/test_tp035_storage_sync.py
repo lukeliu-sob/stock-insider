@@ -130,3 +130,86 @@ def test_sync_status_reports_feed_health_and_body_states(tmp_path) -> None:
     assert status["news_rss"]["feeds"][0]["consecutive_failures"] == 2
     assert status["news_rss"]["topical_articles"] == 0
     assert status["news_body"] == {"by_status": {}}
+
+
+# -- visibility of the new tracks (INV-003) ---------------------------------
+
+
+def _report(rss, body) -> dict:
+    return {"news": {"rss": rss, "body": body}}
+
+
+def test_run_summary_renders_rss_and_body_tracks() -> None:
+    from stockinsider.cli.render import news_track_lines
+
+    rss = {
+        "ran_at": "2026-10-26T04:35:00+00:00",
+        "feeds": [
+            {
+                "feed": "scmp:top",
+                "status": "ok",
+                "kept_new": 1,
+                "topical_new": 30,
+                "dups": 0,
+                "quarantined": 0,
+                "topical_overflow": 4,
+            },
+            {"feed": "rthk:finance", "status": "transport", "error": "transport: network down"},
+        ],
+    }
+    body = {
+        "ran_at": "2026-10-26T04:36:00+00:00",
+        "extracted": 27,
+        "failed": 3,
+        "unavailable": 0,
+        "uncounted": 1,
+        "paused": 2,
+        "deferred": 98,
+        "stale": 5,
+        "paused_domains": ["hongkongfp.com"],
+        "failures": [
+            {"kind": "extraction", "url": "u", "detail": "d"},
+            {"kind": "transport", "url": "u", "detail": "d"},
+        ],
+    }
+    lines = news_track_lines(_report(rss, body))
+    text = "\n".join(lines)
+    assert "news/rss 2026-10-26T04:35:00+00:00: 1/2 feeds ok | new 1 | topical 30" in text
+    assert "topical overflow 4" in text
+    assert "rthk:finance" in text and "transport: network down" in text
+    assert "news/body 2026-10-26T04:36:00+00:00: extracted 27 | failed 3" in text and "stale 5" in text
+    assert "domains: hongkongfp.com" in text
+    assert "failures extraction=1 transport=1" in text
+
+
+def test_run_summary_reports_aborted_tracks_explicitly() -> None:
+    from stockinsider.cli.render import news_track_lines
+
+    lines = news_track_lines(_report({"failed": "rss track aborted: boom"}, {"failed": "body track aborted: boom"}))
+    assert lines == ["news/rss FAILED: rss track aborted: boom", "news/body FAILED: body track aborted: boom"]
+
+
+def test_repl_sync_status_shows_feed_health_and_body_states(tmp_path) -> None:
+    from stockinsider.agent.registry import Registry, register_sync_tools
+    from stockinsider.agent.repl import _cmd_sync
+    from stockinsider.data import open_data_store
+
+    ds = open_data_store(str(tmp_path / "data"))
+    with ds.conn:
+        ds.conn.execute("INSERT INTO news_feed_health VALUES ('scmp:top', 0, '2026-10-26T04:00:00+00:00', NULL)")
+        ds.conn.execute("INSERT INTO news_feed_health VALUES ('rthk:local', 3, NULL, 'transport: down')")
+        for status, url in (("extracted", "a"), ("pending", "b"), ("not_applicable", "c")):
+            ds.conn.execute(
+                "INSERT INTO news (url_norm, url_raw, title, domain, published_at, fetched_at, source_query, symbol,"
+                " relevance_score, kept, body_status) VALUES (?, ?, 't', 'cnbc.com', '20261025T000000Z', 'x', 'q',"
+                " 'topical', 0.0, 1, ?)",
+                (url, url, status),
+            )
+    registry = Registry()
+    register_sync_tools(registry, ds)
+    lines: list[str] = []
+    _cmd_sync(registry, ["status"], lines.append)
+    text = "\n".join(lines)
+    assert "news feeds: 1 healthy, 1 failing; topical articles: 3" in text
+    assert "feed: rthk:local failing 3 run(s) in a row (last ok never; transport: down)" in text
+    assert "article bodies: extracted=1 pending=1 title-only=1" in text

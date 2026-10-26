@@ -397,8 +397,10 @@ config-of-record.
   rthk:local (HTTPS at `rthk9.rthk.hk`), hkfp:all, govhk:finance,
   govhk:top. Dropped: MarketWatch (bot wall), The Standard and China
   Daily HK (no feed).
-- **Body whitelist**: cnbc.com, hongkongfp.com, news.gov.hk, rthk.hk,
-  with CSS-selector templates; robots.txt allows the article paths.
+- **Body whitelist**: hongkongfp.com, news.gov.hk, rthk.hk, with
+  CSS-selector templates; robots.txt allows the article paths. cnbc.com
+  passed the probe but its terms prohibit downloadable copies, so it
+  fails D5 and keeps its feed only (TP-035 "Terms review").
 - **Tier list**: rthk.hk, hongkongfp.com, news.gov.hk join
   `GENERAL_NEWS_DOMAINS`.
 - **Egress**: the seven passing hosts in `NEWS_FETCH_HOSTS` (ADR-004
