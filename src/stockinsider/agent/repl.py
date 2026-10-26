@@ -40,6 +40,7 @@ from stockinsider.agent.providers import (
     ProviderError,
     resolve_api_key,
     resolve_config,
+    resolve_embedding_api_key,
 )
 from stockinsider.agent.registry import (
     Registry,
@@ -942,7 +943,7 @@ def _build_embed_provider(config: ProviderConfig) -> "tuple[Any, str] | None":
     """
     if not config.embedding_base_url:
         return None
-    key, _source = resolve_api_key()
+    key, _source = resolve_embedding_api_key(config)
     if key is None:
         return None
     provider = OpenAICompatibleProvider(config, api_key=key)

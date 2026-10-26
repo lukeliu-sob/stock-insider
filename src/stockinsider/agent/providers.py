@@ -6,7 +6,10 @@ Configuration is layered: code defaults < data/config.json (no secret
 material) < environment overrides (for CI and headless use). The API
 key resolves from the PROVIDER_API_KEY environment variable or the
 repo-root .env file (dotenv semantics: a real environment variable
-always wins); it is never stored in config.json.
+always wins); it is never stored in config.json. The embedding role
+is configured as one unit in the same env file (TP-036):
+EMBEDDING_API_KEY, EMBEDDING_BASE_URL and EMBEDDING_MODEL, so a chat
+vendor's key is never sent to a different embedding vendor.
 
 Implements: REQ-SI-FR-021, REQ-SI-SEC-001 (ADR-001)
 """
@@ -18,14 +21,24 @@ import os
 from dataclasses import dataclass, field
 from pathlib import Path
 from typing import Any, Callable
+from urllib.parse import urlparse
 
 from stockinsider.agent.profiles import PROFILE_BUDGETS, Profile
 from stockinsider.shared.envfile import env_file_path as shared_env_file_path
-from stockinsider.shared.envfile import read_env_file
+from stockinsider.shared.envfile import env_value, read_env_file
 
 DEFAULT_CHAT_MODEL = "deepseek-flash"
 DEFAULT_EMBEDDING_MODEL = "deepseek-flash"
 API_KEY_ENV = "PROVIDER_API_KEY"
+#: Embedding-role key (TP-036): the embedding vendor may differ from
+#: the chat vendor, and each vendor only ever sees its own key.
+EMBEDDING_API_KEY_ENV = "EMBEDDING_API_KEY"
+#: Embedding-role endpoint and model (TP-036), read from the
+#: environment or the env file; they win over the generic
+#: PROVIDER_BASE_URL / PROVIDER_EMBEDDING_MODEL and config.json.
+EMBEDDING_BASE_URL_ENV = "EMBEDDING_BASE_URL"
+EMBEDDING_MODEL_ENV = "EMBEDDING_MODEL"
+_KEY_ENV_NAMES = (API_KEY_ENV, EMBEDDING_API_KEY_ENV)
 CONFIG_VERSION = 1
 
 _TOP_KEYS = {"config_version", "providers", "budgets"}
@@ -136,8 +149,8 @@ def save_config(
     for flat in merged_updates:
         if any(token in flat.lower() for token in ("api_key", "key", "secret")):
             raise ProviderError(
-                f"secret material refused in config key {flat!r}: keys belong in {API_KEY_ENV} / .env, "
-                "never config.json (SEC-001)"
+                f"secret material refused in config key {flat!r}: keys belong in {API_KEY_ENV} / "
+                f"{EMBEDDING_API_KEY_ENV} / .env, never config.json (SEC-001)"
             )
     current = load_config(root)
     providers = {**current.get("providers", {})}
@@ -170,22 +183,35 @@ def save_config(
 def resolve_config(root: Path | str | None = None) -> ProviderConfig:
     """Layered resolution: code defaults < config.json < environment.
 
+    Every override reads the real environment first, then the env file
+    (TP-036), so the whole provider setup can live in .env:
+    PROVIDER_BASE_URL / PROVIDER_CHAT_MODEL / PROVIDER_EMBEDDING_MODEL
+    and the embedding role's EMBEDDING_BASE_URL / EMBEDDING_MODEL. The
+    role-specific values win over the generic ones, so one shared
+    PROVIDER_BASE_URL never redirects the embedding role to the chat
+    vendor.
+
     Implements: REQ-SI-FR-021 (ADR-001)
     """
     raw = load_config(root)
     providers = raw.get("providers", {})
     chat = providers.get("chat", {})
     embedding = providers.get("embedding", {})
-    env_base = os.environ.get("PROVIDER_BASE_URL")
-    env_chat_model = os.environ.get("PROVIDER_CHAT_MODEL")
-    env_embedding_model = os.environ.get("PROVIDER_EMBEDDING_MODEL")
+    env_base = env_value("PROVIDER_BASE_URL")
+    env_chat_model = env_value("PROVIDER_CHAT_MODEL")
+    env_embedding_model = env_value("PROVIDER_EMBEDDING_MODEL")
     budgets = {profile.value: int(value) for profile, value in dict(PROFILE_BUDGETS).items()}
     budgets.update({k: int(v) for k, v in raw.get("budgets", {}).items()})
     return ProviderConfig(
         chat_base_url=env_base or chat.get("base_url"),
         chat_model=env_chat_model or chat.get("model") or DEFAULT_CHAT_MODEL,
-        embedding_base_url=env_base or embedding.get("base_url"),
-        embedding_model=env_embedding_model or embedding.get("model") or DEFAULT_EMBEDDING_MODEL,
+        embedding_base_url=env_value(EMBEDDING_BASE_URL_ENV) or env_base or embedding.get("base_url"),
+        embedding_model=(
+            env_value(EMBEDDING_MODEL_ENV)
+            or env_embedding_model
+            or embedding.get("model")
+            or DEFAULT_EMBEDDING_MODEL
+        ),
         budgets=budgets,
     )
 
@@ -198,20 +224,59 @@ def env_file_path(explicit: Path | str | None = None) -> Path:
     return shared_env_file_path(explicit)
 
 
-def resolve_api_key(explicit_file: Path | str | None = None) -> tuple[str | None, str]:
+def resolve_api_key(
+    explicit_file: Path | str | None = None,
+    *,
+    name: str = API_KEY_ENV,
+) -> tuple[str | None, str]:
     """Resolve the API key: environment wins, then the env file; (key, source).
 
     Parsing lives in shared/envfile (one dotenv parser for the whole
-    codebase since DE-07); semantics unchanged and test-pinned.
+    codebase since DE-07); semantics unchanged and test-pinned. `name`
+    selects the key variable (TP-036: the embedding role has its own).
 
     Implements: REQ-SI-SEC-001 (ADR-004)
     """
-    from_env = os.environ.get(API_KEY_ENV)
+    if name not in _KEY_ENV_NAMES:
+        raise ProviderError(f"unknown key variable {name!r}; allowed: {list(_KEY_ENV_NAMES)}")
+    from_env = os.environ.get(name)
     if from_env:
         return from_env, "environment"
-    from_file = read_env_file(explicit_file).get(API_KEY_ENV)
+    from_file = read_env_file(explicit_file).get(name)
     if from_file:
         return from_file, ".env"
+    return None, "unset"
+
+
+def _host(url: str | None) -> str | None:
+    if not url:
+        return None
+    host = urlparse(url).hostname
+    return host.lower().rstrip(".") if host else None
+
+
+def resolve_embedding_api_key(
+    config: ProviderConfig,
+    explicit_file: Path | str | None = None,
+) -> tuple[str | None, str]:
+    """Resolve the embedding-role key; (key, source).
+
+    EMBEDDING_API_KEY wins (environment, then the env file). Without
+    it, PROVIDER_API_KEY is used only when the embedding endpoint is on
+    the chat endpoint's host (one vendor); for any other host the
+    result is unset, so the chat vendor's key is never sent to another
+    vendor and the caller reports the missing key explicitly (INV-003).
+
+    Implements: REQ-SI-SEC-001, REQ-SI-FR-021 (ADR-001)
+    """
+    key, source = resolve_api_key(explicit_file, name=EMBEDDING_API_KEY_ENV)
+    if key:
+        return key, source
+    embedding_host = _host(config.embedding_base_url)
+    if embedding_host is not None and embedding_host == _host(config.chat_base_url):
+        chat_key, chat_source = resolve_api_key(explicit_file)
+        if chat_key:
+            return chat_key, f"{API_KEY_ENV} via {chat_source}, same host"
     return None, "unset"
 
 
@@ -227,11 +292,20 @@ def mask_key(key: str | None) -> str:
     return f"{key[:3]}...{key[-4:]}"
 
 
-def write_env_api_key(value: str, explicit_file: Path | str | None = None) -> Path:
-    """Create or update PROVIDER_API_KEY in .env; other lines preserved.
+def write_env_api_key(
+    value: str,
+    explicit_file: Path | str | None = None,
+    *,
+    name: str = API_KEY_ENV,
+) -> Path:
+    """Create or update a key variable in .env; other lines preserved.
+
+    `name` is PROVIDER_API_KEY by default, or EMBEDDING_API_KEY.
 
     Implements: REQ-SI-SEC-001 (ADR-001)
     """
+    if name not in _KEY_ENV_NAMES:
+        raise ProviderError(f"unknown key variable {name!r}; allowed: {list(_KEY_ENV_NAMES)}")
     if not value.strip():
         raise ProviderError("refusing to write an empty API key")
     path = env_file_path(explicit_file)
@@ -243,13 +317,13 @@ def write_env_api_key(value: str, explicit_file: Path | str | None = None) -> Pa
         stripped = line.strip()
         if stripped.startswith("#") or "=" not in stripped:
             continue
-        name, _, _ = stripped.partition("=")
-        if name.strip() == API_KEY_ENV:
-            lines[index] = f"{API_KEY_ENV}={value}"
+        line_name, _, _ = stripped.partition("=")
+        if line_name.strip() == name:
+            lines[index] = f"{name}={value}"
             replaced = True
             break
     if not replaced:
-        lines.append(f"{API_KEY_ENV}={value}")
+        lines.append(f"{name}={value}")
     path.parent.mkdir(parents=True, exist_ok=True)
     tmp = path.with_suffix(".env.tmp")
     tmp.write_text("\n".join(lines) + "\n", encoding="utf-8")
@@ -464,7 +538,10 @@ class OpenAICompatibleProvider:
                 "or set PROVIDER_BASE_URL — refusing to guess an endpoint (INV-003)"
             )
         if not self._api_key:
-            raise ProviderError(f"{API_KEY_ENV} is not set (embedding call refused)")
+            raise ProviderError(
+                f"{EMBEDDING_API_KEY_ENV} is not set (embedding call refused); {API_KEY_ENV} "
+                "serves the embedding role only when it shares the chat endpoint's host"
+            )
         client = self._client(self._config.embedding_base_url)
         try:
             response = client.embeddings.create(

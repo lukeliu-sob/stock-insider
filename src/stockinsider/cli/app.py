@@ -18,11 +18,13 @@ import typer
 
 from stockinsider import __version__
 from stockinsider.agent.providers import (
+    EMBEDDING_API_KEY_ENV,
     OpenAICompatibleProvider,
     config_path,
     mask_key,
     resolve_api_key,
     resolve_config,
+    resolve_embedding_api_key,
     save_config,
     write_env_api_key,
 )
@@ -162,9 +164,12 @@ def embed() -> None:
     from stockinsider.data.ingest.embed import run_embed
 
     config = resolve_config()
-    key, _source = resolve_api_key()
+    key, _source = resolve_embedding_api_key(config)
     if not config.embedding_base_url or key is None:
-        typer.echo("embedding provider not configured (embedding base_url + api key required); nothing done")
+        typer.echo(
+            f"embedding provider not configured (embedding base_url + {EMBEDDING_API_KEY_ENV} required; "
+            "the chat key serves only a same-host endpoint); nothing done"
+        )
         raise typer.Exit(code=1)
     provider = OpenAICompatibleProvider(config, api_key=key)
     data_store = open_data_store()
@@ -411,6 +416,8 @@ def config_show() -> None:
     typer.echo(f"embedding:  {resolved.embedding_model} @ {resolved.embedding_base_url or 'UNCONFIGURED'}")
     typer.echo("budgets:    " + " ".join(f"{k}={v}" for k, v in sorted(resolved.budgets.items())))
     typer.echo(f"api key:    {mask_key(key)} ({source})")
+    embedding_key, embedding_source = resolve_embedding_api_key(resolved)
+    typer.echo(f"embed key:  {mask_key(embedding_key)} ({embedding_source})")
 
 
 @config_app.command("set")
@@ -427,6 +434,11 @@ def config_set(
         "--api-key",
         help="Write PROVIDER_API_KEY to .env (never stored in config.json).",
     ),
+    embedding_api_key: str = typer.Option(
+        None,
+        "--embedding-api-key",
+        help="Write EMBEDDING_API_KEY to .env (never stored in config.json).",
+    ),
 ) -> None:
     """Update configuration values; secrets go to .env, never config.json.
 
@@ -435,6 +447,9 @@ def config_set(
     if api_key is not None:
         path = write_env_api_key(api_key)
         typer.echo(f"api key written to {path} (masked: {mask_key(api_key)})")
+    if embedding_api_key is not None:
+        path = write_env_api_key(embedding_api_key, name=EMBEDDING_API_KEY_ENV)
+        typer.echo(f"embedding api key written to {path} (masked: {mask_key(embedding_api_key)})")
     updates: dict[str, object] = {}
     if chat_base_url is not None:
         updates["chat_base_url"] = chat_base_url
@@ -451,7 +466,7 @@ def config_set(
     if budget_deep is not None:
         updates["budget_deep"] = budget_deep
     if not updates:
-        if api_key is None:
+        if api_key is None and embedding_api_key is None:
             typer.secho("nothing to set; see --help for options", fg=typer.colors.RED, err=True)
             raise typer.Exit(code=2)
         return

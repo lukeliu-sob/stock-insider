@@ -3508,3 +3508,43 @@ sessions:
       (no pattern changes). The 80% target stays on record as not met, with its acceptance
       assertion kept as a strict expected failure (TP-033). The owner set the notice wording.
     status: applied
+  - id: AILOG-0082
+    date: "2026-10-26"
+    agent_task: >-
+      TP-036: the QA-002 retrieval relevance suite over frozen real vectors, and the
+      embedding-role configuration it needs. Provider layer: the embedding role reads
+      EMBEDDING_API_KEY, EMBEDDING_BASE_URL and EMBEDDING_MODEL from the environment, then
+      the env file; the chat key serves the embedding role only on the chat endpoint's host,
+      so it is never sent to another vendor. PROVIDER_BASE_URL, PROVIDER_CHAT_MODEL,
+      PROVIDER_EMBEDDING_MODEL, EODHD_FUNDAMENTALS and EGRESS_EXTRA_HOSTS now read the env
+      file as well. CLI: config set --embedding-api-key; config show prints the embedding key
+      masked. Suite: 25 labeled queries over the 89 keep-labeled titles, vectors frozen once by
+      a live generator, loaded through ensure_vec_table / insert_vectors / knn. Measured
+      (E-011): hit@5 0.920 (pass), relevance@5 0.768 (miss). Tests: 16 in
+      test_embedding_role_config.py, 9 in test_retrieval.py (one strict expected failure);
+      offline conftest isolates every test from a real env file.
+    artifacts:
+      - src/stockinsider/agent/providers.py
+      - src/stockinsider/agent/repl.py
+      - src/stockinsider/cli/app.py
+      - src/stockinsider/data/ingest/sync.py
+      - src/stockinsider/shared/egress.py
+      - test/offline/conftest.py
+      - test/offline/test_embedding_role_config.py
+      - test/offline/test_retrieval.py
+      - test/offline/fixtures/retrieval_queries_v1.json
+      - test/offline/fixtures/retrieval_vectors_v1.json
+      - test/live/gen_retrieval_vectors.py
+      - docs/test-plans/TP-036.md
+      - docs/architecture/evaluation-logbook.md
+      - docs/debt-register.md
+      - docs/ai-use-log.yaml
+    human_decision: >-
+      Owner, in session, 2026-10-26: approved TP-036; chose the embedding model
+      qwen3.7-text-embedding-flash and its endpoint; asked for the embedding and provider
+      settings to live in .env; approved the shared/egress.py change that makes
+      EGRESS_EXTRA_HOSTS read the env file (ADR-004 Am2 alignment). On the measured miss, the
+      owner chose to land the suite with the relevance assertion as a strict expected failure
+      (DE-17) and to attempt a retrieval improvement under a separate plan (TP-037). The query
+      labels were written by the agent and fixed before measurement; they await owner review.
+    status: applied

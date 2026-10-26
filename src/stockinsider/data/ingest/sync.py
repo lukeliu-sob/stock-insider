@@ -175,10 +175,13 @@ class SyncService:
             )
 
     def _fundamentals_enabled(self) -> bool:
-        """True unless a recorded plan denial stands (re-probe via env override)."""
-        import os
+        """True unless a recorded plan denial stands (re-probe via env override).
 
-        if os.environ.get("EODHD_FUNDAMENTALS") == "1":
+        The override reads the environment, then the env file (TP-036).
+        """
+        from stockinsider.shared.envfile import env_value
+
+        if env_value("EODHD_FUNDAMENTALS") == "1":
             return True
         row = self._conn.execute("SELECT last_status FROM sync_state WHERE track = ?", (FUND_ACCESS_TRACK,)).fetchone()
         return row is None or row["last_status"] != "denied"
