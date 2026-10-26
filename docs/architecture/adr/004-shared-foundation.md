@@ -192,7 +192,9 @@ fetch from hosts outside the current static whitelist. Status:
 TP-035 implementation change set, after owner approval of this
 amendment.
 
-1. `EGRESS_WHITELIST` gains five entries, each tied to its fetch role:
+1. `EGRESS_WHITELIST` gains up to ten entries, each tied to its fetch
+   role. An entry whose source fails the TP-035 live probe is removed
+   from the hunk before it lands; none is added speculatively.
 
    | Entry | Role | Fetched host(s) |
    |---|---|---|
@@ -201,6 +203,11 @@ amendment.
    | `theguardian.com` | RSS listing | `www.theguardian.com` |
    | `cnbc.com` | body fetch | `www.cnbc.com` |
    | `marketwatch.com` | body fetch | `www.marketwatch.com` |
+   | `thestandard.com.hk` | RSS listing + body fetch | fixed by the live probe |
+   | `rthk.hk` | RSS listing + body fetch | `rthk.hk`, `news.rthk.hk` |
+   | `hongkongfp.com` | RSS listing + body fetch | `hongkongfp.com` |
+   | `chinadailyhk.com` | RSS listing + body fetch | fixed by the live probe |
+   | `news.gov.hk` | RSS listing + body fetch | `www.news.gov.hk` |
 
 2. Egress entries are fetch hosts, not relevance domains. They need
    not appear in the S2 tier lists: `bbci.co.uk` is the BBC feed host,
@@ -210,5 +217,11 @@ amendment.
 3. Matching is unchanged (exact or dot-suffix, HTTPS only), so
    subdomains of an entry are allowed and nothing else is. A denial
    is classified and writes nothing (SEC-003 fail-closed).
+4. The parsing libraries `feedparser` and `beautifulsoup4` (ADR-002
+   Amendment 2) are handed bytes only; neither is given a URL, so
+   neither can open a connection around this gate.
+5. The TP-036 embedding endpoint is a provider host and goes through
+   the existing owner-declared `EGRESS_EXTRA_HOSTS` path (Amendment
+   2), not through this static list.
 
 Implements: REQ-SI-SEC-003.

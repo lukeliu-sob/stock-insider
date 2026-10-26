@@ -29,7 +29,12 @@ meta:
   # 0.6.1 (2026-10-02, TP-024, ADR-008 Am1): REQ-SI-INV-001 regression_scope
   # gains test/offline/test_tp024_typed_claims.py. No statement or fit-criterion
   # change; recorded in AILOG-0071.
-  registry_version: "0.6.1"
+  # 0.6.2 (2026-10-26, TP-035, ADR-002 Am2): REQ-SI-FR-027 appended (curated
+  # topical bucket, owner decision D6); the English-news scope_must_do item
+  # names it. New row only; no existing row changed. Documentation-only
+  # change set (no src/), so no AILOG entry; recorded in
+  # news-rss-body-design.md §12.
+  registry_version: "0.6.2"
   id_prefix: REQ-SI
   classification: type-c-system          # AI-agent-built AND LLM-native (methodology judgment 1)
   markets: [HK, US]
@@ -42,7 +47,7 @@ meta:
   scope_must_do:
     - EOD market data ingestion (watchlist + benchmark indices, 5y, gap-checked)
     - Fundamentals ingestion with full HK coverage via commercial source
-    - English news ingestion (relevance-filtered, deduplicated, 2y retention)
+    - English news ingestion (relevance-filtered, deduplicated, 2y retention; plus a curated topical bucket, REQ-SI-FR-027)
     - Deterministic indicator computation (LLM never computes)
     - RAG-grounded analysis reports with full numeric provenance
     - Event scoring and event study (T+5 primary)
@@ -696,6 +701,33 @@ requirements:
       - test/offline/test_tui_render.py
       - test/offline/test_tui_session.py
       - test/offline/test_tui_invariants.py
+
+  - id: REQ-SI-FR-027
+    type: functional
+    statement: >-
+      Items from a curated, config-of-record list of English news feeds
+      that match no watchlist symbol or macro group are stored in a
+      separate topical bucket as current-affairs context. The bucket
+      never receives items from vendor or firehose sources, keeps the
+      structural gates, negative signals, deduplication and 2-year
+      retention of REQ-SI-FR-003, and is excluded from symbol-scoped and
+      default semantic retrieval.
+    fit_criterion: >-
+      (a) An unmatched fixture item from a curated feed lands in the
+      topical bucket; the same item from GDELT or EODHD stores nothing.
+      (b) A matched item is stored in its symbol or macro bucket only.
+      (c) Topical rows never appear in default news.search results.
+      (d) Per-feed volume caps are enforced and overflow is reported.
+    priority: Should
+    tradeoff: >-
+      A bounded, curated exception to the REQ-SI-FR-003 firehose
+      prohibition, accepted for current-affairs context; kept out of
+      retrieval so symbol-query relevance (REQ-SI-QA-002) is not diluted.
+    source: "Owner decision D6, 2026-10-26 (news-rss-body-design.md)"
+    status: conceptual
+    depends_on: [REQ-SI-FR-003]
+    regression_trigger: true
+    regression_scope: ["future/test/offline/test_ingest_newsrss.py"]
 
   # -----------------------------------------------------------------
   # Invariants (INV) — non-negotiable, zero-tolerance

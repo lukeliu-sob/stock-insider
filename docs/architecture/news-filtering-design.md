@@ -39,25 +39,25 @@ gated separately).
 - **v2 (after QA-002 passes on the title corpus)**: extend to body
   fetching for tier-A domains via the FR-015 whitelist crawler path.
   Activation requires an explicit owner decision recorded here.
-- **v2 activation (proposed 2026-10-26, TP-035, ADR-002 Am2, ADR-004
-  Am7)**: not yet decided. The owner decision is recorded here when
-  TP-035 is approved; implementation lands only with the approved
-  TP-035 change set. The v2 precondition above (QA-002 passes on the
-  title corpus) is not met: QA-002 is still conceptual and its
-  verification suite does not exist yet. Owner decision D10
-  (2026-10-26): no waiver; QA-002 is implemented first under TP-036,
-  and TP-035 implementation waits for that suite to pass. Proposed
-  content: body fetching for the initial body whitelist candidates
-  (cnbc.com, marketwatch.com), which join the whitelist only after
-  the TP-035 live probe confirms fetchability and terms, via
-  per-domain templates — the FR-015 mechanism applied at ingestion;
-  tier-A domains behind bot walls stay title-only and are reported
-  per run (INV-003). A curated RSS listing track (SCMP / BBC business
-  / Guardian business) feeds the same S1–S5 pipeline; the firehose
-  prohibition applies to it unchanged. Bodies are raw evidence at
-  rest; the egress boundary sanitizes. Body-inclusive embeddings
-  remain off pending a separate owner decision. Full design:
-  `news-rss-body-design.md`.
+- **v2 activation (owner decision 2026-10-26, decisions D5–D10;
+  TP-035, ADR-002 Am2, ADR-004 Am7)**: v2 is activated in design.
+  Implementation lands only with the approved TP-035 change set, after
+  three gates: TP-035 approval, the owner-added topical-bucket
+  registry row, and a passing QA-002 suite. The v2 precondition above
+  (QA-002 passes on the title corpus) is not met yet: QA-002 is still
+  conceptual. Owner decision D10: no waiver; QA-002 is implemented
+  first under TP-036. Content: body fetching for the probe-gated body
+  whitelist candidates (cnbc.com, marketwatch.com and the HK English
+  local sources) via per-domain templates — the FR-015 mechanism
+  applied at ingestion; tier-A domains behind bot walls stay
+  title-only and are reported per run (INV-003). A curated RSS
+  listing track (SCMP, BBC and Guardian business, HK English local
+  sources) feeds the same S1–S5 pipeline; for symbol and macro
+  buckets the firehose prohibition applies unchanged, and unmatched
+  curated-feed items go to a separate, capped `topical` bucket that
+  is not embedded in v1. Bodies are raw evidence at rest; the egress
+  boundary sanitizes. Body-inclusive embeddings remain off pending a
+  separate owner decision. Full design: `news-rss-body-design.md`.
 
 ## 4. Filter Pipeline (five stages, fail-closed, fully deterministic)
 
