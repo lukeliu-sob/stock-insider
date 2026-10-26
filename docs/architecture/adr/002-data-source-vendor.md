@@ -70,3 +70,51 @@ Residuals recorded as debt (DE-08): empty-attempt counting and the
 gap-repair budget share are per run, not per day.
 
 Implements: REQ-SI-FR-001, REQ-SI-INV-003.
+
+## Amendment 2 (2026-10-26, TP-035) — news D1 v2: RSS listing track + body backfill track (proposed)
+
+Proposed activation of news-filtering-design.md D1 v2, with the
+approach of a reference news-corpus implementation (curated-feed
+collection, body extraction, source health, backfill state machine)
+ported under this project's governance. Full design:
+`news-rss-body-design.md` (decisions D5–D10). Status: **proposed** —
+the owner decision is recorded only when TP-035 is approved; no code
+lands before that. This amendment, ADR-004 Amendment 7, the design
+note, and the D1 activation proposal are the documentation change
+set. D1 v2's own precondition (QA-002 passes on the title corpus) is
+not yet met; per owner decision D10 it is met by implementing QA-002
+first (TP-036), not waived.
+
+1. **RSS listing track**: curated English feeds on tier-A /
+   general-news domains join GDELT and EODHD as a third listing
+   source, through the unchanged S1–S5 pipeline; per-feed health in
+   `news_feed_health`. FR-003's filter-at-ingestion rule is not
+   relaxed for named sources.
+2. **Body backfill track**: stored rows on the body whitelist gain a
+   fetched body via the shared Transport seam; per-domain template
+   extraction (the FR-015 mechanism, ingestion side); row state
+   machine pending → extracted | failed → unavailable (cap 3 counted
+   attempts; transport / throttle failures are reported, never
+   counted); per-domain pause after 5 consecutive failures. Bodies
+   stored raw with `crawled` provenance; SEC-002 stays at the egress
+   boundary. Embeddings unchanged (D8).
+3. **Rejected from the reference**: FTS5 (FR-007 vector-only
+   tradeoff), Google-News URL decoding (non-vendor scraping), the
+   resident scheduler (deployment shape), the real-browser fallback
+   (instability), and the dependency set feedparser / trafilatura /
+   BeautifulSoup / httpx / tenacity / asyncio (stdlib satisfies the
+   fit criteria; one-shot no-retry stands).
+4. **Egress**: the whitelist additions are a `shared/` change and are
+   governed by ADR-004 Amendment 7 (owner approval), not by this
+   amendment; the code hunk ships with the implementation change set.
+5. **Storage**: append-only migration v8 (news body columns +
+   `news_feed_health`); schema version 8 under the existing
+   memory-design §4 rules.
+
+Reopen conditions: template drift below the fixture threshold →
+recalibrate; persistent extraction-quality failure → the trafilatura
+dependency reopen; a whitelisted domain's terms forbid storage →
+remove the domain (robots.txt / terms are also checked by the TP-035
+live probe before a domain joins the body whitelist).
+
+Implements: REQ-SI-FR-003, REQ-SI-FR-015, REQ-SI-INV-003.
