@@ -34,7 +34,10 @@ meta:
   # names it. New row only; no existing row changed. Documentation-only
   # change set (no src/), so no AILOG entry; recorded in
   # news-rss-body-design.md §12.
-  registry_version: "0.6.2"
+  # 0.6.3 (2026-10-26, TP-035 implementation): REQ-SI-FR-027 regression_scope
+  # drops its future/ prefix (the suite exists). No statement or fit-criterion
+  # change; recorded in AILOG-0085.
+  registry_version: "0.6.3"
   id_prefix: REQ-SI
   classification: type-c-system          # AI-agent-built AND LLM-native (methodology judgment 1)
   markets: [HK, US]
@@ -727,7 +730,7 @@ requirements:
     status: conceptual
     depends_on: [REQ-SI-FR-003]
     regression_trigger: true
-    regression_scope: ["future/test/offline/test_ingest_newsrss.py"]
+    regression_scope: [test/offline/test_ingest_newsrss.py]
 
   # -----------------------------------------------------------------
   # Invariants (INV) — non-negotiable, zero-tolerance

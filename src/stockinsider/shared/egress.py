@@ -30,6 +30,22 @@ EGRESS_WHITELIST: frozenset[str] = frozenset(
     }
 )
 
+#: News feed and article hosts (ADR-004 Am7, TP-035), kept as their own
+#: named set so the role of every entry stays auditable. Each entry's
+#: source passed the TP-035 live probe (2026-10-26); roles are in the
+#: Am7 table. validate_egress_url accepts them alongside the whitelist.
+NEWS_FETCH_HOSTS: frozenset[str] = frozenset(
+    {
+        "scmp.com",
+        "bbci.co.uk",
+        "theguardian.com",
+        "cnbc.com",
+        "rthk.hk",
+        "hongkongfp.com",
+        "news.gov.hk",
+    }
+)
+
 
 class EgressViolationError(RuntimeError):
     """Explicit outbound-URL rejection (SEC-003).
@@ -121,7 +137,7 @@ def validate_egress_url(url: str, *, extra_allowed: tuple[str, ...] = ()) -> Non
         # traffic does not egress; refusing it made the documented local
         # endpoint path unusable.
         raise EgressViolationError(f"egress refused: non-HTTPS scheme {parsed.scheme!r} in {url!r} (SEC-003)")
-    allowed = EGRESS_WHITELIST | frozenset(name.lower() for name in extra_allowed)
+    allowed = EGRESS_WHITELIST | NEWS_FETCH_HOSTS | frozenset(name.lower() for name in extra_allowed)
     if not loopback and not _domain_allowed(host, allowed):
         raise EgressViolationError(
             f"egress refused: host {host!r} not in whitelist (SEC-003); allowed: {sorted(allowed)}"

@@ -3598,3 +3598,55 @@ sessions:
       expected failure and is re-measured when body-inclusive embedding is decided. TP-035
       then waits only on its own approval.
     status: applied
+  - id: AILOG-0085
+    date: "2026-10-26"
+    agent_task: >-
+      TP-035 implementation: the RSS listing track (newsrss.py; ten curated feeds,
+      feedparser over page-seam bytes, S1-S5 reuse, the topical bucket with its per-feed
+      cap, feed health), the body backfill track (newsbody.py; BODY_WHITELIST of four
+      probe-passing domains, CSS templates, the not_applicable -> pending -> extracted |
+      failed -> unavailable state machine, counted vs uncounted failures, domain pause,
+      evidence-first queue within 14 days, one fetch per article), the egress-checked page
+      seam in http.py, migration v8 with lookup indexes, the topical exclusion in the
+      embedding backlog, the HK tier-list additions, NEWS_FETCH_HOSTS in shared/egress.py,
+      both tracks in SyncService with isolation boundaries, sync_status surfaces, and the
+      feedparser / beautifulsoup4 dependencies. A live probe selected the sources; an
+      end-to-end live run on a temporary store confirmed all ten feeds and all four body
+      templates. The offline conftest now blocks DNS, outbound connections and proxy
+      discovery. Registry 0.6.3: REQ-SI-FR-027 regression_scope drops its future/ prefix.
+    artifacts:
+      - src/stockinsider/data/ingest/newsrss.py
+      - src/stockinsider/data/ingest/newsbody.py
+      - src/stockinsider/data/ingest/http.py
+      - src/stockinsider/data/ingest/newsfilter.py
+      - src/stockinsider/data/ingest/sync.py
+      - src/stockinsider/data/store/schema.py
+      - src/stockinsider/data/store/vector.py
+      - src/stockinsider/shared/egress.py
+      - pyproject.toml
+      - uv.lock
+      - test/offline/conftest.py
+      - test/offline/test_ingest_newsrss.py
+      - test/offline/test_ingest_newsbody.py
+      - test/offline/test_tp035_storage_sync.py
+      - test/offline/fixtures/news_pages/
+      - test/live/probe_news_sources.py
+      - docs/test-plans/TP-035.md
+      - docs/architecture/news-rss-body-design.md
+      - docs/architecture/adr/002-data-source-vendor.md
+      - docs/architecture/adr/004-shared-foundation.md
+      - docs/architecture/trace-matrix.md
+      - docs/req/requirements.yaml
+      - docs/debt-register.md
+      - docs/review-memo.md
+      - docs/ai-use-log.yaml
+    human_decision: >-
+      Owner, in session, 2026-10-26: set the session goal to implement TP-035 (test the
+      news sources, normalize the data format, long-term storage, efficient lookup), which
+      approves TP-035 with ADR-002 Am2 and ADR-004 Am7, including the shared/egress.py
+      change. Earlier decisions D5-D10 and D10a set the sources, the topical bucket, the
+      dependencies and the cadence. The probe-driven source set, the separate
+      NEWS_FETCH_HOSTS set and the evidence-first body queue are agent decisions recorded
+      as deviations in TP-035 for owner review; terms of use of the body domains await the
+      owner.
+    status: applied

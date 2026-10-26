@@ -186,6 +186,31 @@ MIGRATION_V7 = """
 ALTER TABLE sync_gaps ADD COLUMN empty_attempts_date TEXT;
 """
 
+#: Migration v8 (TP-035, ADR-002 Am2): article bodies fetched by the
+#: body track, stored verbatim as crawled evidence with a per-row state
+#: machine (not_applicable -> pending -> extracted | failed ->
+#: unavailable); per-feed health for the RSS track. The indexes serve
+#: the hot lookups: the body work queue (status, newest first), body
+#: writes and cross-bucket lookups by normalized URL, the retention
+#: sweeps over the whole table, and per-source counts.
+MIGRATION_V8 = """
+ALTER TABLE news ADD COLUMN body TEXT;
+ALTER TABLE news ADD COLUMN body_status TEXT NOT NULL DEFAULT 'not_applicable';
+ALTER TABLE news ADD COLUMN body_attempts INTEGER NOT NULL DEFAULT 0;
+ALTER TABLE news ADD COLUMN body_fetched_at TEXT;
+CREATE TABLE news_feed_health (
+    feed_id TEXT PRIMARY KEY,
+    consecutive_failures INTEGER NOT NULL DEFAULT 0,
+    last_ok_at TEXT,
+    last_error TEXT
+);
+CREATE INDEX idx_news_body_queue ON news(body_status, published_at);
+CREATE INDEX idx_news_url_norm ON news(url_norm);
+CREATE INDEX idx_news_published ON news(published_at);
+CREATE INDEX idx_news_source ON news(source);
+CREATE INDEX idx_news_quarantine_fetched ON news_quarantine(fetched_at);
+"""
+
 #: Append-only migration list: index i holds migration to version i+1.
 MIGRATIONS: tuple[str, ...] = (
     MIGRATION_V1,
@@ -195,6 +220,7 @@ MIGRATIONS: tuple[str, ...] = (
     MIGRATION_V5,
     MIGRATION_V6,
     MIGRATION_V7,
+    MIGRATION_V8,
 )
 
 #: Latest schema version this code understands.

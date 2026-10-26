@@ -3,7 +3,7 @@
 | Field | Value |
 |---|---|
 | Document | `docs/architecture/news-rss-body-design.md` (pre-TP-035 design note) |
-| Version | 0.3.0 (owner decisions D5–D10 of 2026-10-26: HK English sources, topical bucket, feedparser + BeautifulSoup, daily cadence, QA-002 first with a Qwen embedding model) |
+| Version | 0.4.0 (TP-035 implemented 2026-10-26: source set fixed by the live probe, §13) |
 | Date | 2026-10-26 |
 | Registry baseline | `docs/req/requirements.yaml` v0.6.2 (REQ-SI-FR-027 appended, §12) |
 | Governs | planned `data/ingest/newsrss.py`, `data/ingest/newsbody.py`; FR-003 (Must), FR-007 input side, FR-015 mechanism (Should), the proposed topical-feed row (§12), INV-003, SEC-003 |
@@ -80,7 +80,7 @@ FR-003's "no full firehose" filter-at-ingestion rule does not cover.
 It has its own requirement row, REQ-SI-FR-027 (§12, registry
 v0.6.2); no existing row changes.
 
-## 4. Track 1 — RSS Listing (`data/ingest/newsrss.py`, planned)
+## 4. Track 1 — RSS Listing (`data/ingest/newsrss.py`; as built: §13)
 
 A third S0 listing source feeding the **unchanged** S1–S5 machinery.
 
@@ -189,7 +189,7 @@ current-affairs source rather than rejected.
   `agent/registry` (safety-critical) and needs its own plan and an
   ADR-005 amendment.
 
-## 5. Track 2 — Body Backfill (`data/ingest/newsbody.py`, planned)
+## 5. Track 2 — Body Backfill (`data/ingest/newsbody.py`; as built: §13)
 
 The D1 v2 body fetch, for stored rows of any source whose domain is
 on the body whitelist.
@@ -281,7 +281,7 @@ sync (D9). Read-only status helpers (`rss_news_status`,
 `sync status` is an optional follow-up (the run report satisfies the
 INV-003 visibility floor for v1).
 
-## 8. Egress Whitelist Additions (shared/, owner-gated)
+## 8. Egress Whitelist Additions (shared/, owner-gated; as built: §13)
 
 `EGRESS_WHITELIST` gains the feed and body hosts listed in ADR-004
 Amendment 7: `scmp.com`, `bbci.co.uk`, `theguardian.com`, `cnbc.com`,
@@ -385,3 +385,26 @@ the `future/` prefix until the suite exists:
 The meta `scope_must_do` entry for English news ingestion now names
 the curated topical bucket (REQ-SI-FR-027). The TP-035 implementation
 PR drops the `future/` prefix once the suite lands.
+
+## 13. As Built (TP-035, 2026-10-26)
+
+The tables in §4, §5 and §8 are the pre-probe proposal; the live probe
+(TP-035 "Live probe result") fixed the set below, and the code is the
+config-of-record.
+
+- **Feeds** (`RSS_FEEDS`, all topical): scmp:top, scmp:china,
+  bbc:business, guardian:business, cnbc:top, rthk:finance and
+  rthk:local (HTTPS at `rthk9.rthk.hk`), hkfp:all, govhk:finance,
+  govhk:top. Dropped: MarketWatch (bot wall), The Standard and China
+  Daily HK (no feed).
+- **Body whitelist**: cnbc.com, hongkongfp.com, news.gov.hk, rthk.hk,
+  with CSS-selector templates; robots.txt allows the article paths.
+- **Tier list**: rthk.hk, hongkongfp.com, news.gov.hk join
+  `GENERAL_NEWS_DOMAINS`.
+- **Egress**: the seven passing hosts in `NEWS_FETCH_HOSTS` (ADR-004
+  Am7); `EGRESS_WHITELIST` unchanged.
+- **Body queue**: evidence rows before topical rows, newest first,
+  within 14 days; older waiting rows reported as `stale`; one fetch per
+  normalized URL across buckets.
+- **Storage and lookup**: migration v8 as in §6, plus indexes for the
+  body queue, URL lookups, retention and per-source counts.

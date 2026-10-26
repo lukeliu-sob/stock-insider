@@ -37,13 +37,18 @@ TIER_A_DOMAINS: frozenset[str] = frozenset(
     }
 )
 
-#: General news domains (reputable, not finance-specialized).
+#: General news domains (reputable, not finance-specialized). The HK
+#: English sources joined in TP-035 (D2 change, fixture precision gate
+#: re-run in the same change set): only those that passed the live probe.
 GENERAL_NEWS_DOMAINS: frozenset[str] = frozenset(
     {
         "apnews.com",
         "bbc.com",
         "cnn.com",
+        "hongkongfp.com",
+        "news.gov.hk",
         "nytimes.com",
+        "rthk.hk",
         "theguardian.com",
         "washingtonpost.com",
     }

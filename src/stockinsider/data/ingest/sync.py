@@ -24,13 +24,15 @@ from typing import Any, Callable
 
 from stockinsider.data.ingest.budget import CallBudget
 from stockinsider.data.ingest.calendar import CalendarUnavailable, missing_ranges, trading_dates
-from stockinsider.data.ingest.http import Transport
+from stockinsider.data.ingest.http import PageTransport, Transport
 from stockinsider.data.ingest.fundamentals import (
     CALL_COST as FUNDAMENTALS_COST,
     EodhdFundamentalsAdapter,
     FundamentalsNotInPlan,
 )
 from stockinsider.data.ingest.news import GdeltNewsAdapter, news_status, run_news_sync
+from stockinsider.data.ingest.newsbody import body_status
+from stockinsider.data.ingest.newsrss import rss_news_status
 from stockinsider.data.ingest.market import (
     EodhdMarketAdapter,
     InvalidMarketData,
@@ -138,6 +140,7 @@ class SyncService:
         budget: CallBudget | None = None,
         transport: Transport | None = None,
         news_enabled: bool = True,
+        page_transport: PageTransport | None = None,
     ) -> None:
         self._conn = conn
         self._budget = budget if budget is not None else CallBudget(conn)
@@ -145,6 +148,7 @@ class SyncService:
         self._fund_adapter = EodhdFundamentalsAdapter(transport=transport)
         self._news_enabled = news_enabled
         self._transport = transport
+        self._page_transport = page_transport  # RSS and body tracks (TP-035)
 
     # -- helpers ----------------------------------------------------------
 
@@ -578,6 +582,24 @@ class SyncService:
             except Exception as exc:  # explicit isolation boundary
                 report.news["eodhd"] = {"failed": f"eodhd track aborted: {exc}"}
                 emit(f"news/eodhd: aborted ({exc})")
+            emit("news/rss: start")
+            try:  # curated feeds (TP-035, ADR-002 Am2)
+                from stockinsider.data.ingest.newsrss import RssFeedAdapter, run_rss_news_sync
+
+                report.news["rss"] = run_rss_news_sync(
+                    self._conn, adapter=RssFeedAdapter(transport=self._page_transport), progress=progress
+                )
+            except Exception as exc:  # explicit isolation boundary
+                report.news["rss"] = {"failed": f"rss track aborted: {exc}"}
+                emit(f"news/rss: aborted ({exc})")
+            emit("news/body: start")
+            try:  # body backfill for whitelisted domains (TP-035)
+                from stockinsider.data.ingest.newsbody import run_body_backfill
+
+                report.news["body"] = run_body_backfill(self._conn, self._page_transport, progress=progress)
+            except Exception as exc:  # explicit isolation boundary
+                report.news["body"] = {"failed": f"body track aborted: {exc}"}
+                emit(f"news/body: aborted ({exc})")
         emit(f"sync tracks complete +{monotonic() - started:.1f}s")
         return report
 
@@ -622,4 +644,6 @@ def sync_status(conn: sqlite3.Connection) -> dict[str, Any]:
         "active_symbols": int(active),
         "last_run": _last_run_row(conn),
         "news": news_status(conn),
+        "news_rss": rss_news_status(conn),
+        "news_body": body_status(conn),
     }

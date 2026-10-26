@@ -15,7 +15,7 @@
 | Hidden dependencies | 0 |
 | Agent-induced bloat | 0 |
 | Evaluation debt | 3 (DE-01, DE-09, DE-17) |
-| Guardrail debt | 3 (DE-03, DE-15, DE-16) |
+| Guardrail debt | 4 (DE-03, DE-15, DE-16, DE-18) |
 | Human/cognitive debt | 1 |
 
 Categories at zero have no current entries; the category opens the moment its first entry appears — do not pre-register speculative debt.
@@ -129,3 +129,9 @@ Categories at zero have no current entries; the category opens the moment its fi
 - **Description**: the TP-036 suite measures relevance@5 = 0.768 against the 0.8 QA-002 threshold (E-011; hit@5 = 0.920 passes FR-007). Alias, paraphrase and small-family macro queries fill the top 5 with items from other topic families. The assertion stays in `test/offline/test_retrieval.py` as a strict expected failure. While it stands, the news-filtering-design D1 v2 precondition is unmet and TP-035 cannot start.
 - **Repayment trigger**: the body-inclusive embedding decision (news-rss-body-design D8 follow-up), re-measured on the held-out set; or a live retrieval complaint traced to relevance.
 - **Status**: open, residual accepted. TP-037 stage 1 (2026-10-26, E-012): no query-side variant reaches 0.8 on a separately authored held-out set (best V2 0.736, baseline 0.720). Owner decision D10a (2026-10-26): stop TP-037, accept the residual for D1 v2; the assertion stays a strict expected failure. It no longer blocks TP-035.
+
+### DE-18 — The vendor transport follows redirects without re-checking egress
+- **Category**: guardrail debt
+- **Description**: `data/ingest/http.stdlib_fetch` (EODHD, GDELT) validates the first URL against the egress whitelist, but `urllib.request.urlopen` follows redirects automatically, so a redirect to another host is fetched without a second check (SEC-003). Found while building the TP-035 page seam, which re-validates every hop. Pre-existing; not changed by TP-035.
+- **Repayment trigger**: the next change to `stdlib_fetch`, or any observed redirect from a vendor endpoint. The fix is the TP-035 redirect handler applied to the vendor seam, with a test.
+- **Status**: open (2026-10-26).
