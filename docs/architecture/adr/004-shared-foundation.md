@@ -184,13 +184,13 @@ which runs no handler, still writes no marker.
 
 Implements: REQ-SI-FR-011, REQ-SI-INV-003.
 
-## Amendment 7 (2026-10-26, TP-035) — egress: news feed and body hosts (proposed)
+## Amendment 7 (2026-10-26, TP-035) — egress: news feed and body hosts (accepted 2026-10-26)
 
 The news D1 v2 tracks (ADR-002 Amendment 2, `news-rss-body-design.md`)
 fetch from hosts outside the current static whitelist. Status:
-**proposed** — the code hunk in `shared/egress.py` lands with the
-TP-035 implementation change set, after owner approval of this
-amendment.
+**accepted** (2026-10-26, with the TP-035 approval) — the code hunk in
+`shared/egress.py` lands with the TP-035 implementation change set,
+limited to the entries whose source passes the live probe.
 
 1. `EGRESS_WHITELIST` gains up to ten entries, each tied to its fetch
    role. An entry whose source fails the TP-035 live probe is removed

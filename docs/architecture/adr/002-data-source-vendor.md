@@ -71,15 +71,15 @@ gap-repair budget share are per run, not per day.
 
 Implements: REQ-SI-FR-001, REQ-SI-INV-003.
 
-## Amendment 2 (2026-10-26, TP-035) — news D1 v2: RSS listing track + body backfill track (proposed)
+## Amendment 2 (2026-10-26, TP-035) — news D1 v2: RSS listing track + body backfill track (accepted 2026-10-26)
 
 Proposed activation of news-filtering-design.md D1 v2, with the
 approach of a reference news-corpus implementation (curated-feed
 collection, body extraction, source health, backfill state machine)
 ported under this project's governance. Full design:
 `news-rss-body-design.md` (owner decisions D5–D10, 2026-10-26).
-Status: **proposed** — the decisions are recorded, but no code lands
-before TP-035 is approved. The topical-bucket registry row is in
+Status: **accepted** (2026-10-26, with the TP-035 approval: the owner set
+the session goal to implement TP-035). The topical-bucket registry row is in
 registry 0.6.2. The D1 v2 precondition was measured (TP-036, TP-037:
 QA-002 not met) and the owner accepted the residual (D10a); QA-002
 stays unmet and visible (DE-17).
