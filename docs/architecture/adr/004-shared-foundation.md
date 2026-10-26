@@ -183,3 +183,32 @@ not answer. The schema and `validate_event` do not change. A hard crash,
 which runs no handler, still writes no marker.
 
 Implements: REQ-SI-FR-011, REQ-SI-INV-003.
+
+## Amendment 7 (2026-10-26, TP-035) — egress: news feed and body hosts (proposed)
+
+The news D1 v2 tracks (ADR-002 Amendment 2, `news-rss-body-design.md`)
+fetch from hosts outside the current static whitelist. Status:
+**proposed** — the code hunk in `shared/egress.py` lands with the
+TP-035 implementation change set, after owner approval of this
+amendment.
+
+1. `EGRESS_WHITELIST` gains five entries, each tied to its fetch role:
+
+   | Entry | Role | Fetched host(s) |
+   |---|---|---|
+   | `scmp.com` | RSS listing | `www.scmp.com` |
+   | `bbci.co.uk` | RSS listing | `feeds.bbci.co.uk` |
+   | `theguardian.com` | RSS listing | `www.theguardian.com` |
+   | `cnbc.com` | body fetch | `www.cnbc.com` |
+   | `marketwatch.com` | body fetch | `www.marketwatch.com` |
+
+2. Egress entries are fetch hosts, not relevance domains. They need
+   not appear in the S2 tier lists: `bbci.co.uk` is the BBC feed host,
+   while the BBC items are scored under `bbc.com` (a general-news
+   domain) from the feed spec. The two lists stay separate
+   config-of-record.
+3. Matching is unchanged (exact or dot-suffix, HTTPS only), so
+   subdomains of an entry are allowed and nothing else is. A denial
+   is classified and writes nothing (SEC-003 fail-closed).
+
+Implements: REQ-SI-SEC-003.

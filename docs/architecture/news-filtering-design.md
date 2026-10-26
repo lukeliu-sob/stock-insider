@@ -3,7 +3,7 @@
 | Field | Value |
 |---|---|
 | Document | `docs/architecture/news-filtering-design.md` (pre-TP-011 design note) |
-| Version | 1.0.0 |
+| Version | 1.1.0 (2026-10-26: D1 v2 activation proposal added to §3; 1.0.0 of 2026-09-17 otherwise unchanged) |
 | Date | 2026-09-17 |
 | Registry baseline | `docs/req/requirements.yaml` v0.3.2 |
 | Governs | `data/ingest` news path; FR-003 (Must), FR-007 input side, QA-002 fixture discipline, SEC-002 layer one |
@@ -39,6 +39,24 @@ gated separately).
 - **v2 (after QA-002 passes on the title corpus)**: extend to body
   fetching for tier-A domains via the FR-015 whitelist crawler path.
   Activation requires an explicit owner decision recorded here.
+- **v2 activation (proposed 2026-10-26, TP-035, ADR-002 Am2, ADR-004
+  Am7)**: not yet decided. The owner decision is recorded here when
+  TP-035 is approved; implementation lands only with the approved
+  TP-035 change set. The v2 precondition above (QA-002 passes on the
+  title corpus) is not met: QA-002 is still conceptual and its
+  verification suite does not exist yet, so activation needs either
+  that pass or an explicit owner waiver (design D10). Proposed
+  content: body fetching for the initial body whitelist candidates
+  (cnbc.com, marketwatch.com), which join the whitelist only after
+  the TP-035 live probe confirms fetchability and terms, via
+  per-domain templates — the FR-015 mechanism applied at ingestion;
+  tier-A domains behind bot walls stay title-only and are reported
+  per run (INV-003). A curated RSS listing track (SCMP / BBC business
+  / Guardian business) feeds the same S1–S5 pipeline; the firehose
+  prohibition applies to it unchanged. Bodies are raw evidence at
+  rest; the egress boundary sanitizes. Body-inclusive embeddings
+  remain off pending a separate owner decision. Full design:
+  `news-rss-body-design.md`.
 
 ## 4. Filter Pipeline (five stages, fail-closed, fully deterministic)
 
