@@ -201,7 +201,10 @@ def test_hit_at_5_gate(tmp_path, corpus, query_set, frozen) -> None:
 
 @pytest.mark.xfail(
     strict=True,
-    reason="owner decision 2026-10-26 (D10a): QA-002 not met (0.768 < 0.8, E-011; E-012 no fix); residual accepted, DE-17",
+    reason=(
+        "owner decision 2026-10-26 (D10a): QA-002 not met (0.768 < 0.8, E-011; E-012 no fix); "
+        "residual accepted, DE-17"
+    ),
 )
 def test_relevance_at_5_gate(tmp_path, corpus, query_set, frozen) -> None:
     # QA-002 threshold, measured once on the frozen vectors: 0.768 (E-011).
