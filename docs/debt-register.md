@@ -14,7 +14,7 @@
 | Untouchable code | 0 |
 | Hidden dependencies | 0 |
 | Agent-induced bloat | 0 |
-| Evaluation debt | 2 (DE-01, DE-09) |
+| Evaluation debt | 3 (DE-01, DE-09, DE-17) |
 | Guardrail debt | 3 (DE-03, DE-15, DE-16) |
 | Human/cognitive debt | 1 |
 
@@ -123,3 +123,9 @@ Categories at zero have no current entries; the category opens the moment its fi
   - Five held-out claims escape this way (E-010). The owner waived them for TP-024.
 - **Repayment trigger**: TP-025 (ADR-008 phase 3). Tools return `official_name` with each subject-bearing result and declare field semantics in `shared/`. An unresolvable company name can then count as a subject without evidence.
 - **Status**: open. Stage 2 of TP-025 (2026-10-04) adds the declared-typing hook but no subject source: `official_name` is not added to any tool yet, so stage 4 is still open.
+
+### DE-17 — QA-002 relevance@5 below threshold on the title corpus
+- **Category**: evaluation debt
+- **Description**: the TP-036 suite measures relevance@5 = 0.768 against the 0.8 QA-002 threshold (E-011; hit@5 = 0.920 passes FR-007). Alias, paraphrase and small-family macro queries fill the top 5 with items from other topic families. The assertion stays in `test/offline/test_retrieval.py` as a strict expected failure. While it stands, the news-filtering-design D1 v2 precondition is unmet and TP-035 cannot start.
+- **Repayment trigger**: TP-037 (retrieval improvement, its own plan), or an owner decision to accept the residual for D1 v2.
+- **Status**: open (2026-10-26).

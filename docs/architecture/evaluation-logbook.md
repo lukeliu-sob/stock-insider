@@ -203,3 +203,33 @@ Notes:
   the refined classes; a fresh held-out set is the next evaluation's
   instrument.
 - Not yet measured live: replay the BYD question after merge.
+
+### E-011 — QA-002 retrieval relevance on frozen real vectors (TP-036)
+
+Date: 2026-10-26 - Model(s): qwen3.7-text-embedding-flash (embedding role, 1024 dims; vectors frozen once by test/live/gen_retrieval_vectors.py)
+
+Corpus and queries:
+- test/offline/fixtures/news_corpus_v1.json, the 89 keep-labeled titles
+  (the D1 title corpus).
+- test/offline/fixtures/retrieval_queries_v1.json: 25 known-target
+  queries in five classes (official name, ticker, alias, macro,
+  paraphrase); relevance judged by 12 topic families that partition
+  the corpus. Families and targets were fixed before this measurement.
+
+Scores (k = 5, no bucket filter, production knn path):
+- hit@5 = 23/25 = 0.920 (FR-007 fit criterion, gate 0.8): pass.
+- relevance@5 = 0.768 (QA-002, gate 0.8): miss by 0.032.
+- Ceiling: the hk_rates and trade families hold 2 items each, so two
+  queries cap at 0.4; the best reachable mean is 0.952.
+- Weak queries: q14 alias "WeChat commerce growth" 0.2 (no link from
+  WeChat to Tencent); q20 macro "Hong Kong interbank rates" misses its
+  target (HK index headlines rank first); q18, q23, q24 at 0.4 (target
+  found, the rest of the top 5 from other families). Official-name and
+  ticker queries q02-q13 score 1.0.
+- Controls: reversed ranking and random query vectors fail both gates.
+
+Verdict: blocked (gate). hit@5 passes; relevance@5 misses. Owner
+decision (2026-10-26): land the suite with the relevance assertion as
+a strict expected failure (DE-17), and try a retrieval improvement
+under its own plan (TP-037). The D1 v2 precondition stays unmet, so
+TP-035 stays blocked.

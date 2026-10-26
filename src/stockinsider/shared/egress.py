@@ -48,14 +48,18 @@ def extra_hosts_from_env(environ: "dict[str, str] | None" = None) -> tuple[str, 
     silent default (INV-003). Malformed entries (empty tokens, URLs
     with schemes, whitespace-only) are skipped, not guessed.
 
+    Am2 names the `.env` entry as the extension surface: the value
+    reads the real environment first, then the env file (TP-036; the
+    code had read only the environment, so a `.env` entry was ignored).
+
     Implements: REQ-SI-SEC-003 (ADR-004 Am2)
     """
-    import os
+    from stockinsider.shared.envfile import env_value
 
     if environ is not None:
         raw = environ.get("EGRESS_EXTRA_HOSTS", "")
     else:
-        raw = os.getenv("EGRESS_EXTRA_HOSTS", "")
+        raw = env_value("EGRESS_EXTRA_HOSTS") or ""
     hosts: list[str] = []
     for token in raw.split(","):
         name = token.strip().lower().rstrip(".")
