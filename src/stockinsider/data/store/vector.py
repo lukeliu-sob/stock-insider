@@ -22,6 +22,10 @@ from dataclasses import dataclass
 from datetime import datetime, timezone
 from typing import Any, Sequence
 
+#: The reserved current-affairs bucket (REQ-SI-FR-027, TP-035): curated
+#: feed items that matched no symbol or macro group. Never embedded.
+TOPICAL_BUCKET = "topical"
+
 try:  # pragma: no cover - exercised via the loader seam below
     import sqlite_vec  # type: ignore[import-untyped]
 except ImportError:  # pragma: no cover
@@ -206,27 +210,31 @@ def knn(
 def pending_news(conn: sqlite3.Connection, *, limit: int = 128) -> list[tuple[int, str]]:
     """News rows without vectors, oldest first (embedding backlog).
 
-    Implements: REQ-SI-FR-007 (ADR-003)
+    Rows in the topical bucket never enter the backlog (REQ-SI-FR-027,
+    TP-035): current-affairs context stays out of the vector space, so
+    it cannot crowd symbol-query retrieval.
+
+    Implements: REQ-SI-FR-007, REQ-SI-FR-027 (ADR-003)
     """
     try:
         rows = conn.execute(
             """
             SELECT n.news_id AS news_id, n.title AS title
             FROM news n LEFT JOIN vec_news v ON v.rowid = n.news_id
-            WHERE v.rowid IS NULL
+            WHERE v.rowid IS NULL AND n.symbol IS NOT ?
             ORDER BY n.published_at, n.news_id
             LIMIT ?
             """,
-            (limit,),
+            (TOPICAL_BUCKET, limit),
         ).fetchall()
     except sqlite3.OperationalError:
         # vec table not created yet: every news row is pending
         rows = conn.execute(
             """
             SELECT news_id AS news_id, title AS title
-            FROM news ORDER BY published_at, news_id LIMIT ?
+            FROM news WHERE symbol IS NOT ? ORDER BY published_at, news_id LIMIT ?
             """,
-            (limit,),
+            (TOPICAL_BUCKET, limit),
         ).fetchall()
     return [(int(row["news_id"]), str(row["title"])) for row in rows]
 

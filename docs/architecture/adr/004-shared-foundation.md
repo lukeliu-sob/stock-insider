@@ -184,29 +184,30 @@ which runs no handler, still writes no marker.
 
 Implements: REQ-SI-FR-011, REQ-SI-INV-003.
 
-## Amendment 7 (2026-10-26, TP-035) — egress: news feed and body hosts (proposed)
+## Amendment 7 (2026-10-26, TP-035) — egress: news feed and body hosts (accepted 2026-10-26)
 
 The news D1 v2 tracks (ADR-002 Amendment 2, `news-rss-body-design.md`)
 fetch from hosts outside the current static whitelist. Status:
-**proposed** — the code hunk in `shared/egress.py` lands with the
-TP-035 implementation change set, after owner approval of this
-amendment.
+**accepted** (2026-10-26, with the TP-035 approval) — the code hunk in
+`shared/egress.py` lands with the TP-035 implementation change set,
+limited to the entries whose source passes the live probe.
 
-1. `EGRESS_WHITELIST` gains up to ten entries, each tied to its fetch
-   role. An entry whose source fails the TP-035 live probe is removed
-   from the hunk before it lands; none is added speculatively.
+1. The news hosts that passed the TP-035 live probe (2026-10-26) are
+   accepted, each tied to its fetch role. They live in their own named
+   set, `NEWS_FETCH_HOSTS`, which `validate_egress_url` accepts
+   alongside `EGRESS_WHITELIST`; the whitelist itself is unchanged
+   (its exact contents are pinned by the SEC-003 regression suite).
+   marketwatch.com (bot wall), thestandard.com.hk and chinadailyhk.com
+   (no feed) failed the probe and are not added.
 
    | Entry | Role | Fetched host(s) |
    |---|---|---|
    | `scmp.com` | RSS listing | `www.scmp.com` |
    | `bbci.co.uk` | RSS listing | `feeds.bbci.co.uk` |
    | `theguardian.com` | RSS listing | `www.theguardian.com` |
-   | `cnbc.com` | body fetch | `www.cnbc.com` |
-   | `marketwatch.com` | body fetch | `www.marketwatch.com` |
-   | `thestandard.com.hk` | RSS listing + body fetch | fixed by the live probe |
-   | `rthk.hk` | RSS listing + body fetch | `rthk.hk`, `news.rthk.hk` |
+   | `cnbc.com` | RSS listing (bodies excluded by its terms, TP-035) | `www.cnbc.com` |
+   | `rthk.hk` | RSS listing + body fetch | `rthk9.rthk.hk` (feeds, HTTPS), `news.rthk.hk` (articles) |
    | `hongkongfp.com` | RSS listing + body fetch | `hongkongfp.com` |
-   | `chinadailyhk.com` | RSS listing + body fetch | fixed by the live probe |
    | `news.gov.hk` | RSS listing + body fetch | `www.news.gov.hk` |
 
 2. Egress entries are fetch hosts, not relevance domains. They need
@@ -219,7 +220,9 @@ amendment.
    is classified and writes nothing (SEC-003 fail-closed).
 4. The parsing libraries `feedparser` and `beautifulsoup4` (ADR-002
    Amendment 2) are handed bytes only; neither is given a URL, so
-   neither can open a connection around this gate.
+   neither can open a connection around this gate. The page seam
+   (`data/ingest/http.stdlib_fetch_page`) re-validates every redirect
+   hop, so a redirect cannot lead off these hosts or to plain HTTP.
 5. The TP-036 embedding endpoint is a provider host and goes through
    the existing owner-declared `EGRESS_EXTRA_HOSTS` path (Amendment
    2), not through this static list.

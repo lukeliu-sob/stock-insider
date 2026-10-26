@@ -42,7 +42,7 @@ Mapping: **every requirement → enforcing component → test/evidence → runti
 | FR-024 Chinese news pipeline | `data/ingest` (deferred, FR-024 Could) | `test/offline/test_zh_news.py` (planned) | — |
 | FR-025 Quant models | `data/quant` (deferred, future) | none until ADR reopen (per fit criterion) | — |
 | FR-026 Terminal UI (opt-in) | `agent/tui`, `agent/repl` (I/O port, command table), turn-engine hooks (`agent/loop`), `cli` (`--ui`) | `test/offline/test_tui_render.py`, `test/offline/test_tui_session.py`, `test/offline/test_tui_invariants.py` | S1 (session status on exit) |
-| FR-027 Curated topical bucket | `data/ingest` (RSS track, `newsrss`), `data/store` (embedding backlog exclusion) | `test/offline/test_ingest_newsrss.py` (planned, TP-035) | S5 (topical counts and overflow in the run report) |
+| FR-027 Curated topical bucket | `data/ingest` (RSS track, `newsrss`), `data/store` (embedding backlog exclusion) | `test/offline/test_ingest_newsrss.py` (TP-035) | S5 (topical counts and overflow in the run report) |
 
 ## Invariants
 
