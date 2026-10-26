@@ -3575,3 +3575,26 @@ sessions:
       development text exactly and are reported as a subset. Stage 2 (adopt a variant,
       stop, or a further plan) is the owner's decision on E-012.
     status: applied
+  - id: AILOG-0084
+    date: "2026-10-26"
+    agent_task: >-
+      Decision record D10a after TP-037 stage 1: the QA-002 residual is accepted for D1 v2.
+      Updated the design note (D10a row and section 1), the news-filtering-design D1
+      activation entry, ADR-002 Amendment 2, the TP-035 precondition, the TP-037 stage-2
+      decision, DE-17, and the reason text of the strict expected failure in
+      test_retrieval.py. No assertion, threshold or label changed.
+    artifacts:
+      - docs/architecture/news-rss-body-design.md
+      - docs/architecture/news-filtering-design.md
+      - docs/architecture/adr/002-data-source-vendor.md
+      - docs/test-plans/TP-035.md
+      - docs/test-plans/TP-037.md
+      - docs/debt-register.md
+      - test/offline/test_retrieval.py
+      - docs/ai-use-log.yaml
+    human_decision: >-
+      Owner, in session, 2026-10-26: chose option 1 on E-012. Accept the QA-002 residual
+      for D1 v2 and stop TP-037 with no variant adopted; QA-002 stays unmet as a strict
+      expected failure and is re-measured when body-inclusive embedding is decided. TP-035
+      then waits only on its own approval.
+    status: applied
