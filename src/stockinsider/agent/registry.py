@@ -126,8 +126,9 @@ def register_sync_tools(registry: Registry, data_store: Any) -> None:
 
     Typing the slash command is the confirmation the write gate needs;
     the CLI subcommand is the other authorized entry (blueprint §9.1).
+    sync.status declares `active_symbols` (TP-025 stage 3 batch 3).
 
-    Implements: REQ-SI-FR-001, REQ-SI-FR-013 (ADR-005, ADR-002)
+    Implements: REQ-SI-FR-001, REQ-SI-FR-013, REQ-SI-INV-001 (ADR-005, ADR-002, ADR-005 Am4)
     """
 
     def _run(args: dict[str, Any]) -> dict[str, Any]:
@@ -159,6 +160,7 @@ def register_sync_tools(registry: Registry, data_store: Any) -> None:
             result_spec="dict",
             effect_class=EffectClass.READ,
             source_kind=SourceKind.API,
+            result_fields=_SYNC_STATUS_FIELDS,
         ),
         _status,
     )
@@ -195,6 +197,18 @@ _INDICATOR_METRICS = {
     "pb": FieldSemantics("pb"),
     "ps": FieldSemantics("ps"),
 }
+#: TP-025 stage 3 batch 3. The key-only lookup cannot see a parent, so the
+#: `budget.used/remaining/cap` rule of sync.status stays on the heuristic.
+_SYNC_STATUS_FIELDS = {"active_symbols": FieldSemantics("symbol_count")}
+#: The four EODHD sentiment keys, stored verbatim; `compound` has no source.
+_NEWS_RECENT_FIELDS = {
+    "count": FieldSemantics("news_count"),
+    "polarity": FieldSemantics("sentiment"),
+    "neg": FieldSemantics("sentiment_negative"),
+    "neu": FieldSemantics("sentiment_neutral"),
+    "pos": FieldSemantics("sentiment_positive"),
+}
+_NEWS_SEARCH_FIELDS = {"news_id": FieldSemantics("other"), "distance": FieldSemantics("other")}
 
 
 def register_market_tools(registry: Registry, data_store: Any) -> None:
@@ -294,9 +308,10 @@ def register_news_tools(
     egress. news.search embeds the query through the injected
     provider and runs KNN over the vector store (registered only
     when the embedding provider is configured — explicit absence,
-    not a broken tool). Raw storage is never altered.
+    not a broken tool). Raw storage is never altered. Both declare their
+    result fields (TP-025 stage 3 batch 3).
 
-    Implements: REQ-SI-FR-007, REQ-SI-SEC-002 (ADR-005, ADR-004)
+    Implements: REQ-SI-FR-007, REQ-SI-SEC-002, REQ-SI-INV-001 (ADR-005, ADR-004, ADR-005 Am4)
     """
 
     def _recent(args: dict[str, Any]) -> dict[str, Any]:
@@ -350,6 +365,7 @@ def register_news_tools(
             result_spec="dict",
             effect_class=EffectClass.READ,
             source_kind=SourceKind.API,
+            result_fields=_NEWS_RECENT_FIELDS,
         ),
         _recent,
     )
@@ -401,6 +417,7 @@ def register_news_tools(
             result_spec="dict",
             effect_class=EffectClass.READ,
             source_kind=SourceKind.API,
+            result_fields=_NEWS_SEARCH_FIELDS,
         ),
         _search,
     )
