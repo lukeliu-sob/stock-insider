@@ -1,0 +1,396 @@
+# E-014 held-out battery (TP-039), written by a separately briefed author from the frozen ledgers only.
+items:
+  # ---------------------------------------------------------------- growth_phrasing
+  - id: F001
+    ledger: us_pair
+    text: |-
+      Apple's revenue grew 9.56% year on year, while Target Corp's revenue fell 1.18% versus the prior-year quarter.
+    claims:
+      - {text: "9.56%", correct: true, kind: unit_conversion, class: growth_phrasing}
+      - {text: "1.18%", correct: true, kind: unit_conversion, class: growth_phrasing}
+  - id: F002
+    ledger: us_pair
+    text: |-
+      Apple's revenue rose 9.6% from a year earlier.
+    claims:
+      - {text: "9.6%", correct: true, kind: rounding, class: growth_phrasing}
+  - id: F003
+    ledger: hk_pair
+    text: |-
+      Tencent's revenue was up 14.5% y-o-y, and BYD posted a 23.86% increase in revenue over the same window ending 2026-06-30.
+    claims:
+      - {text: "14.5%", correct: true, kind: rounding, class: growth_phrasing}
+      - {text: "23.86%", correct: true, kind: unit_conversion, class: growth_phrasing}
+      - {text: "2026-06-30", correct: true, kind: temporal, class: growth_phrasing}
+  - id: F004
+    ledger: us_pair
+    text: |-
+      Apple's revenue of 9.56 billion reflects solid demand for its devices.
+    claims:
+      - {text: "9.56 billion", correct: false, kind: wrong_field, class: growth_phrasing}  # growth rate (9.56%) stated as a revenue amount
+  - id: F005
+    ledger: us_pair
+    text: |-
+      Target Corp's revenue grew 25.2% year on year.
+    claims:
+      - {text: "25.2%", correct: false, kind: wrong_field, class: growth_phrasing}  # 25.2 is the June-quarter revenue in USD billions, not a growth rate
+  - id: F006
+    ledger: hk_pair
+    text: |-
+      Tencent's revenue grew 23.9% year on year.
+    claims:
+      - {text: "23.9%", correct: false, kind: misattributed, class: growth_phrasing}  # 23.86% is BYD's revenue growth; Tencent's is 14.53%
+  - id: F007
+    ledger: us_pair
+    text: |-
+      Target Corp's revenue declined by 1.2% versus the prior-year quarter, while Apple's top line expanded 9.557%.
+    claims:
+      - {text: "1.2%", correct: true, kind: rounding, class: growth_phrasing}
+      - {text: "9.557%", correct: true, kind: rounding, class: growth_phrasing}
+  - id: F008
+    ledger: us_pair
+    text: |-
+      Target's revenue fell 1.20% from a year earlier.
+    claims:
+      - {text: "1.20%", correct: false, kind: over_precise, class: growth_phrasing}  # ledger -1.176% rounds to 1.18% at two decimals, not 1.20%
+  - id: F009
+    ledger: hk_pair
+    text: |-
+      BYD's revenue grew 14.53% year on year.
+    claims:
+      - {text: "14.53%", correct: false, kind: misattributed, class: growth_phrasing}  # 14.53% is Tencent's revenue growth; BYD's is 23.86%
+  - id: F010
+    ledger: hk_pair
+    text: |-
+      Tencent's revenue climbed 14.52% from the prior-year period.
+    claims:
+      - {text: "14.52%", correct: false, kind: over_precise, class: growth_phrasing}  # Tencent growth 14.5251% rounds to 14.53%; 14.52% is BYD's volatility
+  - id: F011
+    ledger: apple_only
+    text: |-
+      Apple's sales growth came in at 9.56% for the year to 2026-06-30, against Target's revenue decline of 1.18%.
+    claims:
+      - {text: "9.56%", correct: true, kind: unit_conversion, class: growth_phrasing}
+      - {text: "2026-06-30", correct: true, kind: temporal, class: growth_phrasing}
+      - {text: "1.18%", correct: false, kind: no_evidence, class: growth_phrasing}  # Target Corp has no data in the apple_only ledger
+  - id: F012
+    ledger: us_pair
+    text: |-
+      Apple's revenue rose 9.56% year on year to 94.0 billion in the quarter ended 30 June 2026.
+    claims:
+      - {text: "9.56%", correct: true, kind: unit_conversion, class: growth_phrasing}
+      - {text: "94.0 billion", correct: true, kind: scale_word, class: general}
+      - {text: "30 June 2026", correct: true, kind: temporal, class: general}
+  - id: F013
+    ledger: us_pair
+    text: |-
+      Target Corp's revenue grew 1.18% year on year.
+    claims:
+      - {text: "1.18%", correct: false, kind: sign_flip, class: growth_phrasing}  # ledger shows a 1.18% decline, not growth
+  - id: F014
+    ledger: hk_pair
+    text: |-
+      BYD's revenue jumped 24% from a year earlier, while Tencent's revenue grew 14.53%.
+    claims:
+      - {text: "24%", correct: true, kind: rounding, class: growth_phrasing}
+      - {text: "14.53%", correct: true, kind: unit_conversion, class: growth_phrasing}
+  - id: F015
+    ledger: us_pair
+    text: |-
+      Apple delivered revenue growth of 95.4% year on year.
+    claims:
+      - {text: "95.4%", correct: false, kind: wrong_field, class: growth_phrasing}  # 95.4 is March-quarter revenue in USD billions, not a growth rate
+  - id: F016
+    ledger: us_pair
+    text: |-
+      Apple's revenue increased 9.6% y/y, while Target's revenue contracted 2.4%.
+    claims:
+      - {text: "9.6%", correct: true, kind: rounding, class: growth_phrasing}
+      - {text: "2.4%", correct: false, kind: fabricated, class: growth_phrasing}  # Target's revenue growth is -1.18%; 2.4% is not in the ledger
+  - id: F017
+    ledger: hk_pair
+    text: |-
+      BYD's revenue grew 23.90% year on year, and Tencent's rose 14.53%.
+    claims:
+      - {text: "23.90%", correct: false, kind: over_precise, class: growth_phrasing}  # BYD growth 23.859% rounds to 23.86% at two decimals, not 23.90%
+      - {text: "14.53%", correct: true, kind: unit_conversion, class: growth_phrasing}
+  - id: F018
+    ledger: us_pair
+    text: |-
+      Target Corp booked revenue of USD 1.18 billion in the June quarter.
+    claims:
+      - {text: "1.18 billion", correct: false, kind: wrong_field, class: growth_phrasing}  # 1.18% is the revenue decline rate; June-quarter revenue is 25.2 billion
+  # ---------------------------------------------------------------- name_cue_collision
+  - id: F019
+    ledger: us_pair
+    text: |-
+      Target Corp closed at USD 134.92, and some analysts see a price target of USD 160 for Target.
+    claims:
+      - {text: "134.92", correct: true, kind: exact, class: name_cue_collision}
+      - {text: "160", correct: false, kind: price_target, class: name_cue_collision}  # no ledger holds a price target
+  - id: F020
+    ledger: us_pair
+    text: |-
+      Investors targeting growth may prefer Apple, whose revenue rose 9.56%, over Target Corp, whose net margin is 3.73%.
+    claims:
+      - {text: "9.56%", correct: true, kind: unit_conversion, class: name_cue_collision}
+      - {text: "3.73%", correct: true, kind: unit_conversion, class: name_cue_collision}
+  - id: F021
+    ledger: us_pair
+    text: |-
+      | Company | Close (USD) | ROE | Net margin | Price target (USD) |
+      |---|---|---|---|---|
+      | Apple | 234.42 | 35.0% | 24.9% | 250 |
+      | Target Corp | 134.92 | 6.35% | 3.37% | 150 |
+    claims:
+      - {text: "234.42", correct: true, kind: exact, class: name_cue_collision}
+      - {text: "35.0%", correct: true, kind: rounding, class: name_cue_collision}
+      - {text: "24.9%", correct: true, kind: rounding, class: name_cue_collision}
+      - {text: "250", correct: false, kind: price_target, class: name_cue_collision}  # no ledger holds a price target
+      - {text: "134.92", correct: true, kind: exact, class: name_cue_collision}
+      - {text: "6.35%", correct: true, kind: unit_conversion, class: name_cue_collision}
+      - {text: "3.37%", correct: false, kind: fabricated, class: name_cue_collision}  # Target's net margin is 3.73%; 3.37% is not in the ledger
+      - {text: "150", correct: false, kind: price_target, class: name_cue_collision}  # no ledger holds a price target
+  - id: F022
+    ledger: us_pair
+    text: |-
+      Target's target price of 150 implies upside from the 134.92 close.
+    claims:
+      - {text: "150", correct: false, kind: price_target, class: name_cue_collision}  # no ledger holds a price target
+      - {text: "134.92", correct: true, kind: exact, class: name_cue_collision}
+  - id: F023
+    ledger: us_pair
+    text: |-
+      Target Corp's fair value of USD 145.50 sits above its USD 136.54 session high.
+    claims:
+      - {text: "145.50", correct: false, kind: price_target, class: name_cue_collision}  # no ledger holds a fair value
+      - {text: "136.54", correct: true, kind: exact, class: name_cue_collision}
+  - id: F024
+    ledger: us_pair
+    text: |-
+      Target Corp quarterly fundamentals (USD billions)
+
+      | Quarter ended | Revenue | Net income | Gross profit |
+      |---|---|---|---|
+      | 2026-06-30 | 25.2 | 0.94 | 7.11 |
+      | 2026-03-31 | 23.8 | 1.40 | 6.87 |
+      | 2025-12-31 | 30.9 | 1.10 | 8.20 |
+    claims:
+      - {text: "2026-06-30", correct: true, kind: temporal, class: name_cue_collision}
+      - {text: "25.2", correct: true, kind: scale_word, class: name_cue_collision}
+      - {text: "0.94", correct: true, kind: scale_word, class: name_cue_collision}
+      - {text: "7.11", correct: true, kind: scale_word, class: name_cue_collision}
+      - {text: "2026-03-31", correct: true, kind: temporal, class: name_cue_collision}
+      - {text: "23.8", correct: true, kind: scale_word, class: name_cue_collision}
+      - {text: "1.40", correct: false, kind: fabricated, class: name_cue_collision}  # March-quarter net income is 1.04 billion
+      - {text: "6.87", correct: true, kind: scale_word, class: name_cue_collision}
+      - {text: "2025-12-31", correct: true, kind: temporal, class: name_cue_collision}
+      - {text: "30.9", correct: true, kind: scale_word, class: name_cue_collision}
+      - {text: "1.10", correct: true, kind: scale_word, class: name_cue_collision}
+      - {text: "8.20", correct: false, kind: fabricated, class: name_cue_collision}  # December-quarter gross profit is 8.02 billion
+  - id: F025
+    ledger: us_pair
+    text: |-
+      Target Corp's revenue fell 1.18% year on year; we would not use that to target a price of USD 120 for the stock.
+    claims:
+      - {text: "1.18%", correct: true, kind: unit_conversion, class: name_cue_collision}
+      - {text: "120", correct: false, kind: price_target, class: name_cue_collision}  # no ledger holds a price target
+  - id: F026
+    ledger: us_pair
+    text: |-
+      | Metric | Apple | Target Corp |
+      |---|---|---|
+      | Volatility | 5.93% | 10.32% |
+      | Max drawdown | -8.26% | -18.83% |
+      | Revenue YoY | 9.56% | -1.18% |
+      | Consensus target (USD) | 255 | 148 |
+    claims:
+      - {text: "5.93%", correct: true, kind: unit_conversion, class: name_cue_collision}
+      - {text: "10.32%", correct: true, kind: unit_conversion, class: name_cue_collision}
+      - {text: "-8.26%", correct: true, kind: unit_conversion, class: name_cue_collision}
+      - {text: "-18.83%", correct: false, kind: fabricated, class: name_cue_collision}  # Target's max drawdown is -18.38%
+      - {text: "9.56%", correct: true, kind: unit_conversion, class: name_cue_collision}
+      - {text: "-1.18%", correct: true, kind: unit_conversion, class: name_cue_collision}
+      - {text: "255", correct: false, kind: price_target, class: name_cue_collision}  # no ledger holds a price target
+      - {text: "148", correct: false, kind: price_target, class: name_cue_collision}  # no ledger holds a price target
+  # ---------------------------------------------------------------- general
+  - id: F027
+    ledger: hk_pair
+    text: |-
+      Tencent closed at HKD 643.06 on 23 October 2026 on volume of 17,451,021 shares.
+    claims:
+      - {text: "643.06", correct: true, kind: exact, class: general}
+      - {text: "23 October 2026", correct: true, kind: temporal, class: general}
+      - {text: "17,451,021", correct: true, kind: exact, class: general}
+  - id: F028
+    ledger: hk_pair
+    text: |-
+      BYD closed at HKD 69.44, up HKD 0.42 from its open.
+    claims:
+      - {text: "69.44", correct: true, kind: exact, class: general}
+      - {text: "0.42", correct: false, kind: derived, class: general}  # close minus open; the difference itself is not in the ledger
+  - id: F029
+    ledger: hk_pair
+    text: |-
+      Tencent's ROE stands at 5.45% with a net margin of 30.1%; BYD's ROE is 4.73%.
+    claims:
+      - {text: "5.45%", correct: true, kind: unit_conversion, class: general}
+      - {text: "30.1%", correct: true, kind: rounding, class: general}
+      - {text: "4.73%", correct: false, kind: wrong_field, class: general}  # 4.73% is BYD's net margin; its ROE is 3.88%
+  - id: F030
+    ledger: hk_pair
+    text: |-
+      BYD's annualized volatility was 14.5% and its maximum drawdown reached 26.1% between 14 November 2025 and 19 August 2026.
+    claims:
+      - {text: "14.5%", correct: true, kind: rounding, class: general}
+      - {text: "26.1%", correct: true, kind: rounding, class: general}
+      - {text: "14 November 2025", correct: true, kind: temporal, class: general}
+      - {text: "19 August 2026", correct: true, kind: temporal, class: general}
+  - id: F031
+    ledger: hk_pair
+    text: |-
+      Tencent's max drawdown of 10.46% bottomed on 2025-12-24, and its volatility was 7.3%.
+    claims:
+      - {text: "10.46%", correct: true, kind: unit_conversion, class: general}
+      - {text: "2025-12-24", correct: true, kind: temporal, class: general}
+      - {text: "7.3%", correct: true, kind: rounding, class: general}
+  - id: F032
+    ledger: hk_pair
+    text: |-
+      The 3 recent Tencent headlines carry an average sentiment polarity of 0.52, with the most positive at 0.912.
+    claims:
+      - {text: "3", correct: true, kind: count, class: general}
+      - {text: "0.52", correct: false, kind: derived, class: general}  # mean of the three polarities; not itself in the ledger
+      - {text: "0.912", correct: true, kind: sentiment, class: general}
+  - id: F033
+    ledger: hk_pair
+    text: |-
+      The regulatory headline scored a polarity of -0.214, while the buyback story scored 0.874.
+    claims:
+      - {text: "-0.214", correct: true, kind: sentiment, class: general}
+      - {text: "0.874", correct: true, kind: sentiment, class: general}
+  - id: F034
+    ledger: us_pair
+    text: |-
+      Apple's gross margin was 46.5% in the June quarter.
+    claims:
+      - {text: "46.5%", correct: false, kind: derived, class: general}  # gross profit / revenue; the gross_margin indicator is unavailable
+  - id: F035
+    ledger: us_pair
+    text: |-
+      Apple's total assets were USD 331 billion and shareholders' equity USD 66.8 billion at 30 June 2026.
+    claims:
+      - {text: "331 billion", correct: true, kind: scale_word, class: general}
+      - {text: "66.8 billion", correct: true, kind: scale_word, class: general}
+      - {text: "30 June 2026", correct: true, kind: temporal, class: general}
+  - id: F036
+    ledger: us_pair
+    text: |-
+      Apple's fundamentals coverage ratio is 0.48: 12 cells filled, 5 quarters stored.
+    claims:
+      - {text: "0.48", correct: true, kind: exact, class: general}
+      - {text: "12", correct: true, kind: count, class: general}
+      - {text: "5", correct: true, kind: count, class: general}
+  - id: F037
+    ledger: us_pair
+    text: |-
+      Apple's net income was USD 23.4 billion on revenue of USD 94.0 billion, a net margin of 24.9%.
+    claims:
+      - {text: "23.4 billion", correct: true, kind: scale_word, class: general}
+      - {text: "94.0 billion", correct: true, kind: scale_word, class: general}
+      - {text: "24.9%", correct: true, kind: rounding, class: general}
+  - id: F038
+    ledger: us_pair
+    text: |-
+      Apple's quarterly revenue fell by USD 1.4 billion from the March quarter.
+    claims:
+      - {text: "1.4 billion", correct: false, kind: derived, class: general}  # 95.4 minus 94.0; the difference is not in the ledger
+  - id: F039
+    ledger: us_pair
+    text: |-
+      Apple traded between USD 231.61 and USD 237.23 on volume of 54.4 million shares.
+    claims:
+      - {text: "231.61", correct: true, kind: exact, class: general}
+      - {text: "237.23", correct: true, kind: exact, class: general}
+      - {text: "54.4 million", correct: true, kind: scale_word, class: general}
+  - id: F040
+    ledger: us_pair
+    text: |-
+      Apple's ROE of 35.03% compares with Target Corp's 6.35%.
+    claims:
+      - {text: "35.03%", correct: true, kind: unit_conversion, class: general}
+      - {text: "6.35%", correct: true, kind: unit_conversion, class: general}
+  - id: F041
+    ledger: apple_only
+    text: |-
+      Apple closed at USD 234.42, while Target Corp closed at USD 134.92.
+    claims:
+      - {text: "234.42", correct: true, kind: exact, class: general}
+      - {text: "134.92", correct: false, kind: no_evidence, class: general}  # Target Corp has no data in the apple_only ledger
+  - id: F042
+    ledger: apple_only
+    text: |-
+      Apple's volatility over 259 sessions was 5.9%, with a max drawdown of 8.3%.
+    claims:
+      - {text: "259", correct: true, kind: count, class: general}
+      - {text: "5.9%", correct: true, kind: rounding, class: general}
+      - {text: "8.3%", correct: true, kind: rounding, class: general}
+  - id: F043
+    ledger: session
+    text: |-
+      The sync budget has 20 calls remaining with none used, across 4 active symbols.
+    claims:
+      - {text: "20", correct: true, kind: exact, class: general}
+      - {text: "4", correct: true, kind: count, class: general}
+  - id: F044
+    ledger: session
+    text: |-
+      The news store holds 6 articles, 4 of them in the Tencent bucket and 3 from GDELT.
+    claims:
+      - {text: "6", correct: true, kind: count, class: general}
+      - {text: "4", correct: true, kind: count, class: general}
+      - {text: "3", correct: true, kind: count, class: general}
+  - id: F045
+    ledger: session
+    text: |-
+      Every ticker on the watchlist was added on 1 October 2026, and the store holds 8 news articles.
+    claims:
+      - {text: "1 October 2026", correct: true, kind: temporal, class: general}
+      - {text: "8", correct: false, kind: fabricated, class: general}  # the store holds 6 articles
+  - id: F046
+    ledger: session
+    text: |-
+      The news search returned a BYD deliveries story dated 20 October 2026 at a distance of 0.1, and the sync budget cap is 25.
+    claims:
+      - {text: "20 October 2026", correct: true, kind: temporal, class: general}
+      - {text: "0.1", correct: true, kind: exact, class: general}
+      - {text: "25", correct: false, kind: fabricated, class: general}  # the budget cap is 20
+  - id: F047
+    ledger: unverified
+    text: |-
+      9988.HK closed at HKD 86.81 on volume of 33,051,021 shares, after opening at 86.92.
+    claims:
+      - {text: "86.81", correct: true, kind: exact, class: general}
+      - {text: "33,051,021", correct: true, kind: exact, class: general}
+      - {text: "86.92", correct: false, kind: fabricated, class: general}  # the open is 86.29
+  - id: F048
+    ledger: hk_pair
+    text: |-
+      BYD's net margin is 4.7% and its ROE 3.9%.
+    claims:
+      - {text: "4.7%", correct: true, kind: rounding, class: general}
+      - {text: "3.9%", correct: true, kind: rounding, class: general}
+  - id: F049
+    ledger: us_pair
+    text: |-
+      Target Corp's volume was 6.75 million shares, and its net income was USD 940 million in the June quarter.
+    claims:
+      - {text: "6.75 million", correct: true, kind: scale_word, class: general}
+      - {text: "940 million", correct: true, kind: scale_word, class: general}
+  - id: F050
+    ledger: us_pair
+    text: |-
+      Target Corp's total assets were USD 58.0 billion against equity of USD 18.4 billion.
+    claims:
+      - {text: "58.0 billion", correct: true, kind: scale_word, class: general}
+      - {text: "18.4 billion", correct: false, kind: fabricated, class: general}  # Target's equity is 14.8 billion

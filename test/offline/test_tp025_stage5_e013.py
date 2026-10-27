@@ -375,8 +375,9 @@ def _specs() -> dict:
     return {spec.name: spec for spec in registry.list_tools()}
 
 
-def evaluate(battery: dict, ledgers: dict) -> dict[str, Any]:
+def evaluate(battery: dict, ledgers: dict, rulings: dict | None = None) -> dict[str, Any]:
     """Per-claim outcome on the production post-check path (with the declared specs)."""
+    rulings = LABEL_RULINGS if rulings is None else rulings
     specs = _specs()
     found: dict[str, Any] = {
         "correct": [], "wrong": [], "false_flags": [], "escapes": [], "extra_flags": [], "by_class": {},
@@ -393,7 +394,7 @@ def evaluate(battery: dict, ledgers: dict) -> dict[str, Any]:
             used.update(overlapping)
             flagged = any(not claims[i].verified for i in overlapping)
             key = (item["id"], label["text"])
-            ruling = LABEL_RULINGS.get(key, "label stands")
+            ruling = rulings.get(key, "label stands")
             correct = label["correct"] if ruling == "label stands" else ruling == "correct"
             tally = found["by_class"].setdefault(
                 label.get("class", "general"), {"correct": 0, "wrong": 0, "false_flags": 0, "escapes": 0}
@@ -439,6 +440,9 @@ def test_e013_labels_agree_with_ledgers() -> None:
 
 #: E-013 measured on the frozen stage-4 engine (2026-10-27), pinned by name as a regression baseline.
 #: No threshold was set in advance (owner decision); any change to these sets is visible here.
+#: Migrated by TP-039 (owner-approved plan): the growth-phrasing and "Target" label false flags it
+#: clears are removed - E001 23.9%, E003 9.56%, E022 9.56%, E047 1.18%, E049 9.6%, E027 134.11,
+#: 136.54, 133.3. E026's Target row stays flagged, now only for the table-title scale.
 E013_ESCAPES = {
     ("E007", "6.35%"), ("E051", "3.88%"),  # subject after the number ("ROE at Apple", "for Tencent")
     ("E011", "35.0%"),  # company absent from the ledger (DE-16 residual)
@@ -446,10 +450,8 @@ E013_ESCAPES = {
 }
 E013_FALSE_FLAGS = {
     ("E003", "6.35%"), ("E007", "3.73%"), ("E009", "14.53%"), ("E051", "4.73%"),  # subject after the number
-    ("E001", "23.9%"), ("E003", "9.56%"), ("E022", "9.56%"), ("E047", "1.18%"), ("E049", "9.6%"),  # "year on year"
-    ("E026", "25.2"), ("E026", "7.11"), ("E026", "14.8"),  # "Target" row read as a price-target cue
-    ("E027", "134.11"), ("E027", "136.54"), ("E027", "133.3"),
     ("E026", "94.0"), ("E026", "23.4"), ("E026", "43.7"),  # scale stated in the table title
+    ("E026", "25.2"), ("E026", "7.11"), ("E026", "14.8"),
     ("E043", "36.3 billion"), ("E043", "331 billion"),  # a cue after the next number; total assets untyped
 }
 
