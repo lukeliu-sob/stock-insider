@@ -15,6 +15,7 @@ from __future__ import annotations
 import json
 import math
 import os
+import re
 import sqlite3
 import tempfile
 from contextlib import contextmanager
@@ -24,6 +25,7 @@ from typing import Any, Iterator
 
 import yaml
 
+from stockinsider.agent import guardrail
 from stockinsider.agent.registry import (
     Registry,
     register_data_tools,
@@ -221,6 +223,191 @@ def test_e013_ledgers_match_the_real_tools() -> None:
     assert _load(LEDGER_FILE)["ledgers"] == build_ledgers()
 
 
+# ---- battery, label check, measurement ------------------------------------------
+
+BATTERY_FILE = FIXTURES / "e013_heldout.yaml"
+CLASSES = ("name_misattribution", "postposed_subject", "absent_company", "unverified_name", "common_word_name", "table")
+#: kinds whose value must not be in the ledger at all (fabricated, too precise, computed)
+ABSENT_KINDS = {"fabricated", "over_precise", "derived", "no_evidence"}
+_SCALE_WORDS = {
+    "thousand": 1e3, "k": 1e3, "million": 1e6, "mn": 1e6, "m": 1e6, "billion": 1e9, "bn": 1e9, "b": 1e9,
+    "trillion": 1e12, "tn": 1e12,
+}
+_MONTHS = (
+    "january", "february", "march", "april", "may", "june", "july", "august", "september", "october", "november",
+    "december",
+)
+_NUMBER = re.compile(r"-?\d[\d,]*(?:\.(\d+))?")
+_ISO_DATE = re.compile(r"(\d{4})-(\d{2})-(\d{2})")
+_MDY = re.compile(r"([A-Za-z]+)\.? (\d{1,2}),? (\d{4})")
+_DMY = re.compile(r"(\d{1,2}) ([A-Za-z]+),? (\d{4})")
+
+
+def _ledger_numbers(node: Any, out: list[float]) -> None:
+    """Every numeric leaf and numeric string in a ledger, plus every list length (counts)."""
+    if isinstance(node, dict):
+        for value in node.values():
+            _ledger_numbers(value, out)
+    elif isinstance(node, list):
+        out.append(float(len(node)))
+        for value in node:
+            _ledger_numbers(value, out)
+    elif isinstance(node, bool) or node is None:
+        return
+    elif isinstance(node, (int, float)):
+        out.append(float(node))
+    elif isinstance(node, str) and _NUMBER.fullmatch(node.strip()):
+        out.append(float(node.strip().replace(",", "")))
+
+
+def _ledger_dates(node: Any, out: set[str]) -> None:
+    if isinstance(node, dict):
+        for value in node.values():
+            _ledger_dates(value, out)
+    elif isinstance(node, list):
+        for value in node:
+            _ledger_dates(value, out)
+    elif isinstance(node, str):
+        compact = node.replace("-", "")[:8]
+        if len(compact) == 8 and compact.isdigit():
+            out.add(f"{compact[:4]}-{compact[4:6]}-{compact[6:8]}")
+
+
+def _month(word: str) -> int | None:
+    prefix = word.lower()[:3]
+    return next((index for index, name in enumerate(_MONTHS, start=1) if name.startswith(prefix)), None)
+
+
+def _as_date(raw: str) -> str | None:
+    text = raw.strip().rstrip(".,")
+    if _ISO_DATE.fullmatch(text):
+        return text
+    for pattern, month_group, day_group in ((_MDY, 1, 2), (_DMY, 2, 1)):
+        match = pattern.fullmatch(text)
+        if match and _month(match.group(month_group)):
+            return f"{match.group(3)}-{_month(match.group(month_group)):02d}-{int(match.group(day_group)):02d}"
+    return None
+
+
+def _claimed_value(raw: str, after: str) -> tuple[float, float] | None:
+    """(value, half-width at the written precision) of a claim, with a following scale word applied."""
+    match = _NUMBER.search(raw)
+    if not match:
+        return None
+    value = float(match.group(0).replace(",", ""))
+    decimals = len(match.group(1) or "")
+    rest = raw[match.end():]
+    word = re.match(r"\s*([A-Za-z]+)", rest if rest.strip() else after)
+    scale = _SCALE_WORDS.get(word.group(1).lower(), 1.0) if word else 1.0
+    return value * scale, 0.5 * 10**-decimals * scale
+
+
+def _value_in_ledger(claim: tuple[float, float], numbers: list[float]) -> bool:
+    value, half = claim
+    for number in numbers:
+        for candidate in (abs(number), abs(number) * 100):
+            if abs(candidate - abs(value)) <= half + 1e-9 * max(1.0, candidate):
+                return True
+    return False
+
+
+def label_disagreements(battery: dict, ledgers: dict) -> list[tuple[str, str, str]]:
+    """Labels the ledger values contradict, checked without the engine (stage-5 step 3).
+
+    A claim labeled correct whose value is nowhere in the cited ledger, and a claim labeled
+    fabricated, over-precise, derived or no-evidence whose value is in it, are disagreements.
+    Attribution (which subject, which field) is not checked mechanically.
+    """
+    found: list[tuple[str, str, str]] = []
+    for item in battery["items"]:
+        ledger = ledgers[item["ledger"]]
+        numbers: list[float] = []
+        _ledger_numbers(ledger, numbers)
+        dates: set[str] = set()
+        _ledger_dates(ledger, dates)
+        text = item["text"]
+        position = 0
+        for label in item["claims"]:
+            start = text.find(label["text"], position)
+            position = start + len(label["text"])
+            key = (item["id"], label["text"])
+            as_date = _as_date(label["text"])
+            if as_date is not None or label.get("kind") == "temporal":
+                if as_date is None:
+                    found.append((*key, "date not parsed by the checker"))
+                elif label["correct"] and as_date not in dates:
+                    found.append((*key, "labeled correct, date not in ledger"))
+                continue
+            claim = _claimed_value(label["text"], text[position:])
+            if claim is None:
+                found.append((*key, "no number parsed"))
+            elif label["correct"] and not _value_in_ledger(claim, numbers):
+                found.append((*key, "labeled correct, value not in ledger"))
+            elif not label["correct"] and label.get("kind") in ABSENT_KINDS and _value_in_ledger(claim, numbers):
+                found.append((*key, f"labeled {label.get('kind')}, value is in ledger"))
+    return found
+
+
+#: Owner rulings on mechanical disagreements: (item, claim text) -> "label stands" | "correct" | "wrong".
+#: Owner, 2026-10-27: all nine are checker limits, every label stands - absent-company claims tagged
+#: no_evidence whose value belongs to another company (E011, E013), a scale stated in a table title
+#: (E026), and a wrong-field count tagged fabricated (E046: 13 is the gap count, 12 cells are filled).
+#: The author's unverified_name rule (labeled by value against the 9988.HK quote) is accepted.
+LABEL_RULINGS: dict[tuple[str, str], str] = {
+    ("E011", "35.0%"): "label stands",
+    ("E013", "5.45%"): "label stands",
+    ("E026", "94.0"): "label stands",
+    ("E026", "23.4"): "label stands",
+    ("E026", "43.7"): "label stands",
+    ("E026", "25.2"): "label stands",
+    ("E026", "7.11"): "label stands",
+    ("E026", "14.8"): "label stands",
+    ("E046", "13"): "label stands",
+}
+
+
+def _specs() -> dict:
+    registry = Registry()
+    register_data_tools(registry, None)
+    register_sync_tools(registry, None)
+    register_market_tools(registry, None)
+    register_news_tools(registry, None, (_FixedProvider(), "e013-model"))
+    return {spec.name: spec for spec in registry.list_tools()}
+
+
+def evaluate(battery: dict, ledgers: dict) -> dict[str, Any]:
+    """Per-claim outcome on the production post-check path (with the declared specs)."""
+    specs = _specs()
+    found: dict[str, Any] = {
+        "correct": [], "wrong": [], "false_flags": [], "escapes": [], "extra_flags": [], "by_class": {},
+    }
+    for item in battery["items"]:
+        text = item["text"]
+        claims = list(guardrail.postcheck_numbers(text, ledgers[item["ledger"]], specs).claims)
+        used: set[int] = set()
+        position = 0
+        for label in item["claims"]:
+            start = text.find(label["text"], position)
+            position = start + len(label["text"])
+            overlapping = [i for i, c in enumerate(claims) if c.start < position and c.end > start]
+            used.update(overlapping)
+            flagged = any(not claims[i].verified for i in overlapping)
+            key = (item["id"], label["text"])
+            ruling = LABEL_RULINGS.get(key, "label stands")
+            correct = label["correct"] if ruling == "label stands" else ruling == "correct"
+            tally = found["by_class"].setdefault(
+                label.get("class", "general"), {"correct": 0, "wrong": 0, "false_flags": 0, "escapes": 0}
+            )
+            outcome = ("correct", "false_flags", flagged) if correct else ("wrong", "escapes", not flagged)
+            found[outcome[0]].append(key)
+            tally[outcome[0]] += 1
+            if outcome[2]:
+                found[outcome[1]].append(key)
+                tally[outcome[1]] += 1
+        found["extra_flags"] += [(item["id"], c.raw) for i, c in enumerate(claims) if i not in used and not c.verified]
+    return found
+
+
 if __name__ == "__main__":
     header = (
         "# E-013 session ledgers (TP-025 stage 5): produced by the real tools over a seeded store.\n"
@@ -229,3 +416,49 @@ if __name__ == "__main__":
     body = yaml.safe_dump({"ledgers": build_ledgers()}, sort_keys=False, allow_unicode=False, width=120)
     LEDGER_FILE.write_text(header + body, encoding="utf-8", newline="\n")
     print(f"wrote {LEDGER_FILE}")
+
+
+def test_e013_battery_shape() -> None:
+    battery = _load(BATTERY_FILE)
+    claims = [(item, label) for item in battery["items"] for label in item["claims"]]
+    assert len(claims) >= 80
+    assert sum(not label["correct"] for _, label in claims) >= 35
+    for name in CLASSES:
+        assert sum(label.get("class") == name for _, label in claims) >= 5, name
+    for item, label in claims:
+        assert item["text"].count(label["text"]) == 1, (item["id"], label["text"])
+        assert item["ledger"] in _load(LEDGER_FILE)["ledgers"], item["id"]
+
+
+def test_e013_labels_agree_with_ledgers() -> None:
+    disagreements = label_disagreements(_load(BATTERY_FILE), _load(LEDGER_FILE)["ledgers"])
+    unresolved = [entry for entry in disagreements if entry[:2] not in LABEL_RULINGS]
+    assert unresolved == []
+    assert {entry[:2] for entry in disagreements} == set(LABEL_RULINGS)
+
+
+#: E-013 measured on the frozen stage-4 engine (2026-10-27), pinned by name as a regression baseline.
+#: No threshold was set in advance (owner decision); any change to these sets is visible here.
+E013_ESCAPES = {
+    ("E007", "6.35%"), ("E051", "3.88%"),  # subject after the number ("ROE at Apple", "for Tencent")
+    ("E011", "35.0%"),  # company absent from the ledger (DE-16 residual)
+    ("E030", "0.206"), ("E037", "0.3162"),  # which list item a value belongs to
+}
+E013_FALSE_FLAGS = {
+    ("E003", "6.35%"), ("E007", "3.73%"), ("E009", "14.53%"), ("E051", "4.73%"),  # subject after the number
+    ("E001", "23.9%"), ("E003", "9.56%"), ("E022", "9.56%"), ("E047", "1.18%"), ("E049", "9.6%"),  # "year on year"
+    ("E026", "25.2"), ("E026", "7.11"), ("E026", "14.8"),  # "Target" row read as a price-target cue
+    ("E027", "134.11"), ("E027", "136.54"), ("E027", "133.3"),
+    ("E026", "94.0"), ("E026", "23.4"), ("E026", "43.7"),  # scale stated in the table title
+    ("E043", "36.3 billion"), ("E043", "331 billion"),  # a cue after the next number; total assets untyped
+}
+
+
+def test_e013_heldout_measurement() -> None:
+    result = evaluate(_load(BATTERY_FILE), _load(LEDGER_FILE)["ledgers"])
+    assert (len(result["correct"]), len(result["wrong"])) == (109, 53)
+    assert set(result["escapes"]) == E013_ESCAPES, sorted(set(result["escapes"]) ^ E013_ESCAPES)
+    assert set(result["false_flags"]) == E013_FALSE_FLAGS, sorted(set(result["false_flags"]) ^ E013_FALSE_FLAGS)
+    assert result["extra_flags"] == []
+    for name, tally in sorted(result["by_class"].items()):
+        print(name, tally)

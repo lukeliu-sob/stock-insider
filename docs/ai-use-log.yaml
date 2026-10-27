@@ -3748,3 +3748,30 @@ sessions:
       postposed-subject false flags for stage 5 (all as recommended); then approved the
       stage-4 amendment as drafted.
     status: applied
+  - id: AILOG-0090
+    date: "2026-10-27"
+    agent_task: >-
+      TP-025 stage 5 (E-013): frozen session ledgers produced by the real tools over a
+      seeded store, with a generator drift test; an author brief; a held-out battery of
+      162 claims written by a separately briefed subagent from the ledgers and brief only,
+      committed unedited; a mechanical label check without the engine; one measurement run
+      on the frozen stage-4 engine through the production post-check path with the
+      declared specs (precision 0.817, recall 0.906), pinned by name; evaluation logbook
+      E-013 and ADR-008 Amendment 2. No file under src/ changed.
+    artifacts:
+      - test/offline/test_tp025_stage5_e013.py
+      - test/offline/fixtures/e013_ledgers.yaml
+      - test/offline/fixtures/e013_brief.md
+      - test/offline/fixtures/e013_heldout.yaml
+      - docs/test-plans/TP-025.md
+      - docs/architecture/evaluation-logbook.md
+      - docs/architecture/adr/008-numeric-verification-v2.md
+      - docs/debt-register.md
+      - docs/ai-use-log.yaml
+    human_decision: >-
+      Owner, in session, 2026-10-27: chose a separate subagent author, measure-and-pin with
+      no threshold set in advance, and a mechanical label check (all as recommended);
+      approved the stage-5 amendment including the subagent; ruled that all nine label
+      disagreements stand and accepted the author's unverified-name rule. The ADR-008
+      amendment text is approved in the PR.
+    status: applied
