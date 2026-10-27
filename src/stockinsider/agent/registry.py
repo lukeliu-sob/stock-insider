@@ -181,6 +181,20 @@ _FUNDAMENTALS_FIELDS = {
     "quarters_expected": FieldSemantics("other"),
     "cells": FieldSemantics("other"),
 }
+#: TP-025 stage 3 batch 2: indicator rows are `{metric, value, unit, window}`,
+#: so the `metric` sibling selects the class of `value` - the nine names
+#: `data/compute/indicators.py` emits, each as the heuristic's metric map types it.
+_INDICATOR_METRICS = {
+    "roe": FieldSemantics("roe"),
+    "net_margin": FieldSemantics("net_margin"),
+    "gross_margin": FieldSemantics("gross_margin"),
+    "yoy_growth": FieldSemantics("revenue_growth"),
+    "volatility": FieldSemantics("volatility"),
+    "max_drawdown": FieldSemantics("drawdown"),
+    "pe": FieldSemantics("pe"),
+    "pb": FieldSemantics("pb"),
+    "ps": FieldSemantics("ps"),
+}
 
 
 def register_market_tools(registry: Registry, data_store: Any) -> None:
@@ -192,7 +206,8 @@ def register_market_tools(registry: Registry, data_store: Any) -> None:
     into INV-001 snapshots.
 
     market.quote and fundamentals.summary declare their result fields
-    (TP-025 stage 3 batch 1).
+    (TP-025 stage 3 batch 1); market.indicators declares its metric rows
+    (batch 2).
 
     Implements: REQ-SI-FR-005, REQ-SI-FR-002, REQ-SI-INV-001 (ADR-005, ADR-002, ADR-005 Am4)
     """
@@ -242,6 +257,8 @@ def register_market_tools(registry: Registry, data_store: Any) -> None:
             result_spec="dict",
             effect_class=EffectClass.READ,
             source_kind=SourceKind.COMPUTED,
+            result_fields={"sessions": FieldSemantics("sessions")},
+            result_discriminators={"metric": _INDICATOR_METRICS},
         ),
         _indicators,
     )

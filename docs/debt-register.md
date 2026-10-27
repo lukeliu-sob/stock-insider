@@ -112,7 +112,7 @@ Categories at zero have no current entries; the category opens the moment its fi
 - **Category**: guardrail debt
 - **Description**: field classes come from result key names and a cue vocabulary, and subjects from text proximity (TP-024 Appendix A). A misread cue flags a correct number. Keys outside the vocabulary stay compatible with any field, so a value under an unknown key can verify a fielded claim.
 - **Repayment trigger**: TP-025 (ADR-008 phase 3), where tools declare result-field semantics in `shared/`; or a live false flag or escape traced to the vocabulary.
-- **Status**: open. Stage 2 of TP-025 (2026-10-04, same change set as AILOG-0079): a tool's declared field semantics now replace the heuristic field class for that tool. No tool declares fields yet, so every tool is still typed by the heuristic. Stages 3-5 open. Stage 3 batch 1 (2026-10-27): `market.quote` and `fundamentals.summary` declare their fields, behavior-neutral; other vendor keys and every other tool keep the heuristic. Batches 2-3 and stages 4-5 open.
+- **Status**: open. Stage 2 of TP-025 (2026-10-04, same change set as AILOG-0079): a tool's declared field semantics now replace the heuristic field class for that tool. No tool declares fields yet, so every tool is still typed by the heuristic. Stages 3-5 open. Stage 3 batch 1 (2026-10-27): `market.quote` and `fundamentals.summary` declare their fields, behavior-neutral; other vendor keys and every other tool keep the heuristic. Stage 3 batch 2 (2026-10-27): `market.indicators` declares its nine metric rows and `sessions`, behavior-neutral. Batch 3 and stages 4-5 open.
 
 ### DE-16 — Company names resolve only when the ledger carries them
 - **Category**: guardrail debt
