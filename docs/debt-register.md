@@ -134,4 +134,4 @@ Categories at zero have no current entries; the category opens the moment its fi
 - **Category**: guardrail debt
 - **Description**: `data/ingest/http.stdlib_fetch` (EODHD, GDELT) validates the first URL against the egress whitelist, but `urllib.request.urlopen` follows redirects automatically, so a redirect to another host is fetched without a second check (SEC-003). Found while building the TP-035 page seam, which re-validates every hop. Pre-existing; not changed by TP-035.
 - **Repayment trigger**: the next change to `stdlib_fetch`, or any observed redirect from a vendor endpoint. The fix is the TP-035 redirect handler applied to the vendor seam, with a test.
-- **Status**: open (2026-10-26).
+- **Status**: repaid by TP-038 (2026-10-27): `stdlib_fetch` opens through the egress-checked redirect handler the page seam uses; a refused redirect is a `TransportError` of kind `egress`, so the item fails visibly and the sync run continues. The first-URL check is unchanged.

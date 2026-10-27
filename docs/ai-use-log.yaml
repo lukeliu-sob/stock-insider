@@ -3775,3 +3775,23 @@ sessions:
       disagreements stand and accepted the author's unverified-name rule. The ADR-008
       amendment text is approved in the PR.
     status: applied
+  - id: AILOG-0091
+    date: "2026-10-27"
+    agent_task: >-
+      TP-038 (DE-18): data/ingest/http.stdlib_fetch opens through the egress-checked redirect
+      handler the TP-035 page seam uses; a refused redirect becomes TransportError kind
+      "egress" so the vendor item fails visibly and the run continues; the first-URL check is
+      unchanged. Six offline tests through urllib's real redirect machinery with a fake HTTPS
+      handler; two mutants planted and killed.
+    artifacts:
+      - src/stockinsider/data/ingest/http.py
+      - test/offline/test_tp038_vendor_redirects.py
+      - docs/test-plans/TP-038.md
+      - docs/debt-register.md
+      - docs/ai-use-log.yaml
+    human_decision: >-
+      Owner, in session, 2026-10-27: take the recommended option for DE-18 as its own plan
+      before the E-013 follow-ups. The TransportError "egress" classification (instead of a
+      propagating EgressViolationError) is an agent decision recorded in TP-038 for owner
+      review.
+    status: applied
