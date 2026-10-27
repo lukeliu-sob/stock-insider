@@ -188,7 +188,10 @@ _CUE_PATTERNS: tuple[tuple[str, str], ...] = (
     ("roe", r"\bROE\b|\breturn\s+on\s+equity\b"),
     ("net_margin", r"\bnet\s+(?:profit\s+)?margins?\b"),
     ("gross_margin", r"\bgross\s+margins?\b"),
-    ("revenue_growth", r"\brevenue\s+growth\b|\bYoY\b|\byear[\s-]+over[\s-]+year\b|\by/y\b"),
+    (
+        "revenue_growth",
+        r"\brevenue\s+growth\b|\bYoY\b|\byear[\s-]+(?:over|on)[\s-]+year\b|\by/y\b",
+    ),
     ("pe", r"\bP/?E\b(?:\s+ratio)?|\bprice[\s-]+to[\s-]+earnings\b|\bearnings\s+multiple\b"),
     ("pb", r"\bP/?B\b(?:\s+ratio)?|\bprice[\s-]+to[\s-]+book\b"),
     ("ps", r"\bP/?S\b(?:\s+ratio)?|\bprice[\s-]+to[\s-]+sales\b"),
@@ -269,6 +272,8 @@ _RISE = re.compile(
     r"higher|advanced|rallied)\b",
     re.IGNORECASE,
 )
+#: A change word right after a percent ("a 9.56% increase in revenue") makes it a change (TP-039).
+_CHANGE_AFTER = re.compile(r"\s*(?:increase|rise|gain|growth|jump|decline|drop|fall|decrease)s?\b", re.IGNORECASE)
 _DECLINE_AFTER = re.compile(r"\s*(?:%|percent|pct)?\s*(?:decline|drop|fall|loss|drawdown)\b", re.IGNORECASE)
 _CHANGE_CUE = re.compile(
     r"\b(?:up|down|rose|risen|fell|fallen|gained|lost|higher|lower|above|below|difference|change[ds]?|"
@@ -672,6 +677,8 @@ class _Answer:
         found.sort(key=lambda item: (item[0] - item[1], item[0]))
         self.cues: list[tuple[int, int, str]] = []
         for start, end, name in found:
+            if cue_text[start:end] in self.evidence.names:
+                continue  # a ledger company's name ("Target") is a subject, not a field cue (TP-039)
             if all(end <= other[0] or start >= other[1] for other in self.cues):
                 self.cues.append((start, end, name))
         self.cues.sort()
@@ -719,6 +726,13 @@ class _Answer:
             if start <= position < end:
                 return row_label, column_header
         return None
+
+    def names_subject(self, label: str) -> bool:
+        """Whether a table label is exactly a ledger company's name, not a field (TP-039).
+
+        Implements: REQ-SI-INV-001 (ADR-008 Am2; TP-039)
+        """
+        return re.sub(r"[*_`]", "", label).strip() in self.evidence.names
 
     def label_subject(self, label: str) -> str | None:
         """The subject a table label names, if any.
@@ -1172,11 +1186,12 @@ def _reading(item: _Pending, answer: _Answer) -> _Reading:
 def _resolve_field(item: _Pending, answer: _Answer, reading: _Reading, pending: list[_Pending]) -> str | None:
     cell = answer.cell(item.start)
     if cell is not None:
-        for label in (cell[0], cell[1]):
+        labels = [label for label in (cell[0], cell[1]) if not answer.names_subject(label)]
+        for label in labels:
             name = _LABEL_FIELDS.get(_label(label))
             if name:
                 return name
-        for label in (cell[0], cell[1]):
+        for label in labels:
             for name, pattern in _CUES:
                 if pattern.search(label):
                     return name
@@ -1194,9 +1209,14 @@ def _resolve_field(item: _Pending, answer: _Answer, reading: _Reading, pending: 
     others = [
         p for p in pending if p is not item and p.cls == "quantitative" and clause_start <= p.start < clause_end
     ]
+    # after "to", "at" or "from" the number is a level, so a growth cue does not govern it
+    # ("revenue rose 9.56% year on year to 94.0 billion"; TP-039)
+    level = _LEVEL_BEFORE.search(answer.text[clause_start : item.start]) is not None
     best: tuple[int, int, str] | None = None
     for start, end, name in answer.cues:
         if start < clause_start or end > clause_end:
+            continue
+        if level and name == "revenue_growth":
             continue
         if end <= item.start:
             # a cue before governs every number after it in the clause
@@ -1216,6 +1236,8 @@ def _resolve_field(item: _Pending, answer: _Answer, reading: _Reading, pending: 
     return best[2] if best else None
 
 
+#: The word right before a number that makes it a level, not a change.
+_LEVEL_BEFORE = re.compile(r"\b(?:to|at|from)\s*(?:[$¥]|HKD|USD|RMB|CNY|HK\$|US\$)?\s*$", re.IGNORECASE)
 #: A cue after the number does not reach across these.
 _CONJUNCTION = re.compile(r"\b(?:and|while|but|whereas|before|after|then|with|against|versus|vs|plus)\b", re.IGNORECASE)
 #: A number introduced as a comparison inherits the field it is compared with.
@@ -1250,7 +1272,10 @@ def _fields(answer: _Answer, pending: list[_Pending]) -> dict[int, str | None]:
     fields: dict[int, str | None] = {}
     for item in pending:
         if item.cls == "quantitative":
-            name = _resolve_field(item, answer, _reading(item, answer), pending)
+            reading = _reading(item, answer)
+            name = _resolve_field(item, answer, reading, pending)
+            if name == "revenue" and reading.unit == "percent" and (reading.sign or _CHANGE_AFTER.match(reading.after)):
+                name = "revenue_growth"  # "revenue grew 9.56%", "a 9.56% increase in revenue" (TP-039)
             fields[id(item)] = _refine(name, item, answer, pending) if name else None
     for item in pending:
         if item.cls != "quantitative" or fields[id(item)] is not None:

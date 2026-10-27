@@ -318,3 +318,34 @@ targets the hard classes. Name misattribution and unverified names, the
 classes stages 3-4 address, are clean. Escapes and false flags are pinned
 by name in test/offline/test_tp025_stage5_e013.py. Follow-ups are an
 owner decision.
+
+### E-014 — Growth phrasing and the name/cue collision (TP-039)
+
+Date: 2026-10-27 - Model(s): n/a (checker, unit-level)
+
+Instrument: test/offline/fixtures/e014_heldout.yaml, 50 answers, 127
+claims (93 correct, 34 wrong), written by a separately briefed subagent
+from the frozen E-013 ledgers and e014_brief.md only, committed unedited
+before the rule code. Label check: 8 disagreements, all checker limits;
+the owner ruled that every label stands.
+
+Scores (production post-check path, declared specs):
+
+| Engine | Precision | Recall |
+|---|---|---|
+| Before TP-039 | 66/93 = 0.710 | 34/34 |
+| TP-039, first run (independent) | 76/93 = 0.817 | 34/34 |
+| TP-039 after the F012 fix (not independent for F012) | 77/93 = 0.828 | 34/34 |
+
+Per class, false flags before -> after the fix: growth phrasing 11 -> 2
+(of 15 correct); name/cue collision 10 -> 8 (of 26; 7 are the
+table-title scale); general 6 -> 6 (of 52). No escapes in any run.
+
+Development set E-013 after TP-039: precision 97/109 = 0.890 (from
+0.817), recall unchanged at 48/53.
+
+Verdict: improvement measured on a battery the rules were not tuned on.
+The one regression the first run exposed (F012) is fixed and disclosed.
+Remaining: growth vocabulary ("top line expanded", "sales growth"), a
+scale stated in a table title (option c), a subject written after its
+number (option d), and pinned singletons.

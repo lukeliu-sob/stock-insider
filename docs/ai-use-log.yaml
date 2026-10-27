@@ -3795,3 +3795,31 @@ sessions:
       propagating EgressViolationError) is an agent decision recorded in TP-038 for owner
       review.
     status: applied
+  - id: AILOG-0092
+    date: "2026-10-27"
+    agent_task: >-
+      TP-039 (E-013 follow-up a+b) in agent/guardrail_claims.py: "year on year" joins the
+      growth cue; a percent joined to the revenue cue by a change word is revenue growth; a
+      ledger company's name is neither a table field label nor a prose field cue; a growth
+      cue does not govern a number introduced by to/at/from (the F012 fix). E-014 battery
+      by a separately briefed subagent before the rule code; one run before and one after
+      (precision 0.710 -> 0.817 independent, 0.828 after the disclosed F012 fix, recall
+      1.00 throughout). E-013 pins migrated for the 8 cleared false flags. Ten offline tests,
+      five mutants killed.
+    artifacts:
+      - src/stockinsider/agent/guardrail_claims.py
+      - test/offline/test_tp039_growth_target.py
+      - test/offline/test_tp025_stage5_e013.py
+      - test/offline/fixtures/e014_brief.md
+      - test/offline/fixtures/e014_heldout.yaml
+      - docs/test-plans/TP-039.md
+      - docs/architecture/evaluation-logbook.md
+      - docs/debt-register.md
+      - docs/review-memo.md
+      - docs/ai-use-log.yaml
+    human_decision: >-
+      Owner, in session, 2026-10-27: take the recommended E-013 follow-up (a+b in one plan,
+      measured on a fresh battery); ruled that E-014's eight label disagreements stand and
+      accepted the author's labeling rules; chose to fix the F012 regression now and disclose
+      it rather than pin it.
+    status: applied
