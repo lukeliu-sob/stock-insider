@@ -131,7 +131,11 @@ def test_declared_close_still_rejects_a_volume_claim(registry) -> None:
 
 
 def test_undeclared_tools_keep_heuristic(registry) -> None:
+    # migrated by the TP-025 batch-2 amendment: market.indicators now declares (owner-approved)
     specs = specs_of(registry)
-    assert specs["market.indicators"].result_fields == {}
-    assert specs["market.indicators"].result_discriminators == {}
-    assert all(not spec.result_fields for name, spec in specs.items() if name not in BATCH1)
+    declaring = {*BATCH1, "market.indicators"}
+    assert all(
+        not spec.result_fields and not spec.result_discriminators
+        for name, spec in specs.items()
+        if name not in declaring
+    )
