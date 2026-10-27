@@ -211,6 +211,20 @@ _NEWS_RECENT_FIELDS = {
 _NEWS_SEARCH_FIELDS = {"news_id": FieldSemantics("other"), "distance": FieldSemantics("other")}
 
 
+def _named(data_store: Any, symbol: str) -> dict[str, str | None]:
+    """The verified official name of a result's subject, or an explicit null (DE-16, INV-003).
+
+    Implements: REQ-SI-INV-001 (ADR-005 Am4; TP-025 stage 4)
+    """
+    return {"official_name": _verified_names(data_store, [symbol]).get(symbol)}
+
+
+def _verified_names(data_store: Any, symbols: Any) -> dict[str, str]:
+    # a facade without the name lookup (a read-only stand-in) yields no names: null, never a guess
+    lookup = getattr(data_store, "verified_names", None)
+    return lookup(symbols) if callable(lookup) else {}
+
+
 def register_market_tools(registry: Registry, data_store: Any) -> None:
     """Register the read tools that expose real market numerics (TP-010).
 
@@ -230,13 +244,13 @@ def register_market_tools(registry: Registry, data_store: Any) -> None:
         row = data_store.market_quote(args["symbol"])
         if row is None:
             raise KeyError(f"{args['symbol']}: no stored market data (sync first; INV-003)")
-        return row | {"symbol": args["symbol"]}
+        return row | {"symbol": args["symbol"]} | _named(data_store, args["symbol"])
 
     def _fundamentals(args: dict[str, Any]) -> dict[str, Any]:
         # M8 (TP-018): the honest summary — coverage AND stored rows (or an
         # explicit unavailable reason), so the tool name stops implying data
         # the vendor plan never delivered (INV-003).
-        return data_store.fundamentals_summary(args["symbol"])
+        return data_store.fundamentals_summary(args["symbol"]) | _named(data_store, args["symbol"])
 
     registry.register(
         ToolSpec(
@@ -256,7 +270,7 @@ def register_market_tools(registry: Registry, data_store: Any) -> None:
     def _indicators(args: dict[str, Any]) -> dict[str, Any]:
         # All market-data arithmetic lives behind the data facade
         # (FR-006; ADR-005 Amendment 1 - the 2026-09-29 restoration).
-        return data_store.market_indicators_snapshot(args["symbol"])
+        return data_store.market_indicators_snapshot(args["symbol"]) | _named(data_store, args["symbol"])
 
     registry.register(
         ToolSpec(
@@ -346,6 +360,7 @@ def register_news_tools(
             )
         return {
             "symbol": symbol,
+            **_named(data_store, symbol),
             "count": len(items),
             "items": items,
             "note": "titles sanitized at egress (SEC-002 layer one); cite only these items (FR-007)",
@@ -383,6 +398,7 @@ def register_news_tools(
         if not vectors:
             raise KeyError("embedding provider returned no vector (INV-003)")
         rows = data_store.news_knn(vectors[0], model_id, k=k, bucket=bucket)
+        names = _verified_names(data_store, [row["bucket"] for row in rows])
         results = [
             {
                 "news_id": row["news_id"],
@@ -391,6 +407,7 @@ def register_news_tools(
                 "domain": row["domain"],
                 "seendate": row["seendate"],
                 "bucket": row["bucket"],
+                "official_name": names.get(row["bucket"]),
                 "distance": round(row["distance"], 4),
             }
             for row in rows
