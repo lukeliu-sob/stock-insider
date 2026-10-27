@@ -10,7 +10,9 @@ The page seam (TP-035) serves feed and article fetches: it returns
 raw bytes (feeds declare their own encoding), identifies itself with
 a fixed User-Agent, caps the body size, and re-validates every
 redirect hop against the egress whitelist, so a redirect can never
-lead off the whitelist (SEC-003).
+lead off the whitelist (SEC-003). The vendor seam does the same
+(TP-038, DE-18); a refused vendor redirect is a TransportError of kind
+"egress", so the item fails visibly and the run continues.
 
 Implements: REQ-SI-INV-003, REQ-SI-SEC-003 (ADR-002)
 """
@@ -23,7 +25,7 @@ from dataclasses import dataclass
 from typing import Callable
 from urllib.parse import urlencode
 
-from stockinsider.shared.egress import validate_egress_url
+from stockinsider.shared.egress import EgressViolationError, validate_egress_url
 
 #: Transport contract: (url, params) -> FetchResult (or raises TransportError).
 Transport = Callable[[str, dict[str, str]], "FetchResult"]
@@ -51,7 +53,7 @@ class TransportError(RuntimeError):
 
     def __init__(self, kind: str, message: str, status: int | None = None) -> None:
         super().__init__(message)
-        self.kind = kind  # "rate-limited" | "http-error" | "network" | "too-large"
+        self.kind = kind  # "rate-limited" | "http-error" | "network" | "too-large" | "egress"
         self.status = status  # the HTTP status for "http-error", else None
 
 
@@ -67,15 +69,23 @@ class FetchResult:
 
 
 def stdlib_fetch(url: str, params: dict[str, str]) -> FetchResult:
-    """Live transport over stdlib urllib; egress-gated, one shot, no retry.
+    """Live transport over stdlib urllib; egress-gated per hop, one shot, no retry.
 
-    Implements: REQ-SI-SEC-003 (ADR-002)
+    The first URL is checked before any request (a violation there is a
+    code or configuration error and raises EgressViolationError). Every
+    redirect is checked before it is followed; a refused redirect is a
+    TransportError of kind "egress" (TP-038, DE-18).
+
+    Implements: REQ-SI-SEC-003, REQ-SI-INV-003 (ADR-002)
     """
     full = f"{url}?{urlencode(params)}"
     validate_egress_url(full)
+    opener = urllib.request.build_opener(_EgressCheckedRedirects)
     try:
-        with urllib.request.urlopen(full, timeout=TIMEOUT_SECONDS) as resp:  # noqa: S310 — whitelist-checked
+        with opener.open(full, timeout=TIMEOUT_SECONDS) as resp:  # noqa: S310 — whitelist-checked per hop
             return FetchResult(resp.status, resp.read().decode("utf-8"))
+    except EgressViolationError as exc:
+        raise TransportError("egress", f"redirect from {url} refused: {exc}") from exc
     except urllib.error.HTTPError as exc:
         if exc.code == 402:
             raise TransportError("rate-limited", CAPACITY_MESSAGE) from exc
