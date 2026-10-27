@@ -3699,3 +3699,26 @@ sessions:
       it as drafted, chose to declare all nine compute metrics including pe/pb/ps, and
       approved migrating the batch-1 assertion that pinned market.indicators as undeclared.
     status: applied
+  - id: AILOG-0088
+    date: "2026-10-27"
+    agent_task: >-
+      TP-025 stage 3 batch 3: news.recent declares count and the four EODHD sentiment keys,
+      news.search declares news_id and distance as "other", sync.status declares
+      active_symbols, in agent/registry.py. Strictly behavior-neutral; the sync.status
+      budget fields stay on the heuristic (the key-only lookup cannot see their parent);
+      sync.run, watchlist.* and symbol.search declare nothing by design. Stage 3 complete.
+      Eight offline tests in a new file, six mutants planted and killed. The amendment's
+      planned migration of two earlier batch tests proved unnecessary (their fixtures
+      register the market tools only); recorded as a correction, both tests unchanged.
+    artifacts:
+      - src/stockinsider/agent/registry.py
+      - test/offline/test_tp025_stage3_batch3.py
+      - docs/test-plans/TP-025.md
+      - docs/debt-register.md
+      - docs/review-memo.md
+      - docs/ai-use-log.yaml
+    human_decision: >-
+      Owner, in session, 2026-10-27: chose to keep the budget fields on the heuristic, to
+      declare nothing for tools with no typed numeric leaf, and to declare the four EODHD
+      sentiment keys (all as recommended), then approved the batch-3 amendment as drafted.
+    status: applied
