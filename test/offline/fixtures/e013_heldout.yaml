@@ -1,0 +1,498 @@
+# E-013 held-out battery (TP-025 stage 5), written by a separately briefed author from the frozen ledgers only.
+# Labeling note for unverified_name: the 9988.HK quote is the only subject in the `unverified` ledger, so a
+# number attributed to "Alibaba" is labeled by value against that quote (correct when it matches the field named).
+items:
+  - id: E001
+    ledger: hk_pair
+    text: |-
+      Tencent closed at HKD 643.06 on 2026-10-23, while BYD finished the session at 69.44. Tencent's net margin stands at 4.73%, and BYD's revenue grew 23.9% year on year.
+    claims:
+      - {text: "643.06", correct: true, kind: exact, class: name_misattribution}
+      - {text: "2026-10-23", correct: true, kind: temporal, class: general}
+      - {text: "69.44", correct: true, kind: exact, class: name_misattribution}
+      - {text: "4.73%", correct: false, kind: misattributed, class: name_misattribution}  # 4.73% is BYD's net margin; Tencent's is 30.1%
+      - {text: "23.9%", correct: true, kind: rounding, class: name_misattribution}
+
+  - id: E002
+    ledger: hk_pair
+    text: |-
+      BYD shows the gentler risk profile on paper: BYD's maximum drawdown reached 10.5%, while Tencent's volatility is 7.25%. Tencent's ROE of 3.88% trails its margin profile.
+    claims:
+      - {text: "10.5%", correct: false, kind: misattributed, class: name_misattribution}  # 10.5% is Tencent's drawdown; BYD's is 26.1%
+      - {text: "7.25%", correct: true, kind: unit_conversion, class: name_misattribution}
+      - {text: "3.88%", correct: false, kind: misattributed, class: name_misattribution}  # 3.88% is BYD's ROE; Tencent's is 5.45%
+
+  - id: E003
+    ledger: us_pair
+    text: |-
+      Apple carries a return on equity of 35.0%, against 6.35% for Target. Target's net margin is 24.9%, while Apple's revenue grew 9.56% year on year.
+    claims:
+      - {text: "35.0%", correct: true, kind: rounding, class: name_misattribution}
+      - {text: "6.35%", correct: true, kind: unit_conversion, class: postposed_subject}
+      - {text: "24.9%", correct: false, kind: misattributed, class: name_misattribution}  # 24.9% is Apple's net margin; Target's is 3.73%
+      - {text: "9.56%", correct: true, kind: unit_conversion, class: name_misattribution}
+
+  - id: E004
+    ledger: us_pair
+    text: |-
+      Apple's shares opened at 134.11 and Target's closed at 234.42; Apple traded as high as 237.23 during the day.
+    claims:
+      - {text: "134.11", correct: false, kind: misattributed, class: name_misattribution}  # 134.11 is Target's open; Apple opened at 233.01
+      - {text: "234.42", correct: false, kind: misattributed, class: name_misattribution}  # 234.42 is Apple's close; Target closed at 134.92
+      - {text: "237.23", correct: true, kind: exact, class: name_misattribution}
+
+  - id: E005
+    ledger: us_pair
+    text: |-
+      In the quarter ended 2026-06-30, Target reported net income of USD 23.4 billion on revenue of USD 25.2 billion, while Apple's stockholders' equity stood at USD 66.8 billion.
+    claims:
+      - {text: "2026-06-30", correct: true, kind: temporal, class: general}
+      - {text: "23.4 billion", correct: false, kind: misattributed, class: name_misattribution}  # Apple's net income; Target's was 0.94 billion
+      - {text: "25.2 billion", correct: true, kind: scale_word, class: name_misattribution}
+      - {text: "66.8 billion", correct: true, kind: scale_word, class: name_misattribution}
+
+  - id: E006
+    ledger: hk_pair
+    text: |-
+      The tape showed 21.15 million shares for BYD and 18.2 million shares for Tencent, with a close of 643.1 at Tencent.
+    claims:
+      - {text: "21.15 million", correct: true, kind: scale_word, class: postposed_subject}
+      - {text: "18.2 million", correct: false, kind: fabricated, class: postposed_subject}  # Tencent volume was 17.45 million
+      - {text: "643.1", correct: true, kind: rounding, class: postposed_subject}
+
+  - id: E007
+    ledger: us_pair
+    text: |-
+      Profitability diverges sharply: a 24.9% net margin at Apple versus 3.73% at Target, and a 6.35% ROE at Apple.
+    claims:
+      - {text: "24.9%", correct: true, kind: rounding, class: postposed_subject}
+      - {text: "3.73%", correct: true, kind: unit_conversion, class: postposed_subject}
+      - {text: "6.35%", correct: false, kind: misattributed, class: postposed_subject}  # 6.35% is Target's ROE; Apple's is 35.0%
+
+  - id: E008
+    ledger: us_pair
+    text: |-
+      Revenue of USD 94.0 billion for Apple in the quarter ended June 30, 2026 compares with USD 30.9 billion for Target in that quarter.
+    claims:
+      - {text: "94.0 billion", correct: true, kind: scale_word, class: postposed_subject}
+      - {text: "June 30, 2026", correct: true, kind: temporal, class: general}
+      - {text: "30.9 billion", correct: false, kind: wrong_field, class: postposed_subject}  # Target's 2025-12-31 quarter revenue; June quarter was 25.2 billion
+
+  - id: E009
+    ledger: hk_pair
+    text: |-
+      A drawdown of 26.1% for BYD contrasts with 14.53% revenue growth for Tencent and volatility of 14.52% for Tencent.
+    claims:
+      - {text: "26.1%", correct: true, kind: unit_conversion, class: postposed_subject}
+      - {text: "14.53%", correct: true, kind: unit_conversion, class: postposed_subject}
+      - {text: "14.52%", correct: false, kind: misattributed, class: postposed_subject}  # 14.52% is BYD's volatility; Tencent's is 7.25%
+
+  - id: E010
+    ledger: apple_only
+    text: |-
+      Apple closed at USD 234.42 on 23 October 2026, and Target closed at 134.92 the same day.
+    claims:
+      - {text: "234.42", correct: true, kind: exact, class: absent_company}
+      - {text: "23 October 2026", correct: true, kind: temporal, class: general}
+      - {text: "134.92", correct: false, kind: no_evidence, class: absent_company}  # Target has no data in apple_only
+
+  - id: E011
+    ledger: apple_only
+    text: |-
+      Apple's net margin of 24.9% is well ahead of Target, whose ROE is 35.0%.
+    claims:
+      - {text: "24.9%", correct: true, kind: rounding, class: absent_company}
+      - {text: "35.0%", correct: false, kind: no_evidence, class: absent_company}  # Target absent from apple_only; 35.0% is Apple's ROE
+
+  - id: E012
+    ledger: apple_only
+    text: |-
+      Tencent closed at HKD 643.06, while Apple's volatility over 259 sessions was 5.93%.
+    claims:
+      - {text: "643.06", correct: false, kind: no_evidence, class: absent_company}  # Tencent has no data in apple_only
+      - {text: "259", correct: true, kind: count, class: general}
+      - {text: "5.93%", correct: true, kind: rounding, class: absent_company}
+
+  - id: E013
+    ledger: hk_pair
+    text: |-
+      Apple's ROE of 5.45% looks thin next to BYD's 3.88%.
+    claims:
+      - {text: "5.45%", correct: false, kind: no_evidence, class: absent_company}  # Apple absent from hk_pair; 5.45% is Tencent's ROE
+      - {text: "3.88%", correct: true, kind: unit_conversion, class: absent_company}
+
+  - id: E014
+    ledger: session
+    text: |-
+      The watchlist holds 4 symbols; Tencent last closed at HKD 639.2.
+    claims:
+      - {text: "4", correct: true, kind: count, class: general}
+      - {text: "639.2", correct: false, kind: no_evidence, class: absent_company}  # no Tencent quote in the session ledger
+
+  - id: E015
+    ledger: unverified
+    text: |-
+      Alibaba closed at HKD 86.81, while Tencent finished at 643.06.
+    claims:
+      - {text: "86.81", correct: true, kind: exact, class: unverified_name}
+      - {text: "643.06", correct: false, kind: no_evidence, class: absent_company}  # Tencent has no data in the unverified ledger
+
+  - id: E016
+    ledger: unverified
+    text: |-
+      Alibaba shares closed at HKD 86.81 on 2026-10-23 after opening at 86.29.
+    claims:
+      - {text: "86.81", correct: true, kind: exact, class: unverified_name}
+      - {text: "2026-10-23", correct: true, kind: temporal, class: general}
+      - {text: "86.29", correct: true, kind: exact, class: unverified_name}
+
+  - id: E017
+    ledger: unverified
+    text: |-
+      Alibaba traded between 85.77 and 87.85, with 33.05 million shares changing hands.
+    claims:
+      - {text: "85.77", correct: true, kind: exact, class: unverified_name}
+      - {text: "87.85", correct: true, kind: exact, class: unverified_name}
+      - {text: "33.05 million", correct: true, kind: scale_word, class: unverified_name}
+
+  - id: E018
+    ledger: unverified
+    text: |-
+      Alibaba closed at 87.85 and its volume was 35.1 million shares; Alibaba's net margin is 12.4%.
+    claims:
+      - {text: "87.85", correct: false, kind: wrong_field, class: unverified_name}  # 87.85 is the high; the close was 86.81
+      - {text: "35.1 million", correct: false, kind: fabricated, class: unverified_name}  # volume was 33.05 million
+      - {text: "12.4%", correct: false, kind: fabricated, class: unverified_name}  # no net margin in the unverified ledger
+
+  - id: E019
+    ledger: unverified
+    text: |-
+      Alibaba's close of 86.814 compares with an intraday low of 85.8.
+    claims:
+      - {text: "86.814", correct: false, kind: over_precise, class: unverified_name}  # ledger close is 86.81; extra digit unsupported
+      - {text: "85.8", correct: true, kind: rounding, class: unverified_name}
+
+  - id: E020
+    ledger: us_pair
+    text: |-
+      There is no price target in the data; Apple closed at 234.42 with volume of 54.35 million shares.
+    claims:
+      - {text: "234.42", correct: true, kind: exact, class: common_word_name}
+      - {text: "54.35 million", correct: true, kind: scale_word, class: common_word_name}
+
+  - id: E021
+    ledger: us_pair
+    text: |-
+      Targeted screens on margin quality favour Apple, whose net margin is 3.73%.
+    claims:
+      - {text: "3.73%", correct: false, kind: misattributed, class: common_word_name}  # 3.73% is Target Corp's net margin; Apple's is 24.9%
+
+  - id: E022
+    ledger: us_pair
+    text: |-
+      Investors who targeted growth will note Apple's revenue rose 9.56% while its maximum drawdown was 18.4%.
+    claims:
+      - {text: "9.56%", correct: true, kind: unit_conversion, class: common_word_name}
+      - {text: "18.4%", correct: false, kind: misattributed, class: common_word_name}  # 18.4% is Target Corp's drawdown; Apple's is 8.26%
+
+  - id: E023
+    ledger: us_pair
+    text: |-
+      Target levels aside, Apple's ROE of 35.03% stands out, and no price target debate changes its 8.26% drawdown.
+    claims:
+      - {text: "35.03%", correct: true, kind: unit_conversion, class: common_word_name}
+      - {text: "8.26%", correct: true, kind: unit_conversion, class: common_word_name}
+
+  - id: E024
+    ledger: us_pair
+    text: |-
+      Setting a price target is outside the data, but Apple's low was 231.61 and its open was 237.23.
+    claims:
+      - {text: "231.61", correct: true, kind: exact, class: common_word_name}
+      - {text: "237.23", correct: false, kind: wrong_field, class: common_word_name}  # 237.23 is Apple's high; the open was 233.01
+
+  - id: E025
+    ledger: hk_pair
+    text: |-
+      | Company | Close (HKD) | Volume | Net margin | Max drawdown |
+      |---|---|---|---|---|
+      | Tencent | 643.06 | 17.45M | 30.1% | 10.46% |
+      | BYD | 69.02 | 21.15M | 3.9% | 26.1% |
+    claims:
+      - {text: "643.06", correct: true, kind: exact, class: table}
+      - {text: "17.45M", correct: true, kind: scale_word, class: table}
+      - {text: "30.1%", correct: true, kind: rounding, class: table}
+      - {text: "10.46%", correct: true, kind: unit_conversion, class: table}
+      - {text: "69.02", correct: false, kind: wrong_field, class: table}  # 69.02 is BYD's open; the close was 69.44
+      - {text: "21.15M", correct: true, kind: scale_word, class: table}
+      - {text: "3.9%", correct: false, kind: wrong_field, class: table}  # 3.9% is BYD's ROE; its net margin is 4.73%
+      - {text: "26.1%", correct: true, kind: unit_conversion, class: table}
+
+  - id: E026
+    ledger: us_pair
+    text: |-
+      Quarter ended 2026-06-30 (USD billions):
+
+      | Company | Revenue | Net income | Gross profit | Equity |
+      |---|---|---|---|---|
+      | Apple | 94.0 | 23.4 | 43.7 | 68.6 |
+      | Target | 25.2 | 1.04 | 7.11 | 14.8 |
+    claims:
+      - {text: "2026-06-30", correct: true, kind: temporal, class: table}
+      - {text: "94.0", correct: true, kind: scale_word, class: table}
+      - {text: "23.4", correct: true, kind: scale_word, class: table}
+      - {text: "43.7", correct: true, kind: scale_word, class: table}
+      - {text: "68.6", correct: false, kind: fabricated, class: table}  # Apple equity was 66.8 billion
+      - {text: "25.2", correct: true, kind: scale_word, class: table}
+      - {text: "1.04", correct: false, kind: wrong_field, class: table}  # 1.04 billion is Target's 2026-03-31 net income; June quarter was 0.94
+      - {text: "7.11", correct: true, kind: scale_word, class: table}
+      - {text: "14.8", correct: true, kind: scale_word, class: table}
+
+  - id: E027
+    ledger: us_pair
+    text: |-
+      | Company | Open | High | Low | Close |
+      |---|---|---|---|---|
+      | Apple | 233.01 | 237.23 | 231.61 | 234.42 |
+      | Target | 134.11 | 136.54 | 133.3 | 134.29 |
+    claims:
+      - {text: "233.01", correct: true, kind: exact, class: table}
+      - {text: "237.23", correct: true, kind: exact, class: table}
+      - {text: "231.61", correct: true, kind: exact, class: table}
+      - {text: "234.42", correct: true, kind: exact, class: table}
+      - {text: "134.11", correct: true, kind: exact, class: table}
+      - {text: "136.54", correct: true, kind: exact, class: table}
+      - {text: "133.3", correct: true, kind: exact, class: table}
+      - {text: "134.29", correct: false, kind: fabricated, class: table}  # Target closed at 134.92
+
+  - id: E028
+    ledger: hk_pair
+    text: |-
+      | Date | Tencent headline | Polarity |
+      |---|---|---|
+      | 2026-10-23 | Buyback pace lifted | 0.874 |
+      | 2026-10-22 | Gaming revenue beats | 0.921 |
+      | 2026-10-21 | Game approvals review | -0.214 |
+    claims:
+      - {text: "2026-10-23", correct: true, kind: temporal, class: table}
+      - {text: "0.874", correct: true, kind: sentiment, class: table}
+      - {text: "2026-10-22", correct: true, kind: temporal, class: table}
+      - {text: "0.921", correct: false, kind: fabricated, class: table}  # gaming item polarity is 0.912
+      - {text: "2026-10-21", correct: true, kind: temporal, class: table}
+      - {text: "-0.214", correct: true, kind: sentiment, class: table}
+
+  - id: E029
+    ledger: hk_pair
+    text: |-
+      Tencent has 3 recent articles in the ledger; the most positive, on gaming revenue, carries a polarity of 0.912, and the average polarity across them is 0.524.
+    claims:
+      - {text: "3", correct: true, kind: count, class: general}
+      - {text: "0.912", correct: true, kind: sentiment, class: general}
+      - {text: "0.524", correct: false, kind: derived, class: general}  # mean of the polarities; not itself in the ledger
+
+  - id: E030
+    ledger: hk_pair
+    text: |-
+      The regulatory story scored -0.214 polarity with a negative share of 0.094, and the buyback headline had a positive share of 0.206.
+    claims:
+      - {text: "-0.214", correct: true, kind: sentiment, class: general}
+      - {text: "0.094", correct: true, kind: sentiment, class: general}
+      - {text: "0.206", correct: false, kind: wrong_field, class: general}  # 0.206 is the gaming item's positive share; buyback's is 0.167
+
+  - id: E031
+    ledger: session
+    text: |-
+      With 20 calls remaining, the sync budget shows nothing spent yet today.
+    claims:
+      - {text: "20", correct: true, kind: exact, class: general}
+
+  - id: E032
+    ledger: session
+    text: |-
+      The daily API cap is 20 calls, and 12 have been used today.
+    claims:
+      - {text: "20", correct: true, kind: exact, class: general}
+      - {text: "12", correct: false, kind: fabricated, class: general}  # used is 0
+
+  - id: E033
+    ledger: session
+    text: |-
+      The budget allows 25 calls per day, and 4 symbols are active.
+    claims:
+      - {text: "25", correct: false, kind: fabricated, class: general}  # cap is 20
+      - {text: "4", correct: true, kind: count, class: general}
+
+  - id: E034
+    ledger: session
+    text: |-
+      So far 0 API calls are used, and 4 symbols sit on the watchlist.
+    claims:
+      - {text: "0", correct: true, kind: exact, class: general}
+      - {text: "4", correct: true, kind: count, class: general}
+
+  - id: E035
+    ledger: session
+    text: |-
+      The store holds 6 news articles, 4 of them in the Tencent bucket and 2 in the BYD bucket; none are quarantined.
+    claims:
+      - {text: "6", correct: true, kind: count, class: general}
+      - {text: "4", correct: true, kind: count, class: general}
+      - {text: "2", correct: false, kind: fabricated, class: general}  # BYD bucket has 1 article
+
+  - id: E036
+    ledger: session
+    text: |-
+      By source, eodhd supplied 3 articles and gdelt supplied 5.
+    claims:
+      - {text: "3", correct: true, kind: count, class: general}
+      - {text: "5", correct: false, kind: fabricated, class: general}  # gdelt supplied 3
+
+  - id: E037
+    ledger: session
+    text: |-
+      The BYD deliveries story was the closest search match at a distance of 0.1, published on October 20, 2026, while the Federal Reserve item sat at 0.3162.
+    claims:
+      - {text: "0.1", correct: true, kind: exact, class: general}
+      - {text: "October 20, 2026", correct: true, kind: temporal, class: general}
+      - {text: "0.3162", correct: false, kind: misattributed, class: general}  # 0.3162 is the Tencent item's distance; the Fed item's is 0.7616
+
+  - id: E038
+    ledger: session
+    text: |-
+      All 4 watchlist symbols were added on 1 October 2026, and the last sync ran on 2026-10-25.
+    claims:
+      - {text: "4", correct: true, kind: count, class: general}
+      - {text: "1 October 2026", correct: true, kind: temporal, class: general}
+      - {text: "2026-10-25", correct: false, kind: no_evidence, class: general}  # last_run is null; no sync date in the ledger
+
+  - id: E039
+    ledger: hk_pair
+    text: |-
+      Tencent's 10.5% drawdown ran from a peak on 2025-11-17 to a trough on 2025-12-24, whereas BYD's trough came on 2026-09-19.
+    claims:
+      - {text: "10.5%", correct: true, kind: unit_conversion, class: general}
+      - {text: "2025-11-17", correct: true, kind: temporal, class: general}
+      - {text: "2025-12-24", correct: true, kind: temporal, class: general}
+      - {text: "2026-09-19", correct: false, kind: fabricated, class: general}  # BYD's trough was 2026-08-19
+
+  - id: E040
+    ledger: hk_pair
+    text: |-
+      Tencent's intraday range spanned HKD 15.44, and the stock gained 0.60% from its open of 639.2.
+    claims:
+      - {text: "15.44", correct: false, kind: derived, class: general}  # high minus low; not in the ledger
+      - {text: "0.60%", correct: false, kind: derived, class: general}  # close over open change; not in the ledger
+      - {text: "639.2", correct: true, kind: exact, class: general}
+
+  - id: E041
+    ledger: hk_pair
+    text: |-
+      Tencent closed at 643.064 on volume of 17,451,021 shares.
+    claims:
+      - {text: "643.064", correct: false, kind: over_precise, class: general}  # ledger close is 643.06
+      - {text: "17,451,021", correct: true, kind: exact, class: general}
+
+  - id: E042
+    ledger: hk_pair
+    text: |-
+      BYD closed at 70.27 after touching a low of 68.61.
+    claims:
+      - {text: "70.27", correct: false, kind: wrong_field, class: general}  # 70.27 is BYD's high; the close was 69.44
+      - {text: "68.61", correct: true, kind: exact, class: general}
+
+  - id: E043
+    ledger: us_pair
+    text: |-
+      Apple's net income for the quarter ended 2025-12-31 was USD 36.3 billion on revenue of USD 124.3 billion, and total assets at the latest balance date were USD 331 billion.
+    claims:
+      - {text: "2025-12-31", correct: true, kind: temporal, class: general}
+      - {text: "36.3 billion", correct: true, kind: scale_word, class: general}
+      - {text: "124.3 billion", correct: true, kind: scale_word, class: general}
+      - {text: "331 billion", correct: true, kind: scale_word, class: general}
+
+  - id: E044
+    ledger: us_pair
+    text: |-
+      Apple's revenue slipped 1.5% quarter on quarter to USD 94.0 billion, implying a gross margin of 46.5%.
+    claims:
+      - {text: "1.5%", correct: false, kind: derived, class: general}  # computed from 94.0 vs 95.4 billion; not in the ledger
+      - {text: "94.0 billion", correct: true, kind: scale_word, class: general}
+      - {text: "46.5%", correct: false, kind: derived, class: general}  # gross margin is unavailable in the ledger; computed from gross profit over revenue
+
+  - id: E045
+    ledger: us_pair
+    text: |-
+      Target's equity of USD 14.8 billion compares with net income of USD 1.10 billion in the quarter ended December 31, 2025.
+    claims:
+      - {text: "14.8 billion", correct: true, kind: scale_word, class: general}
+      - {text: "1.10 billion", correct: true, kind: scale_word, class: general}
+      - {text: "December 31, 2025", correct: true, kind: temporal, class: general}
+
+  - id: E046
+    ledger: us_pair
+    text: |-
+      Apple has 5 quarters of fundamentals stored, a coverage ratio of 0.48, with 13 cells filled.
+    claims:
+      - {text: "5", correct: true, kind: count, class: general}
+      - {text: "0.48", correct: true, kind: exact, class: general}
+      - {text: "13", correct: false, kind: fabricated, class: general}  # cells_filled is 12
+
+  - id: E047
+    ledger: us_pair
+    text: |-
+      Target's revenue fell 1.18% year on year, and its volatility was 10.3%.
+    claims:
+      - {text: "1.18%", correct: true, kind: unit_conversion, class: general}
+      - {text: "10.3%", correct: true, kind: rounding, class: general}
+
+  - id: E048
+    ledger: us_pair
+    text: |-
+      Target closed at 134.924 with 6.75 million shares traded.
+    claims:
+      - {text: "134.924", correct: false, kind: over_precise, class: general}  # ledger close is 134.92
+      - {text: "6.75 million", correct: true, kind: scale_word, class: general}
+
+  - id: E049
+    ledger: apple_only
+    text: |-
+      Apple's revenue grew 9.6% year on year and its maximum drawdown was 8.3%, with net income of USD 23.4 billion last quarter.
+    claims:
+      - {text: "9.6%", correct: true, kind: rounding, class: general}
+      - {text: "8.3%", correct: true, kind: rounding, class: general}
+      - {text: "23.4 billion", correct: false, kind: no_evidence, class: general}  # apple_only has no fundamentals tool result
+
+  - id: E050
+    ledger: apple_only
+    text: |-
+      Apple's ROE of 35.03% and net margin of 24.89% sit alongside volume of 54,315,021 shares.
+    claims:
+      - {text: "35.03%", correct: true, kind: unit_conversion, class: general}
+      - {text: "24.89%", correct: true, kind: unit_conversion, class: general}
+      - {text: "54,315,021", correct: false, kind: fabricated, class: general}  # volume was 54,351,021
+
+  - id: E051
+    ledger: hk_pair
+    text: |-
+      Net margin of 30.1% at Tencent dwarfs the 4.73% posted by BYD, and an ROE of 3.88% for Tencent completes the picture.
+    claims:
+      - {text: "30.1%", correct: true, kind: rounding, class: postposed_subject}
+      - {text: "4.73%", correct: true, kind: unit_conversion, class: postposed_subject}
+      - {text: "3.88%", correct: false, kind: misattributed, class: postposed_subject}  # 3.88% is BYD's ROE; Tencent's is 5.45%
+
+  - id: E052
+    ledger: hk_pair
+    text: |-
+      BYD's revenue grew 14.5% year on year, while Tencent's maximum drawdown was 26.1%.
+    claims:
+      - {text: "14.5%", correct: false, kind: misattributed, class: name_misattribution}  # 14.5% is Tencent's revenue growth; BYD's is 23.9%
+      - {text: "26.1%", correct: false, kind: misattributed, class: name_misattribution}  # 26.1% is BYD's drawdown; Tencent's is 10.5%
+
+  - id: E053
+    ledger: unverified
+    text: |-
+      Alibaba volume came in at 33,051,021 shares; Alibaba's session high was 87.85 and its prior close was 85.10.
+    claims:
+      - {text: "33,051,021", correct: true, kind: exact, class: unverified_name}
+      - {text: "87.85", correct: true, kind: exact, class: unverified_name}
+      - {text: "85.10", correct: false, kind: fabricated, class: unverified_name}  # no prior close in the ledger

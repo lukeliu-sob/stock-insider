@@ -273,3 +273,48 @@ transfer. hit@5 passes for every variant. The gap is in alias,
 paraphrase and macro queries, which query-side changes do not reach:
 the top 5 is filled with headlines from neighbouring families. Owner
 decision pending (TP-037 stage 2).
+
+### E-013 — Phase-3 typed claims, independent held-out remeasurement (TP-025 stage 5)
+
+Date: 2026-10-27 - Model(s): n/a (checker, unit-level)
+
+Instrument:
+- test/offline/fixtures/e013_ledgers.yaml: five session ledgers produced by
+  the real tools over a seeded store (stage-3 declarations and stage-4 names
+  in place); a drift test rebuilds them.
+- test/offline/fixtures/e013_heldout.yaml: 53 answers, 162 claims (109
+  correct, 53 wrong). Written by a separately briefed subagent from the
+  frozen ledgers and the brief only (e013_brief.md), committed unedited
+  before the run.
+- Label check without the engine: 9 disagreements, all checker limits; the
+  owner ruled that every label stands, and accepted the author's rule for
+  unverified names (labeled by value).
+- Engine frozen at the stage-4 tree (blob hashes: guardrail_claims.py
+  7351368, guardrail.py 615d8f1, registry.py fd202ad). Run once, on the
+  production path (post-check with the declared tool specs).
+
+Scores:
+- Precision 89/109 = 0.817; recall 48/53 = 0.906; no flags on unlabeled
+  numbers.
+- Per class (false flags / correct; escapes / wrong): name misattribution
+  2/9, 0/9; subject after the number 4/10, 2/5; company absent from the
+  ledger 0/4, 1/6; unverified name 0/9, 0/5; common-word name 1/6, 0/3;
+  tables 9/25, 0/6; general 4/46, 2/19.
+
+Causes:
+- False flags (20): the subject written after its number, "6.35% for
+  Target" (4); "revenue grew X% year on year" typed as revenue, because
+  "year on year" is not a growth cue (5); the company name "Target" as a
+  table row label read as the price-target cue (6); a scale stated in a
+  table title, "(USD billions)" (3); a cue reaching the next number, and
+  total assets having no field class (2).
+- Escapes (5): the subject written after its number (2); a company absent
+  from the ledger (1); which list item a value belongs to, an article's
+  sentiment share or a search result's distance (2).
+
+Verdict: measured, no threshold set in advance (owner decision). Precision
+is below the 0.90 that E-010 required. Recall is 0.906 on a battery that
+targets the hard classes. Name misattribution and unverified names, the
+classes stages 3-4 address, are clean. Escapes and false flags are pinned
+by name in test/offline/test_tp025_stage5_e013.py. Follow-ups are an
+owner decision.

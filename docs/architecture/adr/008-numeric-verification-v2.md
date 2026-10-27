@@ -388,3 +388,44 @@ baseline run on main 97b4a88 with a ledger shaped like real tool results:
 - Headline numbers must be quoted to verify.
 
 Implements: REQ-SI-INV-001, REQ-SI-FR-008, REQ-SI-QA-004.
+
+## Amendment 2 (2026-10-27, TP-025) — phase 3: declared typing, names on results, E-013
+
+Phase 3 (TP-025, with ADR-005 Amendment 4) replaced guessing with
+declaration where the tools can say what they return, and measured the
+result on a fresh held-out battery.
+
+- **Declared typing (stages 1-3).** `ToolSpec` carries `result_fields` and
+  `result_discriminators`; the evidence typing reads them first and falls
+  back to the phase-2 heuristic per leaf. Six tools declare
+  (`market.quote`, `fundamentals.summary`, `market.indicators`,
+  `news.recent`, `news.search`, `sync.status`), each strictly
+  behavior-neutral at the time. Two limits of the key-only lookup are
+  recorded rather than worked around: keys whose meaning depends on their
+  parent (`budget.used`) and list-length counts stay on the heuristic.
+  `sync.run`, `watchlist.*` and `symbol.search` declare nothing by design.
+- **Names on results (stage 4).** The five subject-bearing tools return
+  the verified `official_name` (null otherwise), which the existing name
+  path turns into a subject. A number attributed by company name to the
+  wrong company in the ledger is flagged. A company absent from the
+  session ledger is still not recognized: its name would have to enter the
+  snapshot, which INV-001 checks against and replay depends on (ADR-005
+  Am4 residual, DE-16).
+- **E-013 (stage 5).** An independent battery of 162 claims, written from
+  real-tool ledgers by a separately briefed author: precision 0.817,
+  recall 0.906. Name misattribution and unverified names are clean. The
+  remaining errors are claim-side reading (a subject after its number,
+  "year on year", a company name that is also a field cue, a scale in a
+  table title, list-item attribution) and the absent-company residual.
+  Evaluation logbook E-013 records the classes.
+
+### Consequences
+
+- The `unknown` fallback (Amendment 1, "Alternatives considered") stays
+  for undeclared keys; declared keys no longer fall back.
+- The measured weak spots are on the claim side, not the evidence side.
+  Each follow-up is a separate owner decision with its own plan, written
+  before any rule change, and measured on a battery its rules were not
+  tuned on.
+
+Implements: REQ-SI-INV-001, REQ-SI-QA-001.
