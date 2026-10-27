@@ -3655,3 +3655,25 @@ sessions:
       as deviations in TP-035 for owner review; terms of use of the body domains await the
       owner.
     status: applied
+  - id: AILOG-0086
+    date: "2026-10-27"
+    agent_task: >-
+      TP-025 stage 3 batch 1: market.quote and fundamentals.summary declare result_fields
+      in agent/registry.py (OHLC, adjusted close and volume; the four vendor statement keys
+      in exact vendor case; the coverage bookkeeping keys as "other"). Strictly
+      behavior-neutral: each declaration reproduces the heuristic's class for the same leaf,
+      unit and subject_bearing stay empty. Seven offline tests, including an equivalence
+      test, a fallback-disabled test and two drift tests; four mutants planted and killed.
+    artifacts:
+      - src/stockinsider/agent/registry.py
+      - test/offline/test_tp025_stage3_batch1.py
+      - docs/test-plans/TP-025.md
+      - docs/debt-register.md
+      - docs/review-memo.md
+      - docs/ai-use-log.yaml
+    human_decision: >-
+      Owner, in session, 2026-10-27: asked to proceed through the open steps in order and
+      chose, for batch 1, strictly behavior-neutral declarations, only the four mapped
+      fundamentals keys, and an empty unit field (all as recommended). The same session
+      confirmed HKFP, news.gov.hk and RTHK as TP-035 body domains.
+    status: applied
