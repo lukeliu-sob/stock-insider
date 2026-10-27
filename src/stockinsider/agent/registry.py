@@ -18,6 +18,7 @@ from typing import Any
 from stockinsider.shared.tools import (
     JSON_SCHEMA_TYPES,
     EffectClass,
+    FieldSemantics,
     SourceKind,
     ToolCall,
     ToolResult,
@@ -163,6 +164,25 @@ def register_sync_tools(registry: Registry, data_store: Any) -> None:
     )
 
 
+#: TP-025 stage 3 batch 1: declared result-field semantics. Strictly
+#: behavior-neutral - each class is the one the heuristic gives the same
+#: leaf; `unit` stays empty until a consumer exists.
+_QUOTE_FIELDS = {
+    name: FieldSemantics(name) for name in ("open", "high", "low", "close", "adjusted_close", "volume")
+}
+#: Vendor keys in exact vendor case (the declared lookup is case-sensitive);
+#: coverage bookkeeping is "other", as the heuristic's inert set types it.
+_FUNDAMENTALS_FIELDS = {
+    "totalRevenue": FieldSemantics("revenue"),
+    "netIncome": FieldSemantics("net_income"),
+    "grossProfit": FieldSemantics("gross_profit"),
+    "totalStockholdersEquity": FieldSemantics("equity"),
+    "quarters": FieldSemantics("other"),
+    "quarters_expected": FieldSemantics("other"),
+    "cells": FieldSemantics("other"),
+}
+
+
 def register_market_tools(registry: Registry, data_store: Any) -> None:
     """Register the read tools that expose real market numerics (TP-010).
 
@@ -171,7 +191,10 @@ def register_market_tools(registry: Registry, data_store: Any) -> None:
     are the first real market numbers flowing through the membrane
     into INV-001 snapshots.
 
-    Implements: REQ-SI-FR-005, REQ-SI-FR-002 (ADR-005, ADR-002)
+    market.quote and fundamentals.summary declare their result fields
+    (TP-025 stage 3 batch 1).
+
+    Implements: REQ-SI-FR-005, REQ-SI-FR-002, REQ-SI-INV-001 (ADR-005, ADR-002, ADR-005 Am4)
     """
 
     def _quote(args: dict[str, Any]) -> dict[str, Any]:
@@ -197,6 +220,7 @@ def register_market_tools(registry: Registry, data_store: Any) -> None:
             result_spec="dict",
             effect_class=EffectClass.READ,
             source_kind=SourceKind.API,
+            result_fields=_QUOTE_FIELDS,
         ),
         _quote,
     )
@@ -235,6 +259,7 @@ def register_market_tools(registry: Registry, data_store: Any) -> None:
             result_spec="dict",
             effect_class=EffectClass.READ,
             source_kind=SourceKind.API,
+            result_fields=_FUNDAMENTALS_FIELDS,
         ),
         _fundamentals,
     )
