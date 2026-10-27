@@ -469,10 +469,16 @@ def index_evidence(snapshot_values: object, specs: Mapping[str, ToolSpec] | None
     return evidence
 
 
+def _bucket_symbol(node: dict[str, Any]) -> str | None:
+    """A news row's symbol bucket; macro and topical buckets are not symbols (TP-025 stage 4)."""
+    bucket = node.get("bucket")
+    return bucket if isinstance(bucket, str) and _SYMBOL_SHAPE.match(bucket.strip()) else None
+
+
 def _collect_names(node: object, names: dict[str, set[str]]) -> None:
     if isinstance(node, dict):
         official = node.get("official_name")
-        symbol = node.get("canonical_symbol") or node.get("symbol")
+        symbol = node.get("canonical_symbol") or node.get("symbol") or _bucket_symbol(node)
         if isinstance(official, str) and isinstance(symbol, str) and official.split():
             first = official.split()[0].strip(",.")
             if len(first) >= 3 and first[0].isupper() and first.lower() != "the":

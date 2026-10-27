@@ -3722,3 +3722,29 @@ sessions:
       declare nothing for tools with no typed numeric leaf, and to declare the four EODHD
       sentiment keys (all as recommended), then approved the batch-3 amendment as drafted.
     status: applied
+  - id: AILOG-0089
+    date: "2026-10-27"
+    agent_task: >-
+      TP-025 stage 4 (DE-16, in-ledger class): DataStore.verified_names (verified symbols
+      only); market.quote, market.indicators, fundamentals.summary and news.recent return a
+      top-level official_name, news.search one per row, null when no verified name;
+      guardrail_claims._collect_names pairs a symbol-shaped news bucket with its name. A
+      prototype run on name-bearing E-010 ledgers before the amendment measured the effect
+      (held-out recall 0.938 -> 0.975, precision 0.988 -> 0.976) and exposed the
+      postposed-subject false flags H021/H030, pinned by owner decision. Nine offline tests,
+      four mutants planted and killed; no existing test changed.
+    artifacts:
+      - src/stockinsider/data/store/__init__.py
+      - src/stockinsider/agent/registry.py
+      - src/stockinsider/agent/guardrail_claims.py
+      - test/offline/test_tp025_stage4_names.py
+      - docs/test-plans/TP-025.md
+      - docs/debt-register.md
+      - docs/review-memo.md
+      - docs/ai-use-log.yaml
+    human_decision: >-
+      Owner, in session, 2026-10-27: chose names on results only, verified names only, the
+      guardrail reading the news bucket, no subject_bearing declaration, and pinning the
+      postposed-subject false flags for stage 5 (all as recommended); then approved the
+      stage-4 amendment as drafted.
+    status: applied
