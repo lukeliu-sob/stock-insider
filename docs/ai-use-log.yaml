@@ -3961,6 +3961,7 @@ sessions:
       - test/offline/test_identity_prompt.py
       - test/offline/test_tp018b_fourth_audit.py
       - docs/test-plans/TP-044.md
+      - docs/review-memo.md
       - docs/ai-use-log.yaml
     human_decision: >-
       Owner, in session, 2026-11-03: chose the prompt rule for the raw-float display (over

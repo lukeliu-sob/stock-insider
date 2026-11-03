@@ -815,3 +815,11 @@ test-plan gate's safety-path attestation).
 - Risk:
   - The index aliases ("the index", "the benchmark") apply only when the ledger holds exactly one index.
   - A table cell counts as a quotation only when its whole text equals a tool string of three or more words.
+
+### RM-78 — TP-044: identity prompt v8, readable numbers (ADR-008 decision 2)
+
+- Verdict: APPROVE pending owner merge. The owner chose this option in session (2026-11-03); the plan was committed before the prompt change.
+- Spec alignment: REQ-SI-INV-001, REQ-SI-QA-001. The v7 rule ("no rounding ... display the fraction") predates ADR-008 decision 2 and produced 16-digit floats in every live answer. v8 allows only the renderings the post-check already accepts: a fraction as a two-decimal percent, and a long decimal shortened to four places. Prices, volumes, counts and dates stay exactly as returned.
+- Architecture: `prompts/` needs human approval for every change, hence this entry. One rule is reworded in place and keeps its opening words, which the TP-026 ordering test reads. The post-check, tools and data are unchanged.
+- Test quality: three tests on the frozen E-015 ledgers. Every rendering the rule allows passes the post-check, and wrong renderings (transposed digits, a fraction read as its own percent, the wrong window) are still flagged. Two version pins migrated from v7 to v8, as TP-026 did from v6 to v7. Full offline suite: 818 passed, 2 expected failures.
+- Risk: the model may shorten a price despite the rule. A shortened price is still checked at its written precision, so a wrong one is marked, not hidden. A behavioral eval run (`test/live`) on v8 is advisable before relying on the new rendering.
