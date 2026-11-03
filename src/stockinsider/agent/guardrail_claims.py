@@ -26,7 +26,7 @@ Implements: REQ-SI-INV-001 (ADR-008)
 from __future__ import annotations
 
 import re
-from collections.abc import Callable, Mapping
+from collections.abc import Callable, Mapping, Sequence
 from dataclasses import dataclass, field, replace
 from datetime import date, datetime, timedelta, timezone
 from typing import Any
@@ -1090,7 +1090,7 @@ def _word_value(phrase: str) -> float | None:
 
 
 def _quote_spans(
-    candidate: str, evidence: Evidence, cells: list[tuple[int, int, str, str]] = ()
+    candidate: str, evidence: Evidence, cells: Sequence[tuple[int, int, str, str]] = ()
 ) -> list[tuple[int, int, bool]]:
     spans = []
     # a table cell whose whole text is a tool's text value quotes it (a headline as the
@@ -1241,9 +1241,9 @@ def _resolve_field(item: _Pending, answer: _Answer, reading: _Reading, pending: 
     if cell is not None and noun:
         # a count noun in the cell itself ("259 sessions") names the number before the
         # row's metric label does (TP-042)
-        for name, _pattern in _COUNT_NOUNS:
-            if noun.group(name):
-                return name
+        for count_field, _pattern in _COUNT_NOUNS:
+            if noun.group(count_field):
+                return count_field
     if cell is not None:
         labels = [label for label in (cell[0], cell[1]) if not answer.names_subject(label)]
         for label in labels:
@@ -1505,7 +1505,8 @@ def _stated_window(item: _Pending, answer: _Answer, pending: list[_Pending]) -> 
         start, end = answer.clause(item.start)
     percents = [
         p for p in pending
-        if p is not item and p.cls == "quantitative" and start <= p.start < end and _reading(p, answer).unit == "percent"
+        if p is not item and p.cls == "quantitative" and start <= p.start < end
+        and _reading(p, answer).unit == "percent"
     ]
     after_end = min([p.start for p in percents if p.start >= item.end], default=end)
     segments = [text[item.end : after_end]]
