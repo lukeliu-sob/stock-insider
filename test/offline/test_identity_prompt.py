@@ -17,7 +17,9 @@ IDENTITY_PATH = pathlib.Path(__file__).resolve().parents[2] / "prompts" / "ident
 def test_identity_prompt_names_arguments_as_not_citable() -> None:
     text = IDENTITY_PATH.read_text(encoding="utf-8")
     frontmatter = yaml.safe_load(text.split("---")[1])
-    assert frontmatter["version"] == 7
+    # TP-044 migrated assertion: v7 -> v8 (the readable-number rule bumped the version;
+    # the arguments rule and the rule order are unrelated to that change and still hold)
+    assert frontmatter["version"] == 8
     flat = " ".join(text.split())  # tolerate the file's own line-wrapping
     assert "Tool-call arguments are not evidence" in flat
     assert "is not a stored value" in flat

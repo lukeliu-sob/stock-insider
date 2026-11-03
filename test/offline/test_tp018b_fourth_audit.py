@@ -373,7 +373,8 @@ def test_identity_prompt_is_v7_with_non_relay_rules() -> None:
     from stockinsider.agent.loop import load_identity_prompt
 
     version, body = load_identity_prompt()
-    assert version == "identity-v7"
+    # TP-044 migrated assertion: v7 -> v8 (readable-number rule; unrelated to the token wording)
+    assert version == "identity-v8"
     assert "do NOT repeat, spell out, or invent the token" in body
     assert "user_confirmed" not in body
 

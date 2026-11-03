@@ -3947,3 +3947,25 @@ sessions:
       code are agent decisions recorded for owner review; the migrated stub-command guard
       awaits owner approval in the PR.
     status: applied
+  - id: AILOG-0097
+    date: "2026-11-03"
+    agent_task: >-
+      TP-044: prompts/identity.md v7 -> v8. The "Numbers render as returned" rule now allows a
+      fraction as a two-decimal percent and a long decimal shortened to four decimals; prices,
+      volumes, counts and dates stay exactly as returned; change_pct is already a percent.
+      The post-check is unchanged (ADR-008 decision 2 already accepts these renderings). Three
+      offline tests on the frozen E-015 ledgers; two prompt-version pins migrated v7 -> v8.
+    artifacts:
+      - prompts/identity.md
+      - test/offline/test_tp044_readable_numbers.py
+      - test/offline/test_identity_prompt.py
+      - test/offline/test_tp018b_fourth_audit.py
+      - docs/test-plans/TP-044.md
+      - docs/review-memo.md
+      - docs/ai-use-log.yaml
+    human_decision: >-
+      Owner, in session, 2026-11-03: chose the prompt rule for the raw-float display (over
+      rounding the indicator values or leaving it), which is the human approval prompts/
+      changes require; the wording of the rule and the two migrated version pins await owner
+      review in the PR.
+    status: applied
