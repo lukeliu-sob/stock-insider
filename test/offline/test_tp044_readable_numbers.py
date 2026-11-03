@@ -31,6 +31,7 @@ def test_identity_prompt_is_v8_with_readable_rule() -> None:
     assert "a fraction may be written as a percent with two decimals" in flat
     assert "Prices, volumes, counts and dates appear exactly as received" in flat
     assert "Never add precision" in flat
+    assert "Use one form per value: the percent replaces the fraction" in flat  # live: both were shown
     assert flat.index("Tool-call arguments are not evidence") < flat.index("Numbers render as returned")
 
 
