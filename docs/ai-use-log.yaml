@@ -3931,6 +3931,8 @@ sessions:
       narration turn through the ordinary engine when the chat provider is configured, and
       stores the digest as a session artifact. CLI exits 1 when a symbol's price section is
       unavailable. Nine offline tests, three mutants killed; the stub-command guard migrated.
+      Follow-up from a run on a copy of the owner's store: GDELT-stamped headlines are now
+      dated and filtered correctly (tenth test).
     artifacts:
       - src/stockinsider/agent/digest.py
       - src/stockinsider/cli/app.py

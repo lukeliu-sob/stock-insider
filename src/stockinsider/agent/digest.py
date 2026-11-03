@@ -12,6 +12,7 @@ Implements: REQ-SI-FR-016, REQ-SI-INV-001, REQ-SI-INV-003 (ADR-001, ADR-005 Am5;
 
 from __future__ import annotations
 
+import re
 from collections.abc import Callable
 from dataclasses import dataclass, field
 from datetime import datetime, timezone
@@ -100,6 +101,16 @@ def _gather(store: SessionStore, registry: Any, session_id: str, symbol: str) ->
     return snapshot, results
 
 
+#: A headline's seen date: ISO (2026-10-01T09:00:00+00:00) or the GDELT stamp (20261001T090000Z).
+_SEEN_DAY = re.compile(r"^(\d{4})-?(\d{2})-?(\d{2})")
+
+
+def _day(seendate: object) -> str | None:
+    """The YYYY-MM-DD day of a headline, whichever stamp form the source stored."""
+    match = _SEEN_DAY.match(str(seendate or ""))
+    return f"{match.group(1)}-{match.group(2)}-{match.group(3)}" if match else None
+
+
 def _signed(value: float) -> str:
     return f"+{value}" if value > 0 else str(value)
 
@@ -136,15 +147,13 @@ def _section(symbol: str, results: dict[str, Any]) -> tuple[list[str], bool]:
         lines.append(f"- week: unavailable: {performance.error}")
     if news.ok:
         since = week["from_date"] if week is not None else None
-        items = [
-            item
-            for item in news.result.get("items", [])
-            if since is None or str(item.get("seendate", ""))[:10] >= since
-        ]
+        dated = [(item, _day(item.get("seendate"))) for item in news.result.get("items", [])]
+        # an undated headline cannot be placed in the week, so it is left out, never assumed in
+        items = [(item, day) for item, day in dated if day is not None and (since is None or day >= since)]
         if items:
             # No count here: the in-week subset is derived, and no tool states it (INV-001).
             lines.append("- headlines this week:")
-            lines += [f'  - "{item["title"]}" ({str(item.get("seendate", ""))[:10]})' for item in items]
+            lines += [f'  - "{item["title"]}" ({day})' for item, day in items]
         else:
             lines.append("- headlines this week: unavailable: no stored headline falls within the week window")
     else:

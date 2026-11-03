@@ -228,3 +228,20 @@ def test_postcheck_gate_marks_a_bad_deterministic_number(env: Path, monkeypatch:
     monkeypatch.setattr(digest_module, "_section", tampered)
     outcome, _lines = _run(_without_narration)
     assert "123.45[?]" in outcome.text
+
+
+def test_compact_gdelt_stamps_are_dated_and_filtered(env: Path) -> None:
+    """Live stores hold GDELT stamps (20261001T090000Z), not ISO; the first build rendered
+    "20261001T0" and let every headline through the week filter."""
+    _seed(
+        {"0700.HK": SEEDED["0700.HK"]},
+        {"0700.HK": [
+            ("Oracle lands major cloud deal with Tencent", "20261001T090000Z"),
+            ("Tencent stock jumps after new AI model", "20260922T100000Z"),
+        ]},
+    )
+    outcome, _lines = _run(_without_narration)
+    tencent = _section(outcome.text, "0700.HK")
+    assert '"Oracle lands major cloud deal with Tencent" (2026-10-01)' in tencent
+    assert "new AI model" not in tencent  # dated before the week window
+    assert "20261001T" not in tencent and "[?]" not in outcome.text
