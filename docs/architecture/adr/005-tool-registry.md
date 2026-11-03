@@ -210,6 +210,6 @@ Implements: REQ-SI-INV-001, REQ-SI-SEC-002 (with ADR-008's phase 3).
 3. The tool declares no result fields (Amendment 4 stays optional). Its keys are typed by the heuristic, and a signed percent claim verifies against `change_pct` under the existing rounding rule (ADR-008).
 4. A no-data condition in the market and news read tools raises `LookupError`, so the registry's `tool ... failed: <type>: <message>` error reads cleanly. The fail-closed order of `Registry.execute` is unchanged.
 
-**Consequences.** The model can state a period move with a data date and a source. A decline written as "fell 2.73%" is still misread by the claim side (the sign attaches to a nearby count); TP-042 owns that class.
+**Consequences.** The model can state a period move with a data date and a source. A decline written as "fell 2.73%" is still misread by the claim side (the sign attaches to a nearby count); The post-check follow-up plan owns that class.
 
 Implements: REQ-SI-FR-006, REQ-SI-FR-008, REQ-SI-INV-001, REQ-SI-INV-003.

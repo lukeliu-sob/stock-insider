@@ -783,3 +783,12 @@ test-plan gate's safety-path attestation).
 - Test quality: 10 new tests, plus the E-014 shape, label and measurement pins. Five mutants killed; the prose-name mutant survived at first, and a unit case was added. E-013 pins migrated for exactly the 8 cleared false flags; nothing else moved on E-013, E-010 or the existing suites. Full offline suite 774 passed, 2 expected failures.
 - Security/efficiency: no new dependency; one set lookup per cue match and one regex per field resolution.
 - Risk: the name rule depends on the first-word name map. A company whose first name word is a common field word ("Target") now suppresses that word as a cue only when the company is in the ledger and the word is capitalized as the name. "price target" and "target price" are unaffected. The change-word rule applies only to the revenue cue with a percent.
+
+### RM-76 — TP-041: market.performance, and no-data errors as LookupError (ADR-005 Am5)
+
+- Verdict: APPROVE pending owner merge. The plan and the ADR-005 Amendment 5 text were committed before the code (GOV-006 ordering).
+- Spec alignment: REQ-SI-FR-006, REQ-SI-FR-008, REQ-SI-INV-001, REQ-SI-INV-003. The 2026-11-03 smoke test showed the model refusing a one-month comparison it had no tool for; the move is now a deterministic tool result with dates and a source.
+- Architecture: `agent/registry.py` is in the safety-critical prefix, hence this entry. A new read tool, registered by its own function so the existing registration functions keep the tool sets the TP-025 stage-3 tests pin. The arithmetic is in `data/compute.period_performance` behind `DataStore.market_performance` (FR-006, Am1). The tool declares no result fields. The no-data raises in `market.quote`, `news.recent` and `market_indicators_snapshot` become `LookupError`. `Registry.execute`'s fail-closed order, the guardrail, `shared/` and `prompts/` are unchanged.
+- Test quality: 7 new tests, including a no-data adversarial case and a post-check case on the tool's own result; 2 mutants killed. One migrated golden (`plain_repl_golden.txt`): the tool's `/tools` line and its name in the unknown-tool list, nothing else.
+- Security/efficiency: no new dependency. One indexed query of at most 251 rows per call.
+- Risk: a decline written as "fell 2.73%" is still misread by the claim side (the decline word attaches its sign to a nearby count). The signed form verifies. The post-check follow-up plan owns the prose form.

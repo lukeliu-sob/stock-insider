@@ -64,6 +64,50 @@ def move_vs(bars: Sequence[dict[str, Any]], sessions: int) -> dict[str, Any] | N
         return None
 
 
+#: Session windows of the performance table: a week, a month, a quarter,
+#: and a trading year (TP-041).
+PERFORMANCE_WINDOWS: tuple[int, ...] = (5, 20, 60, 250)
+
+
+def period_performance(
+    bars: Sequence[dict[str, Any]], windows: Sequence[int] = PERFORMANCE_WINDOWS
+) -> dict[str, Any]:
+    """Close-to-close change over trailing session windows (ascending bars).
+
+    Each window's row carries its dates, both closes and the percent
+    change rounded to four decimals; a window the stored history cannot
+    cover, or whose base close is zero, is listed as unavailable with
+    its reason - never estimated (INV-003).
+
+    Implements: REQ-SI-FR-006, REQ-SI-INV-003 (ADR-001; TP-041)
+    """
+    rows: list[dict[str, Any]] = []
+    unavailable: list[dict[str, Any]] = []
+    for sessions in windows:
+        if len(bars) < sessions + 1:
+            unavailable.append(
+                {"sessions": sessions, "reason": f"only {len(bars)} stored sessions; {sessions + 1} needed"}
+            )
+            continue
+        base, last = bars[-sessions - 1], bars[-1]
+        try:
+            change = pct_change(base["close"], last["close"])
+        except InvalidInput as exc:
+            unavailable.append({"sessions": sessions, "reason": str(exc)})
+            continue
+        rows.append(
+            {
+                "sessions": sessions,
+                "from_date": base["date"],
+                "to_date": last["date"],
+                "from_adjusted_close": base["close"],
+                "adjusted_close": last["close"],
+                "change_pct": round(change, 4),
+            }
+        )
+    return {"windows": rows, "unavailable": unavailable}
+
+
 def period_over_period(series: Sequence[tuple[str, float]]) -> dict[str, Any] | None:
     """Latest-over-previous change of a dated series (ascending by date).
 
