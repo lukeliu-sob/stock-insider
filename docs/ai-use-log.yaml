@@ -3969,3 +3969,29 @@ sessions:
       changes require; the wording of the rule and the two migrated version pins await owner
       review in the PR.
     status: applied
+  - id: AILOG-0098
+    date: "2026-11-03"
+    agent_task: >-
+      TP-045 (ADR-008 Amendment 4), from verifying TP-040..044 on a read-only snapshot of the
+      owner's store (a three-turn session and a digest; real data/ untouched): ten claim-side
+      readings - hyphenated counts, session range/high/low, dash-joined ranges, percents at a
+      price cue, "N-session window of X%", snake_case tool keys, the nearest stated window,
+      comparison direction, a bare "index" alias, and "Section N". Live re-check: 21 [?] marks
+      -> 3 (2 correct flags, 1 postposed subject). E-013/E-014/E-015 as regression only: no
+      escape added, one E-014 false flag cleared and migrated. Nine offline tests, ten mutants
+      killed. Disclosed: no independent battery measures this change.
+    artifacts:
+      - src/stockinsider/agent/guardrail_claims.py
+      - test/offline/test_tp045_live_recheck.py
+      - test/offline/test_tp039_growth_target.py
+      - docs/test-plans/TP-045.md
+      - docs/architecture/adr/008-numeric-verification-v2.md
+      - docs/architecture/evaluation-logbook.md
+      - docs/review-memo.md
+      - docs/ai-use-log.yaml
+    human_decision: >-
+      Owner, in session, 2026-11-03: instructed the agent to fix the reported defects; the
+      verification on a store snapshot, the ten rules, measuring without an independent
+      battery (disclosed; E-016 left to the owner) and the migrated E-014 pin are agent
+      decisions recorded for owner review in the PR.
+    status: applied

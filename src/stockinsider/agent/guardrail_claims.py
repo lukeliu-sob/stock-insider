@@ -218,7 +218,8 @@ _CUES = tuple((name, re.compile(pattern, re.IGNORECASE)) for name, pattern in _C
 #: Count nouns right after a number (up to two modifiers between).
 _COUNT_NOUNS: tuple[tuple[str, str], ...] = (
     ("volume", r"shares?"),
-    ("sessions", r"sessions?|days"),
+    # "the 73.3-74.9 session range" names a range, not a count (TP-045)
+    ("sessions", r"sessions?(?!\s+(?:range|high|low|bar)s?\b)|days"),
     ("news_count", r"headlines?|articles?|stories|news\s+items?|items?"),
     ("symbol_count", r"symbols?|stocks?|tickers?|names"),
     ("gaps", r"gaps?"),
@@ -231,7 +232,8 @@ _COUNT_MODIFIERS = (
     r"returned|listed|vendor|api|sync|data|more|separate|individual"
 )
 _COUNT_NOUN = re.compile(
-    rf"\s*(?:(?:{_COUNT_MODIFIERS})\s+){{0,2}}(?:"
+    # a hyphen may join the count to its noun ("the 259-session history"; TP-045)
+    rf"(?:\s*|-)(?:(?:{_COUNT_MODIFIERS})\s+){{0,2}}(?:"
     + "|".join(f"(?P<{name}>{pattern})" for name, pattern in _COUNT_NOUNS)
     + r")\b",
     re.IGNORECASE,
@@ -635,6 +637,7 @@ _REFERENCES = (
     re.compile(r"(?:^|(?<=[\s:;,]))\((?P<n>\d{1,2})\)(?=\s+[A-Za-z])"),
     re.compile(r"(?:^|(?<=[\s:;,]))(?P<n>\d{1,2})\)(?=\s+[A-Za-z])"),
     re.compile(r"\bStep\s+(?P<n>\d{1,2})\b"),
+    re.compile(r"\bSections?\s+(?P<n>\d{1,2})\b(?![.,]\d)"),  # "in Section 2" (TP-045)
 )
 _MENTION = re.compile(r"(?<![\w.])(\d{1,5}\.[A-Z]{1,4}|[A-Z]{1,6}\.(?:US|HK)|[A-Z]{2,8}\.INDX)(?![\w])")
 
@@ -723,7 +726,8 @@ class _Answer:
             code = re.escape(subject.split(".")[0])
             found.extend((base + m.start(), base + m.end(), subject) for m in re.finditer(rf"\b{code}\b", text))
         if len(indices) == 1:
-            pattern = r"\bthe\s+(?:index|benchmark)\b"
+            # "the index", "an essentially flat index", "its benchmark" (TP-045)
+            pattern = r"\b(?:the|an?|its)\s+(?:[A-Za-z-]+\s+){0,2}?(?:index|benchmark)\b"
             found.extend((base + m.start(), base + m.end(), indices[0]) for m in re.finditer(pattern, text, re.I))
         return found
 
@@ -1238,6 +1242,15 @@ def _reading(item: _Pending, answer: _Answer) -> _Reading:
 def _resolve_field(item: _Pending, answer: _Answer, reading: _Reading, pending: list[_Pending]) -> str | None:
     cell = answer.cell(item.start)
     noun = _COUNT_NOUN.match(reading.after) if not item.words else _COUNT_NOUN.match(" " + item.unit_word)
+    # a tool key written right before the number names it ("change_pct -5.0909"; TP-045)
+    key = _KEY_BEFORE.search(answer.text, 0, item.start)
+    if key and key.group(1).lower() in _KEY_FIELDS:
+        return _KEY_FIELDS[key.group(1).lower()]
+    # "a 20-session window of -13.769%": the stated window names a price change (TP-045)
+    if reading.unit == "percent" and _WINDOW_NOUN_BEFORE.search(answer.text, 0, item.start) and any(
+        entry.field == "price_change" for entry in answer.evidence.entries
+    ):
+        return "price_change"
     if cell is not None and noun:
         # a count noun in the cell itself ("259 sessions") names the number before the
         # row's metric label does (TP-042)
@@ -1325,6 +1338,21 @@ def _refine(field_name: str, item: _Pending, answer: _Answer, pending: list[_Pen
     return field_name
 
 
+#: A snake_case tool key right before a number ("change_pct -5.0909", "max_drawdown: -0.36").
+_KEY_BEFORE = re.compile(r"(?<![\w.])([a-z]+(?:_[a-z]+)+)\s*[:=]?\s*$", re.IGNORECASE)
+#: A session window naming the number after it ("the 250-session change at -29.75%").
+_WINDOW_NOUN_BEFORE = re.compile(
+    r"\b\d{1,3}[\s-]+(?:trading[\s-]+)?sessions?\s+(?:window|change|figure|move|return|performance)\s*"
+    r"(?:of|at|was|is|:|\()?\s*[(]?\s*$",
+    re.IGNORECASE,
+)
+#: A price range written "A–B [session] range" (en or em dash; TP-045): its low, then its high.
+_RANGE_ENDS = ("low", "high")
+_RANGE_NOUN = re.compile(r"\s+(?:[A-Za-z-]+\s+)?range\b", re.IGNORECASE)
+_RANGE_AFTER = re.compile(r"\s*[–—]\s*\d[\d,]*(?:\.\d+)?" + _RANGE_NOUN.pattern, re.IGNORECASE)
+_RANGE_BEFORE = re.compile(r"\d[\d,]*(?:\.\d+)?\s*[–—]\s*$")
+
+
 def _fields(answer: _Answer, pending: list[_Pending]) -> dict[int, str | None]:
     """The field of every quantitative claim, with comparison inheritance."""
     fields: dict[int, str | None] = {}
@@ -1339,8 +1367,17 @@ def _fields(answer: _Answer, pending: list[_Pending]) -> dict[int, str | None]:
                 # a percent with a change word or a written sign, and no other field cue,
                 # is a price change when the ledger holds one ("fell 4.88%", "-6.6%"; TP-042)
                 signed = reading.sign or item.value < 0 or answer.text[max(0, item.start - 1) : item.start] == "+"
-                if signed:
+                if signed or _compared_sign(item, answer, pending):
                     name = "price_change"
+            elif reading.unit == "percent" and has_changes and (name in _PRICE_FIELDS or name == "price"):
+                # a price level is never a percent: "the adjusted close fell -3.92%" (TP-045)
+                name = "price_change"
+            if reading.unit == "" and not item.words:
+                # "the 73.3–74.9 session range": a dash-joined pair before "range" is low, then high
+                if _RANGE_AFTER.match(answer.text, item.end):
+                    name = _RANGE_ENDS[0]
+                elif _RANGE_BEFORE.search(answer.text, 0, item.start) and _RANGE_NOUN.match(answer.text, item.end):
+                    name = _RANGE_ENDS[1]
             fields[id(item)] = _refine(name, item, answer, pending) if name else None
     for item in pending:
         if item.cls != "quantitative" or fields[id(item)] is not None:
@@ -1425,6 +1462,12 @@ def _verify_quantity(
 
     if field_name is None:
         return _verify_unfielded(item, reading, _verdict, answer, typed)
+    if field_name == "price_change" and not reading.sign and reading.value > 0:
+        # "Tencent fell 3.92% versus 3.19% for the index": the compared number takes the
+        # direction of the last change word before it in its sentence (TP-045)
+        inherited = _compared_sign(item, answer, pending)
+        if inherited:
+            reading = replace(reading, sign=inherited)
     in_scope = [
         entry for entry in evidence.entries
         if _compatible(field_name, entry.field) and (subject is None or entry.subject in (None, subject))
@@ -1484,6 +1527,24 @@ def _verify_quantity(
     )
 
 
+#: A comparison between a change and the number after it ("fell 3.92% versus the index's 3.19%").
+_COMPARED = re.compile(r"\b(?:versus|vs\.?|against|than|compared\s+(?:with|to))\b", re.IGNORECASE)
+
+
+def _compared_sign(item: _Pending, answer: _Answer, pending: list[_Pending]) -> str:
+    """The direction a number compared with an earlier change inherits, if any (TP-045).
+
+    The number follows another number in its sentence, a comparison word stands between them,
+    and the last change word before it in the sentence gives the direction.
+    """
+    sentence_start, _sentence_end = answer.sentence(item.start)
+    previous = [p.end for p in pending if p is not item and sentence_start <= p.end <= item.start]
+    if not previous or not _COMPARED.search(answer.text, max(previous), item.start):
+        return ""
+    before = answer.text[sentence_start : item.start]
+    words = [(m.start(), "decline") for m in _DECLINE.finditer(before)]
+    words += [(m.start(), "rise") for m in _RISE.finditer(before)]
+    return max(words)[1] if words else ""
 _WINDOW_WORDS = {"five": 5, "twenty": 20, "sixty": 60}
 _STATED_WINDOW = re.compile(r"\b(\d{1,3}|five|twenty|sixty)[\s-]+(?:trading[\s-]+)?sessions?\b", re.IGNORECASE)
 
@@ -1491,10 +1552,12 @@ _STATED_WINDOW = re.compile(r"\b(\d{1,3}|five|twenty|sixty)[\s-]+(?:trading[\s-]
 def _stated_window(item: _Pending, answer: _Answer, pending: list[_Pending]) -> int | None:
     """The session count stated with a change claim (TP-042).
 
-    The scope is the claim's table row, else its clause. A count after the claim, up to the
-    next percent, comes first ("fell 4.88% over the last 20 sessions"); a count before it
-    counts only when no other percent precedes it in the scope ("Over 60 sessions Tencent
-    fell 10.61%").
+    The scope is the claim's table row, else its clause. Candidates are the counts after the
+    claim, up to the next percent ("fell 4.88% over the last 20 sessions"), and the counts
+    before it, back to the previous percent - those only when no other percent precedes the
+    claim, or when no change word stands between the count and the claim ("Over 60 sessions
+    Tencent fell 10.61%", "the 60-session figure (-10.59%)"). The nearest candidate wins
+    (TP-045); a tie goes to the count after.
     """
     text = answer.text
     if answer.cell(item.start) is not None:
@@ -1509,19 +1572,22 @@ def _stated_window(item: _Pending, answer: _Answer, pending: list[_Pending]) -> 
         and _reading(p, answer).unit == "percent"
     ]
     after_end = min([p.start for p in percents if p.start >= item.end], default=end)
-    segments = [text[item.end : after_end]]
-    if not any(p.end <= item.start for p in percents):
-        segments.append(text[start : item.start])
-    for segment in segments:
-        counts = {
-            _WINDOW_WORDS.get(match.group(1).lower()) or int(match.group(1))
-            for match in _STATED_WINDOW.finditer(segment)
-        }
-        if len(counts) == 1:
-            return counts.pop()
-        if counts:
-            return None
-    return None
+    before_start = max([p.end for p in percents if p.end <= item.start], default=start)
+    preceded = any(p.end <= item.start for p in percents)
+    candidates: list[tuple[int, int, int]] = []  # (distance, after-first tie break, count)
+    for match in _STATED_WINDOW.finditer(text, item.end, after_end):
+        candidates.append((match.start() - item.end, 0, _window_count(match)))
+    for match in _STATED_WINDOW.finditer(text, before_start, item.start):
+        between = text[match.end() : item.start]
+        if preceded and (_DECLINE.search(between) or _RISE.search(between)):
+            continue  # "over 5 sessions but slipped 0.3%": the count belongs to the earlier change
+        candidates.append((item.start - match.end(), 1, _window_count(match)))
+    return min(candidates)[2] if candidates else None
+
+
+def _window_count(match: re.Match[str]) -> int:
+    word = match.group(1).lower()
+    return _WINDOW_WORDS[word] if word in _WINDOW_WORDS else int(word)
 
 
 def _verify_unfielded(
