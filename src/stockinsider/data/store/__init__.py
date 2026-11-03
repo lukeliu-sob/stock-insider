@@ -237,6 +237,31 @@ class DataStore:
         ).fetchall()
         return [dict(row) for row in rows]
 
+    def market_performance(self, symbol: str) -> dict[str, Any]:
+        """Trailing-window close-to-close changes for a symbol (TP-041).
+
+        Prices the adjusted series, as the risk metrics do; the
+        arithmetic is `data/compute.period_performance` (FR-006).
+
+        Implements: REQ-SI-FR-006, REQ-SI-INV-003 (ADR-005 Am5; TP-041)
+        """
+        from stockinsider.data.compute import PERFORMANCE_WINDOWS, period_performance
+
+        rows = self._conn.execute(
+            "SELECT date, COALESCE(adjusted_close, close) AS close FROM market_bars"
+            " WHERE canonical_symbol = ? ORDER BY date DESC LIMIT ?",
+            (symbol, max(PERFORMANCE_WINDOWS) + 1),
+        ).fetchall()
+        if not rows:
+            raise LookupError(f"{symbol}: no stored market data (sync first; INV-003)")
+        bars = [dict(row) for row in reversed(rows)]
+        return {
+            "symbol": symbol,
+            "as_of": bars[-1]["date"],
+            "price_basis": "adjusted close",
+            **period_performance(bars),
+        }
+
     def market_indicators_snapshot(self, symbol: str) -> dict[str, Any]:
         """Deterministic indicator snapshot (profitability/growth/risk).
 
@@ -264,7 +289,7 @@ class DataStore:
             (symbol,),
         ).fetchone()
         if price_row is None:
-            raise KeyError(f"{symbol}: no stored market data (sync first; INV-003)")
+            raise LookupError(f"{symbol}: no stored market data (sync first; INV-003)")
         bars = self._conn.execute(
             "SELECT date, COALESCE(adjusted_close, close) AS close FROM market_bars"
             " WHERE canonical_symbol = ? ORDER BY date DESC LIMIT 260",
