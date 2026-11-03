@@ -522,9 +522,22 @@ def config_path_cmd() -> None:
 def digest() -> None:
     """Generate the weekly digest per watchlist symbol.
 
+    Deterministic sections from registry tools, post-checked against
+    their snapshot; a narration turn when the chat provider is
+    configured; stored as a session artifact (TP-043). Exits 1 when a
+    symbol's price section is unavailable, as `sync` does for failures.
+
     Implements: REQ-SI-FR-016
     """
-    _stub("digest", "REQ-SI-FR-016")
+    from stockinsider.agent.digest import run_digest
+
+    data_store = open_data_store()
+    try:
+        outcome = run_digest(SessionStore(), data_store=data_store, echo=typer.echo)
+    finally:
+        data_store.close()
+    if outcome.failed:
+        raise typer.Exit(code=1)
 
 
 def _print_version(value: bool) -> None:

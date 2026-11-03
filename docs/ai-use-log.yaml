@@ -3919,3 +3919,31 @@ sessions:
       ("label stands", agent recommendation) and the ADR-008 Amendment 3 text await owner
       approval in the PR.
     status: applied
+  - id: AILOG-0096
+    date: "2026-11-03"
+    agent_task: >-
+      TP-043 (FR-016): the weekly digest replaces the not-implemented stub. agent/digest.py
+      opens a session, gathers each watchlist symbol's facts only through registry tools
+      (market.quote, market.performance, news.recent) with logged events and a values-as-seen
+      snapshot, renders price action, in-week headlines and explicit unavailable placeholders
+      for scored events (FR-009 not implemented) and catalysts (no earnings calendar), runs
+      the deterministic text through the INV-001 post-check against the snapshot, adds a
+      narration turn through the ordinary engine when the chat provider is configured, and
+      stores the digest as a session artifact. CLI exits 1 when a symbol's price section is
+      unavailable. Nine offline tests, three mutants killed; the stub-command guard migrated.
+      Follow-up from a run on a copy of the owner's store: GDELT-stamped headlines are now
+      dated and filtered correctly (tenth test).
+    artifacts:
+      - src/stockinsider/agent/digest.py
+      - src/stockinsider/cli/app.py
+      - test/offline/test_weekly_digest.py
+      - test/offline/test_cli_surface.py
+      - docs/test-plans/TP-043.md
+      - docs/ai-use-log.yaml
+    human_decision: >-
+      Owner, in session, 2026-11-03: instructed the agent to fix the reported smoke-test
+      defects, which listed the digest stub. The section set, the placeholders for the
+      missing FR-009 and catalyst data, reusing the turn engine for narration, and the exit
+      code are agent decisions recorded for owner review; the migrated stub-command guard
+      awaits owner approval in the PR.
+    status: applied
