@@ -1,0 +1,590 @@
+# E-015 held-out battery (TP-042), written by a separately briefed author from the frozen ledgers only.
+items:
+  - id: G001
+    ledger: byd_report
+    text: |-
+      BYD's last bar (2 Oct 2026): Open 75.37 · High 75.9 · Low 74.47 · Close 75.07.
+    claims:
+      - {text: "2 Oct 2026", correct: true, kind: temporal, class: general}
+      - {text: "75.37", correct: true, kind: exact, class: inline_list}
+      - {text: "75.9", correct: true, kind: exact, class: inline_list}
+      - {text: "74.47", correct: true, kind: exact, class: inline_list}
+      - {text: "75.07", correct: true, kind: exact, class: inline_list}
+  - id: G002
+    ledger: byd_report
+    text: |-
+      Latest BYD quote: Open 75.37 • High 74.47 • Low 75.9 • Close 75.07 (HKD).
+    claims:
+      - {text: "75.37", correct: true, kind: exact, class: inline_list}
+      - {text: "74.47", correct: false, kind: wrong_field, class: inline_list}  # 74.47 is the low, not the high
+      - {text: "75.9", correct: false, kind: wrong_field, class: inline_list}  # 75.9 is the high, not the low
+      - {text: "75.07", correct: true, kind: exact, class: inline_list}
+  - id: G003
+    ledger: perf_pair
+    text: |-
+      Tencent, 2026-10-02: Open 413.46 | High 416.34 | Low 408.52 | Close 411.81.
+    claims:
+      - {text: "2026-10-02", correct: true, kind: temporal, class: general}
+      - {text: "413.46", correct: true, kind: exact, class: inline_list}
+      - {text: "416.34", correct: true, kind: exact, class: inline_list}
+      - {text: "408.52", correct: true, kind: exact, class: inline_list}
+      - {text: "411.81", correct: true, kind: exact, class: inline_list}
+  - id: G004
+    ledger: perf_pair
+    text: |-
+      Tencent's session: Open 411.81 · High 416.34 · Low 408.52 · Close 413.46.
+    claims:
+      - {text: "411.81", correct: false, kind: wrong_field, class: inline_list}  # 411.81 is the close, not the open
+      - {text: "416.34", correct: true, kind: exact, class: inline_list}
+      - {text: "408.52", correct: true, kind: exact, class: inline_list}
+      - {text: "413.46", correct: false, kind: wrong_field, class: inline_list}  # 413.46 is the open, not the close
+  - id: G005
+    ledger: perf_pair
+    text: |-
+      Hang Seng Index: Open 24514.49 · High 24685.41 · Low 24221.49 · Close 24416.82 points.
+    claims:
+      - {text: "24514.49", correct: true, kind: exact, class: inline_list}
+      - {text: "24685.41", correct: true, kind: exact, class: inline_list}
+      - {text: "24221.49", correct: true, kind: exact, class: inline_list}
+      - {text: "24416.82", correct: true, kind: exact, class: inline_list}
+  - id: G006
+    ledger: perf_pair
+    text: |-
+      HSI on the day • Open 24514.49 • High 24685.41 • Low 24416.82 • Close 24221.49.
+    claims:
+      - {text: "24514.49", correct: true, kind: exact, class: inline_list}
+      - {text: "24685.41", correct: true, kind: exact, class: inline_list}
+      - {text: "24416.82", correct: false, kind: wrong_field, class: inline_list}  # 24416.82 is the close, not the low
+      - {text: "24221.49", correct: false, kind: wrong_field, class: inline_list}  # 24221.49 is the low, not the close
+  - id: G007
+    ledger: perf_pair
+    text: |-
+      Tencent: Open 413.46 · High 416.34 · Low 74.47 · Close 411.81.
+    claims:
+      - {text: "413.46", correct: true, kind: exact, class: inline_list}
+      - {text: "416.34", correct: true, kind: exact, class: inline_list}
+      - {text: "74.47", correct: false, kind: misattributed, class: inline_list}  # BYD's low; Tencent's low is 408.52
+      - {text: "411.81", correct: true, kind: exact, class: inline_list}
+  - id: G008
+    ledger: byd_report
+    text: |-
+      | Metric | Value | Window |
+      |---|---|---|
+      | Volatility | 8.85% | 259 sessions |
+      | Max drawdown | -18.2% | 2025-10-08 to 2026-09-17 |
+    claims:
+      - {text: "8.85%", correct: true, kind: unit_conversion, class: table_count}
+      - {text: "259", correct: true, kind: count, class: table_count}
+      - {text: "-18.2%", correct: true, kind: unit_conversion, class: table_count}
+      - {text: "2025-10-08", correct: true, kind: temporal, class: table_count}
+      - {text: "2026-09-17", correct: true, kind: temporal, class: table_count}
+  - id: G009
+    ledger: byd_report
+    text: |-
+      | Metric | Value | Window |
+      |---|---|---|
+      | Volatility | 8.8% | 250 sessions |
+      | Max drawdown | -12.4% | peak 2025-10-08, trough 2026-09-17 |
+    claims:
+      - {text: "8.8%", correct: true, kind: rounding, class: table_count}
+      - {text: "250", correct: false, kind: wrong_count, class: table_count}  # BYD volatility window is 259 sessions
+      - {text: "-12.4%", correct: false, kind: misattributed, class: table_count}  # Tencent's drawdown; BYD's is -18.2%
+      - {text: "2025-10-08", correct: true, kind: temporal, class: table_count}
+      - {text: "2026-09-17", correct: true, kind: temporal, class: table_count}
+  - id: G010
+    ledger: perf_pair
+    text: |-
+      | Window | Tencent change | Length |
+      |---|---|---|
+      | One week | +1.89% | 5 sessions |
+      | One month | -4.88% | 20 sessions |
+      | One quarter | -6.6% | 60 sessions |
+    claims:
+      - {text: "+1.89%", correct: true, kind: rounding, class: table_count}
+      - {text: "5", correct: true, kind: count, class: table_count}
+      - {text: "-4.88%", correct: true, kind: rounding, class: table_count}
+      - {text: "20", correct: true, kind: count, class: table_count}
+      - {text: "-6.6%", correct: true, kind: rounding, class: table_count}
+      - {text: "60", correct: true, kind: count, class: table_count}
+  - id: G011
+    ledger: perf_pair
+    text: |-
+      | Window | Tencent change | Length |
+      |---|---|---|
+      | Week | +1.89% | 15 sessions |
+      | Month | -6.58% | 20 sessions |
+      | Year | -10.6% | 259 sessions |
+    claims:
+      - {text: "+1.89%", correct: true, kind: rounding, class: table_count}
+      - {text: "15", correct: false, kind: wrong_count, class: table_count}  # the +1.89% window is 5 sessions
+      - {text: "-6.58%", correct: false, kind: wrong_window, class: table_count}  # -6.58% is the 60-session change; the 20-session change is -4.88%
+      - {text: "20", correct: true, kind: count, class: table_count}
+      - {text: "-10.6%", correct: true, kind: rounding, class: table_count}
+      - {text: "259", correct: false, kind: wrong_count, class: table_count}  # the -10.6% window is 250 sessions; 259 is the volatility window
+  - id: G012
+    ledger: perf_pair
+    text: |-
+      | Metric | Hang Seng Index | Window |
+      |---|---|---|
+      | Change | +3.34% | 2026-09-04 to 2026-10-02 |
+      | Change | -0.32% | 250 sessions |
+    claims:
+      - {text: "+3.34%", correct: true, kind: rounding, class: table_count}
+      - {text: "2026-09-04", correct: true, kind: temporal, class: table_count}
+      - {text: "2026-10-02", correct: true, kind: temporal, class: table_count}
+      - {text: "-0.32%", correct: true, kind: rounding, class: table_count}
+      - {text: "250", correct: true, kind: count, class: table_count}
+  - id: G013
+    ledger: perf_pair
+    text: |-
+      | Tencent metric | Value | Window |
+      |---|---|---|
+      | Volatility | 7.21% | 259 sessions |
+      | Max drawdown | -12.43% | 270 sessions |
+      | 60-session change | -6.58% | 2026-07-10 to 2026-10-02 |
+    claims:
+      - {text: "7.21%", correct: true, kind: unit_conversion, class: table_count}
+      - {text: "259", correct: true, kind: count, class: table_count}
+      - {text: "-12.43%", correct: true, kind: unit_conversion, class: table_count}
+      - {text: "270", correct: false, kind: fabricated, class: table_count}  # the ledger gives no session count for the drawdown window
+      - {text: "60", correct: true, kind: count, class: table_count}
+      - {text: "-6.58%", correct: true, kind: rounding, class: table_count}
+      - {text: "2026-07-10", correct: true, kind: temporal, class: table_count}
+      - {text: "2026-10-02", correct: true, kind: temporal, class: table_count}
+  - id: G014
+    ledger: byd_report
+    text: |-
+      | BYD metric | Value | Window |
+      |---|---|---|
+      | Volatility | 7.2% | 259 sessions |
+      | Max drawdown | -18.24% | 2025-10-08 to 2026-09-24 |
+    claims:
+      - {text: "7.2%", correct: false, kind: misattributed, class: table_count}  # Tencent's volatility; BYD's is 8.85%
+      - {text: "259", correct: true, kind: count, class: table_count}
+      - {text: "-18.24%", correct: true, kind: unit_conversion, class: table_count}
+      - {text: "2025-10-08", correct: true, kind: temporal, class: table_count}
+      - {text: "2026-09-24", correct: false, kind: misattributed, class: table_count}  # Tencent's trough date; BYD's trough was 2026-09-17
+  - id: G015
+    ledger: byd_report
+    text: |-
+      §2 covers price: (1) BYD closed at 75.07 HKD; (2) the day's high was 75.9.
+    claims:
+      - {text: "§2", correct: true, kind: identifier, class: reference}
+      - {text: "(1)", correct: true, kind: identifier, class: reference}
+      - {text: "75.07", correct: true, kind: exact, class: reference}
+      - {text: "(2)", correct: true, kind: identifier, class: reference}
+      - {text: "75.9", correct: true, kind: exact, class: reference}
+  - id: G016
+    ledger: byd_report
+    text: |-
+      See §4 for risk. 1) Volatility over 259 sessions was 9.85%; 2) max drawdown reached -18.2%.
+    claims:
+      - {text: "§4", correct: true, kind: identifier, class: reference}
+      - {text: "1)", correct: true, kind: identifier, class: reference}
+      - {text: "259", correct: true, kind: count, class: reference}
+      - {text: "9.85%", correct: false, kind: fabricated, class: reference}  # BYD volatility is 8.85%
+      - {text: "2)", correct: true, kind: identifier, class: reference}
+      - {text: "-18.2%", correct: true, kind: unit_conversion, class: reference}
+  - id: G017
+    ledger: perf_pair
+    text: |-
+      Step 1: Tencent's 20-session change was -4.88%. Step 2: the index rose 3.34% over the same window (§3).
+    claims:
+      - {text: "Step 1", correct: true, kind: identifier, class: reference}
+      - {text: "20", correct: true, kind: count, class: reference}
+      - {text: "-4.88%", correct: true, kind: rounding, class: reference}
+      - {text: "Step 2", correct: true, kind: identifier, class: reference}
+      - {text: "3.34%", correct: true, kind: rounding, class: reference}
+      - {text: "§3", correct: true, kind: identifier, class: reference}
+  - id: G018
+    ledger: perf_pair
+    text: |-
+      (1) Tencent fell 6.58% over 20 sessions; (2) the Hang Seng Index rose 1.10% over five sessions (see §4).
+    claims:
+      - {text: "(1)", correct: true, kind: identifier, class: reference}
+      - {text: "6.58%", correct: false, kind: wrong_window, class: reference}  # 6.58% is the 60-session fall; the 20-session fall is 4.88%
+      - {text: "20", correct: true, kind: count, class: reference}
+      - {text: "(2)", correct: true, kind: identifier, class: reference}
+      - {text: "1.10%", correct: true, kind: rounding, class: reference}
+      - {text: "§4", correct: true, kind: identifier, class: reference}
+  - id: G019
+    ledger: byd_report
+    text: |-
+      §1 summary: 1) the latest bar is dated 2026-10-02; 2) volume was 17,051,021 shares; 3) no fundamentals quarters are stored, against 8 expected.
+    claims:
+      - {text: "§1", correct: true, kind: identifier, class: reference}
+      - {text: "1)", correct: true, kind: identifier, class: reference}
+      - {text: "2026-10-02", correct: true, kind: temporal, class: reference}
+      - {text: "2)", correct: true, kind: identifier, class: reference}
+      - {text: "17,051,021", correct: true, kind: exact, class: reference}
+      - {text: "3)", correct: true, kind: identifier, class: reference}
+      - {text: "8", correct: true, kind: count, class: reference}
+  - id: G020
+    ledger: byd_report
+    text: |-
+      Step 3: BYD's low was 74.47 and its close 75.37 (§6).
+    claims:
+      - {text: "Step 3", correct: true, kind: identifier, class: reference}
+      - {text: "74.47", correct: true, kind: exact, class: reference}
+      - {text: "75.37", correct: false, kind: wrong_field, class: reference}  # 75.37 is the open; the close is 75.07
+      - {text: "§6", correct: true, kind: identifier, class: reference}
+  - id: G021
+    ledger: perf_pair
+    text: |-
+      §2 (1) Tencent's max drawdown was -12.4%, from a peak on 2025-10-15; (2) its volatility was 8.85%.
+    claims:
+      - {text: "§2", correct: true, kind: identifier, class: reference}
+      - {text: "(1)", correct: true, kind: identifier, class: reference}
+      - {text: "-12.4%", correct: true, kind: unit_conversion, class: reference}
+      - {text: "2025-10-15", correct: true, kind: temporal, class: reference}
+      - {text: "(2)", correct: true, kind: identifier, class: reference}
+      - {text: "8.85%", correct: false, kind: misattributed, class: reference}  # BYD's volatility; Tencent's is 7.21%
+  - id: G022
+    ledger: perf_pair
+    text: |-
+      1) The index closed at 24416.82; 2) it is down 0.3% over 250 sessions; 3) Tencent is down 10.6% on the same window.
+    claims:
+      - {text: "1)", correct: true, kind: identifier, class: reference}
+      - {text: "24416.82", correct: true, kind: exact, class: reference}
+      - {text: "2)", correct: true, kind: identifier, class: reference}
+      - {text: "0.3%", correct: true, kind: sign_word, class: reference}
+      - {text: "250", correct: true, kind: count, class: reference}
+      - {text: "3)", correct: true, kind: identifier, class: reference}
+      - {text: "10.6%", correct: true, kind: sign_word, class: reference}
+  - id: G023
+    ledger: byd_report
+    text: |-
+      The top headline was `Did Gas Vehicle Sales Just Dip Below 50% For The First Time?`, the newest of the recent items.
+    claims:
+      - {text: "50%", correct: true, kind: quoted_title, class: quoted_title}
+  - id: G024
+    ledger: byd_report
+    text: |-
+      Another item, "3 Out-of-Favor Stocks with Warning Signs", carried a polarity of 0.998.
+    claims:
+      - {text: "3", correct: true, kind: quoted_title, class: quoted_title}
+      - {text: "0.998", correct: true, kind: sentiment, class: general}
+  - id: G025
+    ledger: byd_report
+    text: |-
+      A market report, “China Electric Vehicle Market Size and Forecast 2026-2030: 100+ KPIs on Powertrains”, appeared on 29 September.
+    claims:
+      - {text: "2026-2030", correct: true, kind: quoted_title, class: quoted_title}
+      - {text: "100", correct: true, kind: quoted_title, class: quoted_title}
+      - {text: "29 September", correct: true, kind: temporal, class: general}
+  - id: G026
+    ledger: byd_report
+    text: |-
+      | Date | Headline |
+      |---|---|
+      | 2026-10-02 | Did Gas Vehicle Sales Just Dip Below 50% For The First Time? |
+      | 2026-09-29 | 3 Out-of-Favor Stocks with Warning Signs |
+    claims:
+      - {text: "2026-10-02", correct: true, kind: temporal, class: general}
+      - {text: "50%", correct: true, kind: quoted_title, class: quoted_title}
+      - {text: "2026-09-29", correct: true, kind: temporal, class: general}
+      - {text: "3", correct: true, kind: quoted_title, class: quoted_title}
+  - id: G027
+    ledger: byd_report
+    text: |-
+      The feed led with `Did Gas Vehicle Sales Just Dip Below 40% For The First Time?`.
+    claims:
+      - {text: "40%", correct: false, kind: altered_title, class: quoted_title}  # the title says 50%
+  - id: G028
+    ledger: byd_report
+    text: |-
+      Headline: "4 Out-of-Favor Stocks with Warning Signs".
+    claims:
+      - {text: "4", correct: false, kind: altered_title, class: quoted_title}  # the title says 3
+  - id: G029
+    ledger: byd_report
+    text: |-
+      “China Electric Vehicle Market Size and Forecast 2026-2031: 100+ KPIs on Powertrains” was the oldest item in the feed.
+    claims:
+      - {text: "2026-2031", correct: false, kind: altered_title, class: quoted_title}  # the title says 2026-2030
+      - {text: "100", correct: true, kind: quoted_title, class: quoted_title}
+  - id: G030
+    ledger: byd_report
+    text: |-
+      Gas vehicles fell below 50% of sales for the first time, according to the latest headline.
+    claims:
+      - {text: "50%", correct: false, kind: fabricated, class: quoted_title}  # the headline asks the question; no ledger value states it
+  - id: G031
+    ledger: byd_report
+    text: |-
+      One report tracks 100+ KPIs on powertrains, and the China EV market is mapped out through 2030.
+    claims:
+      - {text: "100", correct: false, kind: fabricated, class: quoted_title}  # digits from a title used as data
+      - {text: "2030", correct: false, kind: fabricated, class: quoted_title}  # digits from a title used as data
+  - id: G032
+    ledger: byd_report
+    text: |-
+      | Headline | Polarity |
+      |---|---|
+      | China Electric Vehicle Market Size and Forecast 2026-2030: 100+ KPIs on Powertrains | 0.999 |
+      | Did Gas Vehicle Sales Just Dip Below 50% For The First Time? | -0.786 |
+    claims:
+      - {text: "2026-2030", correct: true, kind: quoted_title, class: quoted_title}
+      - {text: "100", correct: true, kind: quoted_title, class: quoted_title}
+      - {text: "0.999", correct: true, kind: sentiment, class: general}
+      - {text: "50%", correct: true, kind: quoted_title, class: quoted_title}
+      - {text: "-0.786", correct: false, kind: fabricated, class: general}  # that headline's polarity is -0.768
+  - id: G033
+    ledger: byd_report
+    text: |-
+      The gas-vehicle headline scored polarity -0.768, with neg 0.224 and neu 0.776.
+    claims:
+      - {text: "-0.768", correct: true, kind: sentiment, class: sentiment_component}
+      - {text: "0.224", correct: true, kind: sentiment, class: sentiment_component}
+      - {text: "0.776", correct: true, kind: sentiment, class: sentiment_component}
+  - id: G034
+    ledger: byd_report
+    text: |-
+      The Leapmotor headline had polarity -0.422, neg 0.882 and neu 0.118.
+    claims:
+      - {text: "-0.422", correct: true, kind: sentiment, class: sentiment_component}
+      - {text: "0.882", correct: false, kind: wrong_field, class: sentiment_component}  # 0.882 is the neu share, not neg
+      - {text: "0.118", correct: false, kind: wrong_field, class: sentiment_component}  # 0.118 is the neg share, not neu
+  - id: G035
+    ledger: byd_report
+    text: |-
+      The board-reshuffle item scored polarity 0.966 with a pos share of 0.139 and neu 0.861.
+    claims:
+      - {text: "0.966", correct: true, kind: sentiment, class: sentiment_component}
+      - {text: "0.139", correct: true, kind: sentiment, class: sentiment_component}
+      - {text: "0.861", correct: true, kind: sentiment, class: sentiment_component}
+  - id: G036
+    ledger: byd_report
+    text: |-
+      The warning-signs headline had polarity 0.998, but its pos share was just 0.071 against neg 0.136.
+    claims:
+      - {text: "0.998", correct: true, kind: sentiment, class: sentiment_component}
+      - {text: "0.071", correct: false, kind: wrong_field, class: sentiment_component}  # 0.071 is the neg share, not pos
+      - {text: "0.136", correct: false, kind: wrong_field, class: sentiment_component}  # 0.136 is the pos share, not neg
+  - id: G037
+    ledger: byd_report
+    text: |-
+      The market-size report had polarity 0.999 and pos 0.114, with neg 0.12.
+    claims:
+      - {text: "0.999", correct: true, kind: sentiment, class: sentiment_component}
+      - {text: "0.114", correct: true, kind: sentiment, class: sentiment_component}
+      - {text: "0.12", correct: false, kind: fabricated, class: sentiment_component}  # that headline's neg share is 0.012
+  - id: G038
+    ledger: byd_report
+    text: |-
+      Polarity on the gas-vehicle headline was -0.224, with neu 0.776.
+    claims:
+      - {text: "-0.224", correct: false, kind: wrong_field, class: sentiment_component}  # 0.224 is the neg share; polarity is -0.768
+      - {text: "0.776", correct: true, kind: sentiment, class: sentiment_component}
+  - id: G039
+    ledger: byd_report
+    text: |-
+      The Leapmotor item: polarity -0.42, neu 0.88, pos 0.0.
+    claims:
+      - {text: "-0.42", correct: true, kind: rounding, class: sentiment_component}
+      - {text: "0.88", correct: true, kind: rounding, class: sentiment_component}
+      - {text: "0.0", correct: true, kind: sentiment, class: sentiment_component}
+  - id: G040
+    ledger: perf_pair
+    text: |-
+      Tencent fell 4.88% over the last 20 sessions, while the index gained 3.34% over the month.
+    claims:
+      - {text: "4.88%", correct: true, kind: sign_word, class: decline_sign}
+      - {text: "20", correct: true, kind: count, class: decline_sign}
+      - {text: "3.34%", correct: true, kind: rounding, class: decline_sign}
+  - id: G041
+    ledger: perf_pair
+    text: |-
+      Tencent rose 4.9% over 20 sessions.
+    claims:
+      - {text: "4.9%", correct: false, kind: wrong_direction, class: decline_sign}  # Tencent fell 4.88% over 20 sessions
+      - {text: "20", correct: true, kind: count, class: decline_sign}
+  - id: G042
+    ledger: perf_pair
+    text: |-
+      Over 5 sessions Tencent rose 1.89%, ahead of the Hang Seng's 1.1% gain.
+    claims:
+      - {text: "5", correct: true, kind: count, class: decline_sign}
+      - {text: "1.89%", correct: true, kind: rounding, class: decline_sign}
+      - {text: "1.1%", correct: true, kind: rounding, class: decline_sign}
+  - id: G043
+    ledger: perf_pair
+    text: |-
+      The Hang Seng Index fell 4.88% over 20 sessions.
+    claims:
+      - {text: "4.88%", correct: false, kind: misattributed, class: decline_sign}  # Tencent's change; the index rose 3.34%
+      - {text: "20", correct: true, kind: count, class: decline_sign}
+  - id: G044
+    ledger: perf_pair
+    text: |-
+      Tencent is down 10.6% across 250 sessions; the HSI is down 0.32% on the same window.
+    claims:
+      - {text: "10.6%", correct: true, kind: sign_word, class: decline_sign}
+      - {text: "250", correct: true, kind: count, class: decline_sign}
+      - {text: "0.32%", correct: true, kind: sign_word, class: decline_sign}
+  - id: G045
+    ledger: perf_pair
+    text: |-
+      Over 60 sessions Tencent fell 10.61%.
+    claims:
+      - {text: "60", correct: true, kind: count, class: decline_sign}
+      - {text: "10.61%", correct: false, kind: wrong_window, class: decline_sign}  # 10.61% is the 250-session fall; the 60-session fall is 6.58%
+  - id: G046
+    ledger: perf_pair
+    text: |-
+      The index fell 2.31% over 60 sessions.
+    claims:
+      - {text: "2.31%", correct: false, kind: wrong_direction, class: decline_sign}  # the index rose 2.31% over 60 sessions
+      - {text: "60", correct: true, kind: count, class: decline_sign}
+  - id: G047
+    ledger: perf_pair
+    text: |-
+      Tencent's 60-session change was -6.58%, against +2.31% for the index.
+    claims:
+      - {text: "60", correct: true, kind: count, class: decline_sign}
+      - {text: "-6.58%", correct: true, kind: rounding, class: decline_sign}
+      - {text: "+2.31%", correct: true, kind: rounding, class: decline_sign}
+  - id: G048
+    ledger: perf_pair
+    text: |-
+      Tencent declined 4.88281% over 20 sessions.
+    claims:
+      - {text: "4.88281%", correct: false, kind: over_precise, class: decline_sign}  # the ledger gives -4.8828, no further digits
+      - {text: "20", correct: true, kind: count, class: decline_sign}
+  - id: G049
+    ledger: perf_pair
+    text: |-
+      Tencent's one-week change was -1.89% and its one-year change -10.61%.
+    claims:
+      - {text: "-1.89%", correct: false, kind: wrong_direction, class: decline_sign}  # Tencent rose 1.89% over 5 sessions
+      - {text: "-10.61%", correct: true, kind: rounding, class: decline_sign}
+  - id: G050
+    ledger: perf_pair
+    text: |-
+      The index gained 1.10% over 5 sessions but slipped 0.3% over the longest window.
+    claims:
+      - {text: "1.10%", correct: true, kind: rounding, class: decline_sign}
+      - {text: "5", correct: true, kind: count, class: decline_sign}
+      - {text: "0.3%", correct: true, kind: sign_word, class: decline_sign}
+  - id: G051
+    ledger: perf_pair
+    text: |-
+      Tencent underperformed the index by 8.23 points over 20 sessions.
+    claims:
+      - {text: "8.23", correct: false, kind: derived, class: decline_sign}  # computed from -4.8828 and 3.3446; not in the ledger
+      - {text: "20", correct: true, kind: count, class: decline_sign}
+  - id: G052
+    ledger: perf_pair
+    text: |-
+      Tencent gained 3.34% over the month.
+    claims:
+      - {text: "3.34%", correct: false, kind: misattributed, class: decline_sign}  # the index's 20-session gain; Tencent fell 4.88%
+  - id: G053
+    ledger: byd_report
+    text: |-
+      BYD Company Ltd closed at 75.07 HKD on 2 October 2026, on volume of 17,051,021 shares.
+    claims:
+      - {text: "75.07", correct: true, kind: exact, class: general}
+      - {text: "2 October 2026", correct: true, kind: temporal, class: general}
+      - {text: "17,051,021", correct: true, kind: exact, class: general}
+  - id: G054
+    ledger: byd_report
+    text: |-
+      BYD closed at 411.81 HKD on volume of 17.1 million shares.
+    claims:
+      - {text: "411.81", correct: false, kind: fabricated, class: general}  # not a BYD value; BYD closed at 75.07
+      - {text: "17.1 million", correct: true, kind: rounding, class: general}
+  - id: G055
+    ledger: byd_report
+    text: |-
+      Volatility was 8.8% over 259 sessions, and the maximum drawdown was -18.2%.
+    claims:
+      - {text: "8.8%", correct: true, kind: rounding, class: general}
+      - {text: "259", correct: true, kind: count, class: general}
+      - {text: "-18.2%", correct: true, kind: unit_conversion, class: general}
+  - id: G056
+    ledger: byd_report
+    text: |-
+      BYD's drawdown ran from a peak on 2025-10-08 to a trough on 2026-09-24.
+    claims:
+      - {text: "2025-10-08", correct: true, kind: temporal, class: general}
+      - {text: "2026-09-24", correct: false, kind: fabricated, class: general}  # BYD's trough was 2026-09-17
+  - id: G057
+    ledger: byd_report
+    text: |-
+      The news feed returned 5 headlines for BYD, the latest seen on 2 Oct.
+    claims:
+      - {text: "5", correct: true, kind: count, class: general}
+      - {text: "2 Oct", correct: true, kind: temporal, class: general}
+  - id: G058
+    ledger: byd_report
+    text: |-
+      The feed returned 6 headlines.
+    claims:
+      - {text: "6", correct: false, kind: wrong_count, class: general}  # the feed returned 5 headlines
+  - id: G059
+    ledger: byd_report
+    text: |-
+      BYD's intraday range was 1.43 HKD, and the close sat 0.30 below the open.
+    claims:
+      - {text: "1.43", correct: false, kind: derived, class: general}  # high minus low; not in the ledger
+      - {text: "0.30", correct: false, kind: derived, class: general}  # open minus close; not in the ledger
+  - id: G060
+    ledger: byd_report
+    text: |-
+      No fundamentals are stored: 0 of 8 expected quarters are covered.
+    claims:
+      - {text: "0", correct: true, kind: count, class: general}
+      - {text: "8", correct: true, kind: count, class: general}
+  - id: G061
+    ledger: perf_pair
+    text: |-
+      Tencent's volatility was 7.2% and its max drawdown -12.4%, from 2025-10-15 to 2026-09-24.
+    claims:
+      - {text: "7.2%", correct: true, kind: rounding, class: general}
+      - {text: "-12.4%", correct: true, kind: rounding, class: general}
+      - {text: "2025-10-15", correct: true, kind: temporal, class: general}
+      - {text: "2026-09-24", correct: true, kind: temporal, class: general}
+  - id: G062
+    ledger: perf_pair
+    text: |-
+      Tencent's drawdown trough came on 2026-09-17, and the drawdown measured -18.2%.
+    claims:
+      - {text: "2026-09-17", correct: false, kind: fabricated, class: general}  # Tencent's trough was 2026-09-24
+      - {text: "-18.2%", correct: false, kind: fabricated, class: general}  # Tencent's drawdown is -12.4%
+  - id: G063
+    ledger: perf_pair
+    text: |-
+      Twenty sessions ago Tencent's adjusted close was 440.81 HKD; 250 sessions ago it was 460.69 HKD.
+    claims:
+      - {text: "440.81", correct: false, kind: wrong_field, class: general}  # 440.81 is the 60-session base; the 20-session base is 432.95
+      - {text: "250", correct: true, kind: count, class: general}
+      - {text: "460.69", correct: true, kind: exact, class: general}
+  - id: G064
+    ledger: perf_pair
+    text: |-
+      The Hang Seng Index closed at 24,416.82 points on 2026-10-02.
+    claims:
+      - {text: "24,416.82", correct: true, kind: exact, class: general}
+      - {text: "2026-10-02", correct: true, kind: temporal, class: general}
+  - id: G065
+    ledger: perf_pair
+    text: |-
+      Tencent traded 18,051,021 shares in the session.
+    claims:
+      - {text: "18,051,021", correct: false, kind: fabricated, class: general}  # the volume is 17,051,021
+  - id: G066
+    ledger: perf_pair
+    text: |-
+      The index's high of 24685.41 compares with a low of 24514.49.
+    claims:
+      - {text: "24685.41", correct: true, kind: exact, class: general}
+      - {text: "24514.49", correct: false, kind: wrong_field, class: general}  # 24514.49 is the open; the low is 24221.49
+  - id: G067
+    ledger: perf_pair
+    text: |-
+      The HSI rose 3.3% over 20 sessions from 23626.6 points.
+    claims:
+      - {text: "3.3%", correct: true, kind: rounding, class: general}
+      - {text: "20", correct: true, kind: count, class: general}
+      - {text: "23626.6", correct: true, kind: exact, class: general}
