@@ -471,3 +471,22 @@ Evidence side, disclosed after the first independent run: an index result (`HSI.
   - the window of a base close.
 
 Implements: REQ-SI-INV-001, REQ-SI-QA-001.
+
+## Amendment 4 (2026-11-03, TP-045) — readings found when verifying on a copy of the real store
+
+A three-turn session and a digest on a snapshot of the owner's store, with TP-040 to TP-044 applied, showed further claim-side misreadings of correct numbers. TP-045 changes these readings:
+
+- a count joined by a hyphen ("259-session") is a count;
+- "session range", "session high" and "session low" are not counts;
+- a dash-joined pair before "range" is low, then high;
+- a percent at a price cue is a price change;
+- "N-session window/change/figure of X%" names a price change;
+- a snake_case tool key right before a number names it;
+- the nearest stated count selects a change's window;
+- a number compared with an earlier change ("versus", "against", "than") takes its direction;
+- "an essentially flat index" names the single index;
+- "Section N" is layout.
+
+The evidence side, P2 and P3 are unchanged. No independent battery measures this amendment: E-013, E-014 and E-015 run as regression only, and no escape was added. Whether to commission E-016 is an owner decision.
+
+Implements: REQ-SI-INV-001, REQ-SI-QA-001.

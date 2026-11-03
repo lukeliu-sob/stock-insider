@@ -86,11 +86,13 @@ E014_RULINGS: dict[tuple[str, str], str] = {
 #: E-014 on the changed engine (2026-10-27). The first run, before the F012 fix, measured
 #: precision 76/93; F012 ("rose 9.56% year on year to 94.0 billion") was a regression of the new
 #: growth cue, fixed by owner decision and so no longer independent. Pre-change engine: 66/93.
+#: TP-045 migrated assertion: F023 136.54 cleared ("its USD 136.54 session high": "session"
+#: before "high" is no longer a count noun); no escape added.
 E014_FALSE_FLAGS = {
     ("F007", "9.557%"), ("F011", "9.56%"),  # growth vocabulary: "top line expanded", "sales growth"
     ("F024", "25.2"), ("F024", "0.94"), ("F024", "7.11"), ("F024", "23.8"), ("F024", "6.87"), ("F024", "30.9"),
     ("F024", "1.10"),  # scale stated in the table title (option c, deferred)
-    ("F023", "136.54"), ("F032", "3"), ("F035", "331 billion"), ("F039", "231.61"), ("F039", "237.23"),
+    ("F032", "3"), ("F035", "331 billion"), ("F039", "231.61"), ("F039", "237.23"),
     ("F047", "86.81"), ("F050", "58.0 billion"),
 }
 

@@ -390,3 +390,12 @@ tuned on. Remaining: dates without a year, inert bookkeeping counts, an
 altered quotation failing as a whole, a subject written after its
 number, the attribution of sentiment to a single headline, and the window
 of a base close.
+
+### Note to E-015 — live re-check after TP-040..045 (2026-11-03)
+
+This is not an E-entry: no new battery. The session (three turns plus a digest) ran on a read-only snapshot of the owner's store, with TP-040 to TP-044 applied. Its stored answers were then re-checked offline.
+
+- After TP-040 to TP-044: 21 numbers marked `[?]`, 2 of them correct flags.
+- After TP-045: 3 marked. The same 2 correct flags remain (a 250-session change called a "drawdown"), plus 1 postposed subject.
+
+Every battery is now a development set. An independent measurement would need a fresh battery (E-016).

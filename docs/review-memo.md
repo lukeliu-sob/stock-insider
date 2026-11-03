@@ -823,3 +823,11 @@ test-plan gate's safety-path attestation).
 - Architecture: `prompts/` needs human approval for every change, hence this entry. One rule is reworded in place and keeps its opening words, which the TP-026 ordering test reads. The post-check, tools and data are unchanged.
 - Test quality: three tests on the frozen E-015 ledgers. Every rendering the rule allows passes the post-check, and wrong renderings (transposed digits, a fraction read as its own percent, the wrong window) are still flagged. Two version pins migrated from v7 to v8, as TP-026 did from v6 to v7. Full offline suite: 818 passed, 2 expected failures.
 - Risk: the model may shorten a price despite the rule. A shortened price is still checked at its written precision, so a wrong one is marked, not hidden. A behavioral eval run (`test/live`) on v8 is advisable before relying on the new rendering.
+
+### RM-79 — TP-045: readings found when verifying on a copy of the real store (ADR-008 Am4)
+
+- Verdict: APPROVE pending owner merge, with one disclosed method deviation. No independent battery measures this change; the existing batteries run as regression only.
+- Spec alignment: REQ-SI-INV-001, REQ-SI-QA-001. On the live re-check, `[?]` marks drop from 21 to 3, and two of the three are correct flags. No escape was added on E-013, E-014 or E-015. One E-014 false flag cleared (F023) and was migrated.
+- Architecture: `agent/guardrail_claims.py` is in the safety-critical prefix, hence this entry. All ten rules are claim-side, and the evidence side is unchanged. One structural detail: the low/high labels come from a tuple constant, because the name-based static-arithmetic gate taints any variable assigned a market-field string, module-wide.
+- Test quality: 9 tests with an adversarial case for each rule. Ten mutants, all killed; the range-noun mutant needed an added case. Full offline suite passes, and ruff and mypy are clean.
+- Risk: the bare-index alias ("an ... index") applies only when the ledger holds exactly one index, and the tool-key rule applies only to snake_case keys the typing table knows.
