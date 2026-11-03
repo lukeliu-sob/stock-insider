@@ -361,6 +361,15 @@ def _budget_query(args: dict) -> dict:
     return {"profile": envelope.profile.value, "max_session_tokens": envelope.max_session_tokens}
 
 
+def _canonical_arg(text: str) -> str:
+    """Upper-case a symbol-shaped argument (0700.hk -> 0700.HK; TP-040).
+
+    Implements: REQ-SI-FR-013 (ADR-001; TP-040)
+    """
+    stripped = text.strip()
+    return stripped.upper() if "." in stripped and not any(ch.isspace() for ch in stripped) else stripped
+
+
 def _cmd_watch(
     registry: Registry,
     args: list[str],
@@ -451,19 +460,20 @@ def _cmd_watch(
         if not rest:
             echo("error: /watch remove requires a canonical symbol")
             return
-        confirm = input_fn(f"remove {rest[0]}? [y/N]: ").strip().lower()
+        symbol = _canonical_arg(rest[0])
+        confirm = input_fn(f"remove {symbol}? [y/N]: ").strip().lower()
         if confirm not in ("y", "yes"):
             echo("cancelled; watchlist unchanged")
             return
         result = registry.execute(
             ToolCall(
                 tool="watchlist.remove",
-                arguments={"canonical_symbol": rest[0]},
+                arguments={"canonical_symbol": symbol},
                 call_id="slash-watch",
             ),
             allow_write=True,
         )
-        echo(f"removed {rest[0]}" if result.ok else f"error: {result.error}")
+        echo(f"removed {symbol}" if result.ok else f"error: {result.error}")
         return
     echo(f"error: unknown watch action {action!r} (list | add | remove)")
 
@@ -872,7 +882,7 @@ def _dispatch_loop(
                     )
                     continue
                 try:
-                    _run_report_turn(engine, store, record, args[0], out.echo, io=out)
+                    _run_report_turn(engine, store, record, _canonical_arg(args[0]), out.echo, io=out)
                 except SessionError as exc:
                     out.echo(f"error: {exc}")
             elif name == "watch":

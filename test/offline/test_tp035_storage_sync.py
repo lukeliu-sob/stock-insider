@@ -46,8 +46,10 @@ def test_v7_store_migrates_to_v8_and_old_rows_are_title_only(tmp_path) -> None:
     root = tmp_path / "data"
     _v7_store(root)
     conn = open_db(root)
-    assert SCHEMA_VERSION == 8
-    assert conn.execute("SELECT MAX(version) FROM schema_history").fetchone()[0] == 8
+    # TP-040 migrated assertion: 8 -> 9 (migration v9 repairs HKEX-spelled
+    # symbol rows; the v7 -> v8 news-row subject of this test is unchanged).
+    assert SCHEMA_VERSION == 9
+    assert conn.execute("SELECT MAX(version) FROM schema_history").fetchone()[0] == 9
     row = conn.execute("SELECT title, body, body_status, body_attempts, body_fetched_at FROM news").fetchone()
     assert dict(row) == {
         "title": "Old row",
@@ -60,10 +62,12 @@ def test_v7_store_migrates_to_v8_and_old_rows_are_title_only(tmp_path) -> None:
 
 
 def test_a_v9_store_is_refused(tmp_path) -> None:
+    # TP-040 migrated assertion: v9 is now the current schema, so the
+    # "newer than this code" store is one version past it (v10).
     root = tmp_path / "data"
     conn = open_db(root)
     with conn:
-        conn.execute("INSERT INTO schema_history (version, applied_at) VALUES (9, '2049-01-01T00:00:00+00:00')")
+        conn.execute("INSERT INTO schema_history (version, applied_at) VALUES (10, '2049-01-01T00:00:00+00:00')")
     conn.close()
     with pytest.raises(SchemaVersionError, match="newer than this code"):
         open_db(root)

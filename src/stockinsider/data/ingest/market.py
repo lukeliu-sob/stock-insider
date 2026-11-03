@@ -127,16 +127,23 @@ class EodhdMarketAdapter:
         """
         return self._transport is not None and (self._api_key is not None or self._injected)
 
-    def fetch_eod(self, symbol: str, from_date: str, to_date: str) -> list[dict[str, Any]]:
-        """Return validated bars for [from_date, to_date] (ascending).
+    def require_live(self) -> None:
+        """Raise the explicit not-configured error unless fetching is possible.
 
-        Implements: REQ-SI-FR-001, REQ-SI-INV-003 (ADR-002)
+        Implements: REQ-SI-INV-003 (ADR-002; TP-040)
         """
         if not self.is_live():
             raise MarketKeyMissing(
                 "market ingestion is not configured: set EODHD_API_KEY "
                 "(real environment variable or the local env file) (INV-003)"
             )
+
+    def fetch_eod(self, symbol: str, from_date: str, to_date: str) -> list[dict[str, Any]]:
+        """Return validated bars for [from_date, to_date] (ascending).
+
+        Implements: REQ-SI-FR-001, REQ-SI-INV-003 (ADR-002)
+        """
+        self.require_live()
         assert self._transport is not None
         token = self._api_key or ""
         params = {
