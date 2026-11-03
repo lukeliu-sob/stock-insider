@@ -24,10 +24,12 @@ SUBCOMMANDS = [
 ]
 #: Commands still explicit-failure stubs after TP-003 (sessions, analyze,
 #: and config are real behavior now; the negative stub guard covers the rest).
+#: TP-043 migrated assertion: digest is real (FR-016), the last stub; the
+#: guard stays for any future stub command.
 STUB_SUBCOMMANDS = [
     name
     for name in SUBCOMMANDS
-    if name not in ("sessions", "analyze", "config", "show", "resume", "watch", "sync", "info")
+    if name not in ("sessions", "analyze", "config", "show", "resume", "watch", "sync", "info", "digest")
 ]
 STUB_ARGS = {"info": ["0700.HK"]}
 
