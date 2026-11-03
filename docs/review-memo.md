@@ -792,3 +792,26 @@ test-plan gate's safety-path attestation).
 - Test quality: 7 new tests, including a no-data adversarial case and a post-check case on the tool's own result; 2 mutants killed. One migrated golden (`plain_repl_golden.txt`): the tool's `/tools` line and its name in the unknown-tool list, nothing else.
 - Security/efficiency: no new dependency. One indexed query of at most 251 rows per call.
 - Risk: a decline written as "fell 2.73%" is still misread by the claim side (the decline word attaches its sign to a nearby count). The signed form verifies. The post-check follow-up plan owns the prose form.
+
+### RM-77 — TP-042: live false flags (E-015; ADR-008 Am3)
+
+- Verdict: APPROVE pending owner merge.
+  - Commit order: the plan; the ledgers and the brief; the battery, committed unedited; then the rule code.
+  - The one evidence-side fix made after the first run is disclosed with both numbers.
+- Spec alignment: REQ-SI-INV-001, REQ-SI-QA-001.
+  - E-015 precision: 0.630 before, 0.977 on the independent run, 0.971 after the fix.
+  - E-015 recall: 0.780 before, 0.860 on the independent run, 0.940 after the fix.
+  - No new escape. The E-013 and E-014 pins are unchanged.
+- Architecture: `agent/guardrail_claims.py` is in the safety-critical prefix, hence this entry.
+  - Claim side: clause boundaries, cues, the cell count noun, layout exemptions, quotations, sign reach, and the `price_change` fallback.
+  - Evidence side: `change_pct` is typed `price_change` and carries its window; index results are subjects.
+  - The fallback applies only when the ledger holds a price change, so ledgers without `market.performance` are untouched.
+  - Unchanged: `shared/`, the registry, the declared typing, the v1 path.
+- Test quality:
+  - 13 tests: the ledger rebuild; the E-015 shape, label and measurement pins; and an adversarial case for each rule.
+  - Nine mutants planted, all killed. The sign-reach mutant needed an added unit case.
+  - Full offline suite: 800 passed, 2 expected failures.
+- Security and efficiency: no new dependency. Each claim costs one regex pass over its row or clause for the stated window.
+- Risk:
+  - The index aliases ("the index", "the benchmark") apply only when the ledger holds exactly one index.
+  - A table cell counts as a quotation only when its whole text equals a tool string of three or more words.

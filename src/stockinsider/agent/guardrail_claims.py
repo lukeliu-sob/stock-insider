@@ -74,6 +74,7 @@ FIELD_NAMES: dict[str, str] = {
     "gross_profit": "gross profit",
     "equity": "equity",
     "target": "price target",
+    "price_change": "price change",
 }
 _PRICE_FIELDS = frozenset({"open", "high", "low", "close", "adjusted_close"})
 #: Fields whose values are fractions: a percent claim compares value x 100.
@@ -83,6 +84,8 @@ _FRACTION_FIELDS = frozenset(
         "sentiment_positive", "sentiment_negative", "sentiment_neutral",
     }
 )
+#: Fields whose values are already percents (market.performance `change_pct`; TP-042).
+_PERCENT_FIELDS = frozenset({"price_change"})
 #: A claimed generic class -> the evidence classes it covers.
 _FAMILIES: dict[str, frozenset[str]] = {
     "price": _PRICE_FIELDS,
@@ -135,6 +138,7 @@ _KEY_FIELDS: dict[str, str] = {
     "equity": "equity",
     "active_symbols": "symbol_count",
     "calls_used": "api_calls_run",
+    "change_pct": "price_change",
 }
 #: Indicator metric names (the `metric` sibling of a `value`, or the key).
 _METRIC_FIELDS: dict[str, str] = {
@@ -171,12 +175,12 @@ _CUE_PATTERNS: tuple[tuple[str, str], ...] = (
     (
         "high",
         r"\b(?:the|a|its|day|intraday|session|daily|52-week)[\s_]+highs?\b|\bhighs?\s+(?:of|was|at|is)\b"
-        r"|\bpeaked\s+at\b",
+        r"|\bpeaked\s+at\b|\bhigh\b(?=\s*:?\s*(?:HK\$|US\$|\$)?\d)",
     ),
     (
         "low",
         r"\b(?:the|a|its|day|intraday|session|daily|52-week)[\s_]+lows?\b|\blows?\s+(?:of|was|at|is)\b"
-        r"|\bbottomed\s+(?:out\s+)?at\b",
+        r"|\bbottomed\s+(?:out\s+)?at\b|\blow\b(?=\s*:?\s*(?:HK\$|US\$|\$)?\d)",
     ),
     ("volume", r"\bvolumes?\b|\bshares?\s+traded\b|\btraded\s+shares\b"),
     ("volatility", r"\bvolatility\b|\bswings?\b|\bfluctuations?\b"),
@@ -195,9 +199,9 @@ _CUE_PATTERNS: tuple[tuple[str, str], ...] = (
     ("pe", r"\bP/?E\b(?:\s+ratio)?|\bprice[\s-]+to[\s-]+earnings\b|\bearnings\s+multiple\b"),
     ("pb", r"\bP/?B\b(?:\s+ratio)?|\bprice[\s-]+to[\s-]+book\b"),
     ("ps", r"\bP/?S\b(?:\s+ratio)?|\bprice[\s-]+to[\s-]+sales\b"),
-    ("sentiment_positive", rf"\bpositive\s+{_SENTIMENT_PART}"),
-    ("sentiment_negative", rf"\bnegative\s+{_SENTIMENT_PART}"),
-    ("sentiment_neutral", rf"\bneutral\s+{_SENTIMENT_PART}"),
+    ("sentiment_positive", rf"\bpositive\s+{_SENTIMENT_PART}|\bpos\b"),
+    ("sentiment_negative", rf"\bnegative\s+{_SENTIMENT_PART}|\bneg\b"),
+    ("sentiment_neutral", rf"\bneutral\s+{_SENTIMENT_PART}|\bneu\b"),
     ("sentiment", r"\bsentiment\b(?:\s+score)?|\bpolarity\b"),
     ("api_calls", r"\b(?:API|call)\s+budget\b|\bAPI\s+calls?\b"),
     ("tokens", r"\btoken\s+(?:budget|cap|limit|ceiling)\b|\btokens?\b"),
@@ -264,7 +268,7 @@ _TIME_LABEL = re.compile(r"^(?:years?|dates?|period|as[\s-]+of|fiscal\s+year|fy|
 
 _DECLINE = re.compile(
     r"\b(?:fell|fall|falls|falling|dropped|drop|drops|declined|decline|declines|down|lost|loss|slid|slumped|"
-    r"plunged|sank|tumbled|shed)\b",
+    r"plunged|sank|tumbled|shed|slipped|dipped|eased|retreated)\b",
     re.IGNORECASE,
 )
 _RISE = re.compile(
@@ -275,6 +279,7 @@ _RISE = re.compile(
 #: A change word right after a percent ("a 9.56% increase in revenue") makes it a change (TP-039).
 _CHANGE_AFTER = re.compile(r"\s*(?:increase|rise|gain|growth|jump|decline|drop|fall|decrease)s?\b", re.IGNORECASE)
 _DECLINE_AFTER = re.compile(r"\s*(?:%|percent|pct)?\s*(?:decline|drop|fall|loss|drawdown)\b", re.IGNORECASE)
+_RISE_AFTER = re.compile(r"\s*(?:%|percent|pct)?\s*(?:gain|rise|increase|advance|climb)s?\b", re.IGNORECASE)
 _CHANGE_CUE = re.compile(
     r"\b(?:up|down|rose|risen|fell|fallen|gained|lost|higher|lower|above|below|difference|change[ds]?|"
     r"increase[ds]?|decrease[ds]?|more\s+than|less\s+than|compared|spread|premium|discount)\b",
@@ -315,6 +320,8 @@ class _Entry:
     unit: str
     currency: str | None
     derived: bool = False
+    #: the session window of a price change (market.performance `sessions`; TP-042)
+    window: int | None = None
 
 
 @dataclass(frozen=True)
@@ -352,7 +359,9 @@ class Evidence:
     specs: dict[str, ToolSpec] = field(default_factory=dict)  # TP-025 stage 2: declared typing, by tool
 
 
-_SYMBOL_SHAPE = re.compile(r"^(?:\d{1,5}\.[A-Za-z]{1,4}|[A-Za-z]{1,6}\.(?:US|HK))$")
+#: Index results (HSI.INDX) are subjects too (TP-042): without the INDX form an index's
+#: values had no subject, so any company's claim matched them.
+_SYMBOL_SHAPE = re.compile(r"^(?:\d{1,5}\.[A-Za-z]{1,4}|[A-Za-z]{1,6}\.(?:US|HK)|[A-Za-z]{2,8}\.INDX)$")
 _NUMERIC_STRING = re.compile(r"-?\d[\d,]*(?:\.\d+)?")
 _ZONES = {"Z": 0, "UTC": 0, "GMT": 0, "HKT": 8 * 60, "EST": -5 * 60, "EDT": -4 * 60}
 _ZONE_ALT = r"Z|UTC|GMT|HKT|EST|EDT|[+-]\d{2}:?\d{2}"
@@ -594,7 +603,11 @@ def _add_entry(
     field_class = _declared_field(evidence, tool, key, siblings) or _evidence_field(key, parent, siblings, tool)
     unit = siblings.get("unit") if key.lower() == "value" else ""
     currency = _norm_currency(siblings.get("currency")) if field_class in _PRICE_FIELDS else None
-    evidence.entries.append(_Entry(value, field_class, subject, unit if isinstance(unit, str) else "", currency))
+    sessions = siblings.get("sessions")
+    window = sessions if field_class == "price_change" and isinstance(sessions, int) else None
+    evidence.entries.append(
+        _Entry(value, field_class, subject, unit if isinstance(unit, str) else "", currency, window=window)
+    )
 
 
 def _note_unavailable(evidence: Evidence, node: dict[str, Any], key: str, subject: str | None) -> None:
@@ -614,7 +627,16 @@ def _note_unavailable(evidence: Evidence, node: dict[str, Any], key: str, subjec
 # ---- answer structure ----------------------------------------------------------
 
 _URL = re.compile(r"https?://\S+|\bwww\.\S+")
-_MENTION = re.compile(r"(?<![\w.])(\d{1,5}\.[A-Z]{1,4}|[A-Z]{1,6}\.(?:US|HK))(?![\w])")
+#: Section and paragraph signs, list enumerators and step numbers (TP-042): "§2", "(2) run a
+#: sync", "2) it is down", "Step 3". An enumerator opens a list item - at the start, or after a
+#: space or clause mark - and is followed by a word; "(2.5%)" stays a claim.
+_REFERENCES = (
+    re.compile(r"[§¶]\s?(?P<n>\d{1,3}(?:\.\d{1,3})*)"),
+    re.compile(r"(?:^|(?<=[\s:;,]))\((?P<n>\d{1,2})\)(?=\s+[A-Za-z])"),
+    re.compile(r"(?:^|(?<=[\s:;,]))(?P<n>\d{1,2})\)(?=\s+[A-Za-z])"),
+    re.compile(r"\bStep\s+(?P<n>\d{1,2})\b"),
+)
+_MENTION = re.compile(r"(?<![\w.])(\d{1,5}\.[A-Z]{1,4}|[A-Z]{1,6}\.(?:US|HK)|[A-Z]{2,8}\.INDX)(?![\w])")
 
 
 def _segments(text: str, boundary: re.Pattern[str]) -> list[tuple[int, int]]:
@@ -669,7 +691,7 @@ class _Answer:
         self.text = text
         self.evidence = evidence
         self.sentences = _segments(text, re.compile(r"[.!?](?=\s|$)|\n"))
-        self.clauses = _segments(text, re.compile(r"[.!?](?=\s|$)|\n|;|,(?=\s)|\s[-–—]\s"))
+        self.clauses = _segments(text, re.compile(r"[.!?](?=\s|$)|\n|;|,(?=\s)|\s[-–—]\s|[·•]|\s\|\s"))
         self.paragraphs = _segments(text, re.compile(r"\n\s*\n"))
         self.cells = _table_cells(text)
         cue_text = _URL.sub(lambda m: " " * len(m.group()), text)
@@ -694,6 +716,15 @@ class _Answer:
         for word, subject in self.evidence.names.items():
             name_pattern = rf"\b{re.escape(word)}\b"
             found.extend((base + m.start(), base + m.end(), subject) for m in re.finditer(name_pattern, text))
+        # an index is written by its code ("HSI") or, when the ledger holds one index, as
+        # "the index" or "the benchmark" (TP-042)
+        indices = sorted(subject for subject in self.evidence.subjects if subject.endswith(".INDX"))
+        for subject in indices:
+            code = re.escape(subject.split(".")[0])
+            found.extend((base + m.start(), base + m.end(), subject) for m in re.finditer(rf"\b{code}\b", text))
+        if len(indices) == 1:
+            pattern = r"\bthe\s+(?:index|benchmark)\b"
+            found.extend((base + m.start(), base + m.end(), indices[0]) for m in re.finditer(pattern, text, re.I))
         return found
 
     def sentence(self, position: int) -> tuple[int, int]:
@@ -763,7 +794,8 @@ _TIME_OF_DAY = re.compile(rf"(?<![\w:.]){_TIME_PART}(?![\w:])")
 _COMPACT_DATE = re.compile(r"(?<![\w.,-])((?:19|20)\d{2})(\d{2})(\d{2})(?![\w.,%-]|\.\d)")
 _TICKER = re.compile(r"(?<![\w.])\d{1,5}\.[A-Z]{1,4}(?![\w])")
 _VERSION = re.compile(r"\bv\d+(?:\.\d+)+\b")
-_QUOTE = re.compile(r'"([^"\n]{3,300})"|“([^”\n]{3,300})”')
+#: Straight, curly and backtick quotes (backticks: TP-042).
+_QUOTE = re.compile(r'"([^"\n]{3,300})"|“([^”\n]{3,300})”|`([^`\n]{3,300})`')
 _SUBJECT_VERB = re.compile(
     r"\s+(?:was|is|saw|brought|ended|began|started|marked|proved|remained|became|delivered|featured|"
     r"turned|looked|showed|has|had)\b",
@@ -899,6 +931,11 @@ def scan_claims(candidate: str, snapshot_values: object, specs: Mapping[str, Too
     for match in _URL.finditer(candidate):
         exempt.append((match.start(), match.end(), "identifier"))
         _blank(work, match.start(), match.end())
+    for pattern in _REFERENCES:
+        for match in pattern.finditer(candidate):
+            start, end = match.span("n")
+            exempt.append((start, end, "layout"))
+            _blank(work, start, end)
 
     # 2. whole temporal expressions
     _scan_times(_current, work, pending)
@@ -946,7 +983,7 @@ def scan_claims(candidate: str, snapshot_values: object, specs: Mapping[str, Too
         pending.append(_Pending(match.start(), match.end(), "quantitative", surface, value=value, decimals=decimals))
 
     pending.sort(key=lambda item: item.start)
-    quotes = _quote_spans(candidate, evidence)
+    quotes = _quote_spans(candidate, evidence, answer.cells)
     typed = v1._typed_ohlcv_pool(snapshot_values)
     fields = _fields(answer, pending)
     verdicts = [_verify(item, answer, quotes, pending, typed, fields.get(id(item))) for item in pending]
@@ -1052,10 +1089,19 @@ def _word_value(phrase: str) -> float | None:
     return float(current)
 
 
-def _quote_spans(candidate: str, evidence: Evidence) -> list[tuple[int, int, bool]]:
+def _quote_spans(
+    candidate: str, evidence: Evidence, cells: list[tuple[int, int, str, str]] = ()
+) -> list[tuple[int, int, bool]]:
     spans = []
+    # a table cell whose whole text is a tool's text value quotes it (a headline as the
+    # cell of a table; TP-042); any other cell is no quotation
+    for start, end, _row, _column in cells:
+        inner = re.sub(r'^[\s*_`"“]+|[\s*_`"”]+$', "", candidate[start:end])
+        normalized = _normalize_quote(inner).strip(" .,;:!?")
+        if len(inner.split()) >= 3 and any(normalized == text.strip(" .,;:!?") for text in evidence.free_text):
+            spans.append((start, end, True))
     for match in _QUOTE.finditer(candidate):
-        inner = match.group(1) or match.group(2) or ""
+        inner = match.group(1) or match.group(2) or match.group(3) or ""
         if len(inner.split()) < 3:
             continue
         normalized = _normalize_quote(inner).strip(" .,;:!?")
@@ -1170,9 +1216,13 @@ def _reading(item: _Pending, answer: _Answer) -> _Reading:
         currency = _norm_currency(currency_after.group(1))
     sign = ""
     clause_start, _clause_end = answer.clause(item.start)
-    words_before = re.findall(r"[A-Za-z']+", full[clause_start : item.start])[-4:]
+    # a change word signs the next number only (TP-042): "fell 4.88% over the last 20
+    # sessions" signs 4.88, not 20 - the words are read after the previous number
+    lead = re.split(r"\d[\d,.]*%?", full[clause_start : item.start])[-1]
+    words_before = re.findall(r"[A-Za-z']+", lead)[-4:]
+    counted = not item.words and _COUNT_NOUN.match(rest) is not None
     # after "to", "at" or "from" the number is a level, not a change
-    if not words_before or words_before[-1].lower() not in {"to", "at", "from"}:
+    if not counted and (not words_before or words_before[-1].lower() not in {"to", "at", "from"}):
         window = " ".join(words_before)
         if _DECLINE.search(window):
             sign = "decline"
@@ -1180,11 +1230,20 @@ def _reading(item: _Pending, answer: _Answer) -> _Reading:
             sign = "rise"
     if not sign and _DECLINE_AFTER.match(full, item.end):
         sign = "decline"
+    if not sign and unit == "percent" and _RISE_AFTER.match(full, item.end):
+        sign = "rise"  # "the Hang Seng's 1.1% gain"
     return _Reading(item.value, 0.5 * 10 ** (-item.decimals), scale, unit, currency, sign, rest)
 
 
 def _resolve_field(item: _Pending, answer: _Answer, reading: _Reading, pending: list[_Pending]) -> str | None:
     cell = answer.cell(item.start)
+    noun = _COUNT_NOUN.match(reading.after) if not item.words else _COUNT_NOUN.match(" " + item.unit_word)
+    if cell is not None and noun:
+        # a count noun in the cell itself ("259 sessions") names the number before the
+        # row's metric label does (TP-042)
+        for name, _pattern in _COUNT_NOUNS:
+            if noun.group(name):
+                return name
     if cell is not None:
         labels = [label for label in (cell[0], cell[1]) if not answer.names_subject(label)]
         for label in labels:
@@ -1195,7 +1254,6 @@ def _resolve_field(item: _Pending, answer: _Answer, reading: _Reading, pending: 
             for name, pattern in _CUES:
                 if pattern.search(label):
                     return name
-    noun = _COUNT_NOUN.match(reading.after) if not item.words else _COUNT_NOUN.match(" " + item.unit_word)
     if noun:
         for name, _pattern in _COUNT_NOUNS:
             if noun.group(name):
@@ -1270,12 +1328,19 @@ def _refine(field_name: str, item: _Pending, answer: _Answer, pending: list[_Pen
 def _fields(answer: _Answer, pending: list[_Pending]) -> dict[int, str | None]:
     """The field of every quantitative claim, with comparison inheritance."""
     fields: dict[int, str | None] = {}
+    has_changes = any(entry.field == "price_change" for entry in answer.evidence.entries)
     for item in pending:
         if item.cls == "quantitative":
             reading = _reading(item, answer)
             name = _resolve_field(item, answer, reading, pending)
             if name == "revenue" and reading.unit == "percent" and (reading.sign or _CHANGE_AFTER.match(reading.after)):
                 name = "revenue_growth"  # "revenue grew 9.56%", "a 9.56% increase in revenue" (TP-039)
+            if name is None and reading.unit == "percent" and has_changes:
+                # a percent with a change word or a written sign, and no other field cue,
+                # is a price change when the ledger holds one ("fell 4.88%", "-6.6%"; TP-042)
+                signed = reading.sign or item.value < 0 or answer.text[max(0, item.start - 1) : item.start] == "+"
+                if signed:
+                    name = "price_change"
             fields[id(item)] = _refine(name, item, answer, pending) if name else None
     for item in pending:
         if item.cls != "quantitative" or fields[id(item)] is not None:
@@ -1299,7 +1364,7 @@ def _interpretations(reading: _Reading, entry: _Entry) -> list[float]:
     if reading.unit == "percent":
         if fraction_like or entry.field == "unknown":
             values.append(entry.value * 100.0)
-        if entry.field == "unknown" or entry.unit == "percent":
+        if entry.field == "unknown" or entry.unit == "percent" or entry.field in _PERCENT_FIELDS:
             values.append(entry.value)
     elif reading.unit == "bps":
         values.append(entry.value * 10000.0)
@@ -1364,6 +1429,12 @@ def _verify_quantity(
         entry for entry in evidence.entries
         if _compatible(field_name, entry.field) and (subject is None or entry.subject in (None, subject))
     ]
+    if field_name == "price_change":
+        # a session count stated with the change ("over 20 sessions") selects its window (TP-042)
+        # (a count with no window in the ledger is its own wrong claim, so it selects nothing)
+        stated = _stated_window(item, answer, pending)
+        if stated is not None and any(entry.window == stated for entry in in_scope):
+            in_scope = [entry for entry in in_scope if entry.window in (None, stated)]
     mismatch = ""
     for entry in in_scope:
         matched, exact, kind = _matches(reading, entry, field_name)
@@ -1411,6 +1482,45 @@ def _verify_quantity(
     return _verdict(
         False, reason=f"differs from the tool's {label}" + (f" for {subject}" if subject else ""), kind="differs"
     )
+
+
+_WINDOW_WORDS = {"five": 5, "twenty": 20, "sixty": 60}
+_STATED_WINDOW = re.compile(r"\b(\d{1,3}|five|twenty|sixty)[\s-]+(?:trading[\s-]+)?sessions?\b", re.IGNORECASE)
+
+
+def _stated_window(item: _Pending, answer: _Answer, pending: list[_Pending]) -> int | None:
+    """The session count stated with a change claim (TP-042).
+
+    The scope is the claim's table row, else its clause. A count after the claim, up to the
+    next percent, comes first ("fell 4.88% over the last 20 sessions"); a count before it
+    counts only when no other percent precedes it in the scope ("Over 60 sessions Tencent
+    fell 10.61%").
+    """
+    text = answer.text
+    if answer.cell(item.start) is not None:
+        start = text.rfind("\n", 0, item.start) + 1
+        end = text.find("\n", item.end)
+        end = end if end != -1 else len(text)
+    else:
+        start, end = answer.clause(item.start)
+    percents = [
+        p for p in pending
+        if p is not item and p.cls == "quantitative" and start <= p.start < end and _reading(p, answer).unit == "percent"
+    ]
+    after_end = min([p.start for p in percents if p.start >= item.end], default=end)
+    segments = [text[item.end : after_end]]
+    if not any(p.end <= item.start for p in percents):
+        segments.append(text[start : item.start])
+    for segment in segments:
+        counts = {
+            _WINDOW_WORDS.get(match.group(1).lower()) or int(match.group(1))
+            for match in _STATED_WINDOW.finditer(segment)
+        }
+        if len(counts) == 1:
+            return counts.pop()
+        if counts:
+            return None
+    return None
 
 
 def _verify_unfielded(

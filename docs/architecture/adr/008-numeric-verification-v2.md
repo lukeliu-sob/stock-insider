@@ -429,3 +429,45 @@ result on a fresh held-out battery.
   tuned on.
 
 Implements: REQ-SI-INV-001, REQ-SI-QA-001.
+
+## Amendment 3 (2026-11-03, TP-042) — live false flags: list, table, reference, quotation, sentiment and change readings
+
+### Context
+
+The first live session on the owner's store after TP-039 marked 17 numbers `[?]`, nearly all of them correct. Six claim-side misreadings recurred:
+
+- a middle-dot field list;
+- a session count in a metric row;
+- section and list numbers;
+- a headline quoted in backticks or as a table cell;
+- a sentiment share written after its key name;
+- a decline word carried to the next count.
+
+E-015, written by a separately briefed author from real tool results, measured precision 0.630 and recall 0.780 on them.
+
+### Decision
+
+Claim side:
+
+1. A middle dot, a bullet or a bar in prose ends a clause. "High" and "Low" right before a number are cues, and so are pos, neg and neu.
+2. Inside a table cell, a count noun after the number ("259 sessions") names it before the row's metric label does.
+3. Section and paragraph signs, list enumerators and step numbers are layout, not claims.
+4. Backticks are quotes. A table cell whose whole text equals a tool's text value is a quotation of it. P3 is otherwise unchanged: a number paraphrased from a tool's prose stays unverified.
+5. A change word signs the next number only, never a count.
+6. A percent with a change word or a written sign, and no other cue, is a `price_change` when the ledger holds one. `market.performance`'s `change_pct` is typed `price_change` (already a percent), and a session count stated with the change selects its window.
+
+Evidence side, disclosed after the first independent run: an index result (`HSI.INDX`) is a subject. When the ledger holds one index, "the index", "the benchmark" and the index code name it.
+
+### Consequences
+
+- E-015 moved from precision 0.630 and recall 0.780 to 0.977 and 0.860 on the first, independent run, and to 0.971 and 0.940 after the disclosed fix. The run exposed that fix, so the second pair of numbers is not independent of E-015.
+- E-013 and E-014 are unchanged: their pins hold. Their ledgers hold no `market.performance` result and no index.
+- Residuals:
+  - a date written without its year;
+  - bookkeeping counts typed as inert;
+  - a quotation with one altered digit fails as a whole;
+  - a subject written after its number;
+  - a value that rounds to another headline's share (a headline is not a subject);
+  - the window of a base close.
+
+Implements: REQ-SI-INV-001, REQ-SI-QA-001.

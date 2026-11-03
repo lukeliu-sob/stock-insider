@@ -3887,3 +3887,35 @@ sessions:
       change to pinned indicator values) are agent decisions recorded for owner review; the
       migrated golden awaits owner approval in the PR.
     status: applied
+  - id: AILOG-0095
+    date: "2026-11-03"
+    agent_task: >-
+      TP-042 (ADR-008 Amendment 3), from the 2026-11-03 live session's false flags: claim-side
+      rules for middle-dot lists, bare High/Low and pos/neg/neu cues, count nouns in table
+      cells, section/enumerator/step numbers, backtick and table-cell quotations, sign reach,
+      and a price_change field for market.performance with its stated window; index results
+      became subjects (disclosed after the first run). E-015 battery by a separately briefed
+      subagent on frozen ledgers of real tool results, committed before the rule code:
+      precision 0.630 -> 0.977 (independent) -> 0.971 after the disclosed fix, recall
+      0.780 -> 0.860 -> 0.940. E-013/E-014 pins unchanged. Thirteen offline tests, nine
+      mutants killed.
+    artifacts:
+      - src/stockinsider/agent/guardrail_claims.py
+      - test/offline/test_tp042_live_false_flags.py
+      - test/offline/fixtures/e015_ledgers.yaml
+      - test/offline/fixtures/e015_brief.md
+      - test/offline/fixtures/e015_heldout.yaml
+      - docs/test-plans/TP-042.md
+      - docs/architecture/adr/008-numeric-verification-v2.md
+      - docs/architecture/evaluation-logbook.md
+      - docs/debt-register.md
+      - docs/review-memo.md
+      - docs/ai-use-log.yaml
+    human_decision: >-
+      Owner, in session, 2026-11-03: instructed the agent to fix the reported smoke-test
+      defects, including the post-check marking correct numbers. A separately briefed
+      subagent wrote E-015, per the standing method. The index-subject and window fix after
+      the first run is an agent decision disclosed with both numbers. The 19 label rulings
+      ("label stands", agent recommendation) and the ADR-008 Amendment 3 text await owner
+      approval in the PR.
+    status: applied
