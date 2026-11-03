@@ -164,7 +164,8 @@ def test_symbol_without_bars_fails_visibly(env: Path) -> None:
     result = runner.invoke(app, ["digest"])
     assert result.exit_code == 1
     alibaba = _section(result.output, "9988.HK")
-    assert "- latest bar: unavailable: tool 'market.quote' failed: LookupError: 9988.HK: no stored market data" in alibaba
+    no_bars = "tool 'market.quote' failed: LookupError: 9988.HK: no stored market data"
+    assert f"- latest bar: unavailable: {no_bars}" in alibaba
     assert "- week: unavailable: tool 'market.performance' failed: LookupError" in alibaba
     assert "## 0700.HK" in result.output  # the other symbols still render
 

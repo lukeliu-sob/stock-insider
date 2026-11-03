@@ -66,11 +66,15 @@ def _gather(store: SessionStore, registry: Any, session_id: str, symbol: str) ->
     turn_id = _next_turn_id(store, session_id)
     store.append_event(
         session_id,
-        {"event": "user-message", "text": f"[harness] weekly digest: deterministic facts for {symbol}", "turn": turn_id},
+        {
+            "event": "user-message",
+            "text": f"[harness] weekly digest: deterministic facts for {symbol}",
+            "turn": turn_id,
+        },
     )
     snapshot: dict[str, Any] = {}
     results: dict[str, Any] = {}
-    calls = (
+    calls: tuple[tuple[str, dict[str, Any]], ...] = (
         ("market.quote", {"symbol": symbol}),
         ("market.performance", {"symbol": symbol}),
         ("news.recent", {"symbol": symbol, "k": 10}),
