@@ -6,7 +6,8 @@ record a session's subject symbols; a keyless sync fails before it
 spends budget; the CLI shows the exchange and last-active date and
 normalizes lowercase symbols.
 
-Implements: REQ-SI-FR-001, REQ-SI-FR-004, REQ-SI-FR-005, REQ-SI-FR-012, REQ-SI-INV-001, REQ-SI-INV-003, REQ-SI-INV-004 (ADR-002, ADR-003, ADR-005 Am4)
+Implements: REQ-SI-FR-001, REQ-SI-FR-004, REQ-SI-FR-005, REQ-SI-FR-012, REQ-SI-INV-001,
+REQ-SI-INV-003, REQ-SI-INV-004 (ADR-002, ADR-003, ADR-005 Am4)
 """
 
 from __future__ import annotations

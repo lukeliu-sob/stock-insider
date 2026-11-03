@@ -243,7 +243,8 @@ def watch(
                     candidates = [verified] if verified is not None else []
                     if not candidates:
                         typer.secho(
-                            f"not found: {_canonical(query)} returned no data via direct verification; watchlist unchanged",
+                            f"not found: {_canonical(query)} returned no data via direct verification; "
+                            "watchlist unchanged",
                             fg=typer.colors.RED,
                             err=True,
                         )
