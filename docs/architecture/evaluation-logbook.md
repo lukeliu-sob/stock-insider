@@ -349,3 +349,44 @@ The one regression the first run exposed (F012) is fixed and disclosed.
 Remaining: growth vocabulary ("top line expanded", "sales growth"), a
 scale stated in a table title (option c), a subject written after its
 number (option d), and pinned singletons.
+
+### E-015 — Live false flags: list, table, reference, quotation, sentiment, change (TP-042)
+
+Date: 2026-11-03 - Model(s): n/a (checker, unit-level)
+
+Instrument: test/offline/fixtures/e015_heldout.yaml, 67 answers, 223
+claims (173 correct, 50 wrong). A separately briefed subagent wrote it
+from e015_brief.md and the frozen e015_ledgers.yaml only, and it was
+committed unedited before the rule code. The ledgers are real tool
+results over a seeded store, rebuilt by
+`test_e015_ledgers_match_the_real_tools`. The label check found 19
+disagreements, all checker limits: identifiers, a quoted title's digits,
+two fabricated values that equal other ledger numbers, and two dates the
+mechanical parser does not read. The agent recommends that every label
+stands; the owner rules in the PR.
+
+Scores (production post-check path, declared specs):
+
+| Engine | Precision | Recall |
+|---|---|---|
+| Before TP-042 | 109/173 = 0.630 | 39/50 = 0.780 |
+| TP-042, first run (independent) | 169/173 = 0.977 | 43/50 = 0.860 |
+| TP-042 after the disclosed index-subject and window fix (not independent) | 168/173 = 0.971 | 47/50 = 0.940 |
+
+False flags per class, before -> after the fix (correct claims in the
+class in brackets): reference 26 -> 1 (43), inline list 10 -> 0 (21),
+decline sign 10 -> 1 (22), quoted title 7 -> 1 (10), table count 5 -> 0
+(32), sentiment component 3 -> 0 (14), general 3 -> 2 (31). Escapes went
+from 11 to 3, and all 3 were present before the change.
+
+The first run exposed two new escapes and one old one. G018 and G045
+gave a change to the wrong window, and G052 gave the index's change to
+Tencent. The causes: index results had no subject, and windows were not
+checked. Both are fixed and disclosed. The development sets E-013 and
+E-014 are unchanged, and their pins hold.
+
+Verdict: a large improvement, measured on a battery the rules were not
+tuned on. Remaining: dates without a year, inert bookkeeping counts, an
+altered quotation failing as a whole, a subject written after its
+number, the attribution of sentiment to a single headline, and the window
+of a base close.

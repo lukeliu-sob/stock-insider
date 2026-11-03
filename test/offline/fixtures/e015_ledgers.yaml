@@ -1,0 +1,249 @@
+# E-015 frozen ledgers (TP-042): real tool results over a seeded store, generated once by
+# the rule author's script; the battery author reads only these and the brief.
+ledgers:
+  byd_report:
+    turn-0001/market.quote#1:
+      date: '2026-10-02'
+      open: 75.37
+      high: 75.9
+      low: 74.47
+      close: 75.07
+      adjusted_close: 75.07
+      volume: 17051021
+      currency: HKD
+      symbol: 1211.HK
+      official_name: BYD Company Ltd
+    turn-0001/market.indicators#2:
+      symbol: 1211.HK
+      as_of: '2026-10-02'
+      valuation:
+        note: share count is not captured by the fundamentals adapter; per-share ratios unavailable until it is
+          (INV-003)
+      profitability:
+        roe:
+          metric: roe
+          unavailable: input value missing from stored data
+        net_margin:
+          metric: net_margin
+          unavailable: input value missing from stored data
+        gross_margin:
+          metric: gross_margin
+          unavailable: input value missing from stored data
+      growth:
+        revenue_yoy:
+          metric: yoy_growth
+          unavailable: insufficient history (0 periods; need 5+)
+        earnings_yoy:
+          unavailable: quarterly net-income series not assembled in this snapshot
+      risk:
+        volatility:
+          metric: volatility
+          value: 0.08848323313573633
+          unit: fraction
+          window:
+            from: '2025-10-06'
+            until: '2026-10-02'
+            sessions: 259
+        max_drawdown:
+          metric: max_drawdown
+          value: -0.18235430157261806
+          unit: fraction
+          window:
+            peak_date: '2025-10-08'
+            trough_date: '2026-09-17'
+      official_name: BYD Company Ltd
+    turn-0001/fundamentals.summary#3:
+      symbol: 1211.HK
+      coverage:
+        symbol: 1211.HK
+        quarters: 0
+        quarters_expected: 8
+        cells: 0
+        cells_filled: 0
+        ratio: 0.0
+        meets_threshold: false
+        gaps: []
+      stored: []
+      stored_unavailable_reason: 'no fundamentals rows stored for this symbol: the fundamentals data feed is not
+        in the current vendor plan (explicit, not omitted)'
+      official_name: BYD Company Ltd
+    turn-0001/news.recent#4:
+      symbol: 1211.HK
+      official_name: BYD Company Ltd
+      count: 5
+      items:
+      - title: Did Gas Vehicle Sales Just Dip Below 50% For The First Time?
+        url: https://finance.yahoo.com/n0
+        domain: finance.yahoo.com
+        seendate: '2026-10-02T13:05:00+00:00'
+        source: eodhd
+        sentiment:
+          polarity: -0.768
+          neg: 0.224
+          neu: 0.776
+          pos: 0.0
+      - title: BYD, Leapmotor Continue EV Sales Streak; Tesla Deliveries On Deck
+        url: https://finance.yahoo.com/n1
+        domain: finance.yahoo.com
+        seendate: '2026-10-01T15:40:00+00:00'
+        source: eodhd
+        sentiment:
+          polarity: -0.422
+          neg: 0.118
+          neu: 0.882
+          pos: 0.0
+      - title: BYD (SEHK:1211) Reshuffled Its Board And Committees
+        url: https://finance.yahoo.com/n2
+        domain: finance.yahoo.com
+        seendate: '2026-09-30T09:12:00+00:00'
+        source: eodhd
+        sentiment:
+          polarity: 0.966
+          neg: 0.0
+          neu: 0.861
+          pos: 0.139
+      - title: 3 Out-of-Favor Stocks with Warning Signs
+        url: https://finance.yahoo.com/n3
+        domain: finance.yahoo.com
+        seendate: '2026-09-29T11:20:00+00:00'
+        source: eodhd
+        sentiment:
+          polarity: 0.998
+          neg: 0.071
+          neu: 0.793
+          pos: 0.136
+      - title: 'China Electric Vehicle Market Size and Forecast 2026-2030: 100+ KPIs on Powertrains'
+        url: https://finance.yahoo.com/n4
+        domain: finance.yahoo.com
+        seendate: '2026-09-29T08:00:00+00:00'
+        source: eodhd
+        sentiment:
+          polarity: 0.999
+          neg: 0.012
+          neu: 0.874
+          pos: 0.114
+      note: titles sanitized at egress (SEC-002 layer one); cite only these items (FR-007)
+  perf_pair:
+    turn-0001/market.quote#1:
+      date: '2026-10-02'
+      open: 413.46
+      high: 416.34
+      low: 408.52
+      close: 411.81
+      adjusted_close: 411.81
+      volume: 17051021
+      currency: HKD
+      symbol: 0700.HK
+      official_name: Tencent Holdings Ltd
+    turn-0001/market.quote#2:
+      date: '2026-10-02'
+      open: 24514.49
+      high: 24685.41
+      low: 24221.49
+      close: 24416.82
+      adjusted_close: 24416.82
+      volume: 17051021
+      currency: POINTS
+      symbol: HSI.INDX
+      official_name: Hang Seng Index
+    turn-0001/market.performance#3:
+      symbol: 0700.HK
+      as_of: '2026-10-02'
+      price_basis: adjusted close
+      windows:
+      - sessions: 5
+        from_date: '2026-09-25'
+        to_date: '2026-10-02'
+        from_adjusted_close: 404.19
+        adjusted_close: 411.81
+        change_pct: 1.8853
+      - sessions: 20
+        from_date: '2026-09-04'
+        to_date: '2026-10-02'
+        from_adjusted_close: 432.95
+        adjusted_close: 411.81
+        change_pct: -4.8828
+      - sessions: 60
+        from_date: '2026-07-10'
+        to_date: '2026-10-02'
+        from_adjusted_close: 440.81
+        adjusted_close: 411.81
+        change_pct: -6.5788
+      - sessions: 250
+        from_date: '2025-10-17'
+        to_date: '2026-10-02'
+        from_adjusted_close: 460.69
+        adjusted_close: 411.81
+        change_pct: -10.6102
+      unavailable: []
+      official_name: Tencent Holdings Ltd
+    turn-0001/market.performance#4:
+      symbol: HSI.INDX
+      as_of: '2026-10-02'
+      price_basis: adjusted close
+      windows:
+      - sessions: 5
+        from_date: '2026-09-25'
+        to_date: '2026-10-02'
+        from_adjusted_close: 24151.45
+        adjusted_close: 24416.82
+        change_pct: 1.0988
+      - sessions: 20
+        from_date: '2026-09-04'
+        to_date: '2026-10-02'
+        from_adjusted_close: 23626.6
+        adjusted_close: 24416.82
+        change_pct: 3.3446
+      - sessions: 60
+        from_date: '2026-07-10'
+        to_date: '2026-10-02'
+        from_adjusted_close: 23864.41
+        adjusted_close: 24416.82
+        change_pct: 2.3148
+      - sessions: 250
+        from_date: '2025-10-17'
+        to_date: '2026-10-02'
+        from_adjusted_close: 24496.04
+        adjusted_close: 24416.82
+        change_pct: -0.3234
+      unavailable: []
+      official_name: Hang Seng Index
+    turn-0001/market.indicators#5:
+      symbol: 0700.HK
+      as_of: '2026-10-02'
+      valuation:
+        note: share count is not captured by the fundamentals adapter; per-share ratios unavailable until it is
+          (INV-003)
+      profitability:
+        roe:
+          metric: roe
+          unavailable: input value missing from stored data
+        net_margin:
+          metric: net_margin
+          unavailable: input value missing from stored data
+        gross_margin:
+          metric: gross_margin
+          unavailable: input value missing from stored data
+      growth:
+        revenue_yoy:
+          metric: yoy_growth
+          unavailable: insufficient history (0 periods; need 5+)
+        earnings_yoy:
+          unavailable: quarterly net-income series not assembled in this snapshot
+      risk:
+        volatility:
+          metric: volatility
+          value: 0.07213456608268039
+          unit: fraction
+          window:
+            from: '2025-10-06'
+            until: '2026-10-02'
+            sessions: 259
+        max_drawdown:
+          metric: max_drawdown
+          value: -0.12429807254515109
+          unit: fraction
+          window:
+            peak_date: '2025-10-15'
+            trough_date: '2026-09-24'
+      official_name: Tencent Holdings Ltd
