@@ -177,16 +177,23 @@ class EodhdFundamentalsAdapter:
         """
         return self._transport is not None and (self._api_key is not None or self._injected)
 
-    def fetch_and_store(self, conn: sqlite3.Connection, symbol: str) -> dict[str, Any]:
-        """One request: parse, store statements + profile, report counts.
+    def require_live(self) -> None:
+        """Raise the explicit not-configured error unless fetching is possible.
 
-        Implements: REQ-SI-FR-002 (ADR-002)
+        Implements: REQ-SI-INV-003 (ADR-002; TP-040)
         """
         if not self.is_live():
             raise MarketKeyMissing(
                 "fundamentals ingestion is not configured: set EODHD_API_KEY "
                 "(real environment variable or the local env file) (INV-003)"
             )
+
+    def fetch_and_store(self, conn: sqlite3.Connection, symbol: str) -> dict[str, Any]:
+        """One request: parse, store statements + profile, report counts.
+
+        Implements: REQ-SI-FR-002 (ADR-002)
+        """
+        self.require_live()
         assert self._transport is not None
         token = self._api_key or ""
         try:

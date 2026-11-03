@@ -65,6 +65,17 @@ app = typer.Typer(
 _STUB_NOTE = "error: '{command}' is not implemented yet (target: {req}); refusing to pretend success (INV-003)."
 
 
+def _canonical(text: str) -> str:
+    """Upper-case a symbol-shaped argument (0700.hk -> 0700.HK; TP-040).
+
+    Canonical symbols are upper case throughout the store; a one-word
+    argument with a market suffix is read as a symbol, anything else is
+    left as typed.
+    """
+    stripped = text.strip()
+    return stripped.upper() if "." in stripped and not any(ch.isspace() for ch in stripped) else stripped
+
+
 class UIMode(str, Enum):
     """Interactive front-end: the plain REPL (default) or the terminal UI.
 
@@ -224,15 +235,15 @@ def watch(
                 )
                 raise typer.Exit(code=2)
             try:
-                if SYMBOL_SHAPE.match(query.strip()):
+                if SYMBOL_SHAPE.match(_canonical(query)):
                     # Direct verification path (BD-017): vendor search does
                     # not index HK listings; one budgeted EOD fetch proves
                     # existence. INV-004 confirmation unchanged below.
-                    verified = data_store.verify_symbol(query.strip())
+                    verified = data_store.verify_symbol(_canonical(query))
                     candidates = [verified] if verified is not None else []
                     if not candidates:
                         typer.secho(
-                            f"not found: {query.strip()} returned no data via direct verification; watchlist unchanged",
+                            f"not found: {_canonical(query)} returned no data via direct verification; watchlist unchanged",
                             fg=typer.colors.RED,
                             err=True,
                         )
@@ -284,7 +295,7 @@ def watch(
             if not query:
                 typer.secho(render_error("`watch remove` requires a canonical symbol"), fg=typer.colors.RED, err=True)
                 raise typer.Exit(code=2)
-            result = data_store.watchlist.remove(query)
+            result = data_store.watchlist.remove(_canonical(query))
             typer.echo(f"removed {result['canonical_symbol']} (status: {result['status']})")
             return
         typer.secho(
@@ -306,6 +317,7 @@ def info(symbol: str = typer.Argument(..., help="Canonical symbol, e.g. 0700.HK"
 
     Implements: REQ-SI-FR-005
     """
+    symbol = _canonical(symbol)
     data_store = open_data_store()
     try:
         try:
@@ -371,7 +383,10 @@ def sessions(
         typer.echo(f"(showing the {limit} most recent of {total}; raise --limit for more)")
     for row in rows:
         symbols = ",".join(row["subject_symbols"]) or "-"
-        typer.echo(f"{row['session_id']}  {row['created']}  {row['status']}  {symbols}  {row['profile']}")
+        typer.echo(
+            f"{row['session_id']}  {row['created']}  last {row.get('last_active', '-')}  "
+            f"{row['status']}  {symbols}  {row['profile']}"
+        )
 
 
 @app.command()

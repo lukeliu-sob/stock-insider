@@ -262,3 +262,30 @@ Invariant/process gap exposed → what changed:
 - **Root cause**: `_article()`'s default `seendate` (`test_ingest_news_sync.py:59`) is the fixed absolute date `20260918T090000Z`; the test never passes `run_news_sync()`'s optional `now:` (`news.py:412`), so it defaults to real wall-clock time. The near-title dedup gate only applies inside a rolling `DUP_WINDOW_DAYS = 14` window (`news.py:63, 272`): `2026-09-18 + 14 days = 2026-10-02`. The test passed through that boundary day and was mathematically certain to start failing on 2026-10-03 — a calendar-dependent fixture, not a regression in `news.py`'s dedup logic, which is correct as written.
 - **Fix**: the one `run_news_sync(...)` call in this test now passes an explicit, frozen `now=` comfortably inside the 14-day window, so the test no longer depends on the real calendar date (TP-027).
 - **Gap exposed -> change**: a date-sensitive fixture with no frozen clock can pass today and fail tomorrow with zero code changes, and the "regression" CI gate has no way to tell a pre-existing-but-now-failing case apart from a real regression — it blocks every PR equally. No gate change proposed here (out of TP-027's scope); worth a reference-lint-adjacent check later if this class recurs.
+
+## BD-030 — Primary HK watchlist rows demoted to unverified; the stage-4 name checks never ran on the real store
+- **Date / discovered by**: 2026-11-03 / coding agent, CLI smoke test on the owner's real data root (owner-approved, sessions in a scratch directory).
+- **Symptom**: `watch list` printed `[unverified resolution]` on 0700.HK, 1211.HK and 9988.HK, all HKEX listings. In a live `/report 1211.HK`, every tool returned `official_name: null`, and the model noted it.
+- **Reproduction**: run migrations v1 to v8 over a `symbols` row (`0700.HK`, exchange `HKEX`, verified 1): v6 sets verified to 0 (`test_v9_restores_hkex_spelled_primary_rows` runs this path through v9).
+- **Classification**: data-migration over-reach; test-coverage gap (fixtures seed rows after the migrations have run, so no test passed an old-spelling row through v6).
+- **Root cause**: an early build stored these three rows with the venue name `HKEX` instead of the market code `HK`. Migration v6 (TP-018b) demoted every row whose exchange is not in `('HK', 'US', 'INDX')`; it meant secondary venues, but it also caught the primary listing spelled as a venue name. `verified_names` reads `verified = 1` rows only, so TP-025 stage 4's `official_name` was null for the whole watchlist, and the DE-16 in-ledger name checks had no names to check on the real store.
+- **Fix**: migration v9 sets an HKEX-spelled `.HK` row with a real name back to `HK`, verified (TP-040). v6 is not edited.
+- **Gap exposed -> change**: offline fixtures write the current shape, so a migration's effect on rows an older build wrote is untested. The v9 tests run the full migration chain over old-shape rows, and the smoke test against the real store is now on record as the check that found it.
+
+## BD-031 — Session subject symbols never recorded; `sessions --symbol` matched no real session
+- **Date / discovered by**: 2026-11-03 / coding agent, CLI smoke test (same run as BD-030).
+- **Symptom**: a session that queried 0700.HK, HSI.INDX and 1211.HK, and ran `/report 1211.HK`, was listed with subject `-`, and `sessions --symbol 1211.HK` printed "no sessions match the filter". The model's `session.list` tool returned `[]` for the same reason.
+- **Reproduction**: open a REPL session, make any symbol tool call, then list sessions with `--symbol` (`test_tool_call_symbol_becomes_session_subject`).
+- **Classification**: missing behavior behind a passing test (FR-012, Must).
+- **Root cause**: `SessionStore.create` takes `subject_symbols`, but the REPL creates every session without them and nothing adds them later. `test_cli_sessions.py` seeds the index with `subject_symbols` directly, so its filter test passed while the product never wrote the field.
+- **Fix**: `append_event` adds a tool call's canonical `symbol` argument to the index row (`session.*` tools excluded); the event log is unchanged (TP-040). Sessions written before the fix keep their empty list.
+- **Gap exposed -> change**: a fit-criterion test that seeds the very field under test proves only the filter, not the product path that should fill it. The new tests drive `append_event`, which every front-end uses.
+
+## BD-032 — Direct-verification placeholder returned as a verified official name
+- **Date / discovered by**: 2026-11-03 / coding agent, code reading during the BD-030 fix.
+- **Symptom**: none observed live. A symbol added through direct verification (BD-017) would have its placeholder name "<symbol> (name unverified - ...)" returned by `verified_names` and carried in tool results as `official_name`.
+- **Reproduction**: a `symbols` row with `verified = 1` and the placeholder name; `verified_names` returns the placeholder (`test_verified_names_drops_placeholder`).
+- **Classification**: contract mismatch between a docstring and the code; fixture shape differs from the product's.
+- **Root cause**: `record_resolution` writes `verified = 1` for any HK/US listing, including a direct-verified one, while `verified_names` assumed (and its docstring said) that placeholder rows are unverified. The TP-025 stage-4 tests seed the placeholder row with `verified = 0`, which the product never writes.
+- **Fix**: `verified_names` drops a name carrying the placeholder marker (TP-040).
+- **Gap exposed -> change**: the same class as BD-031: a fixture written to the assumed shape instead of the produced one.

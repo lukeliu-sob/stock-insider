@@ -29,6 +29,7 @@ from stockinsider.data.ingest.fundamentals import (
     CALL_COST as FUNDAMENTALS_COST,
     EodhdFundamentalsAdapter,
     FundamentalsNotInPlan,
+    MarketKeyMissing as FundamentalsKeyMissing,
 )
 from stockinsider.data.ingest.news import GdeltNewsAdapter, news_status, run_news_sync
 from stockinsider.data.ingest.newsbody import body_status
@@ -251,6 +252,16 @@ class SyncService:
         """Fetch+store one item under budget; every failure explicit."""
         symbol, action, from_date, to_date = item
         cost = FUNDAMENTALS_COST if action == "fundamentals" else 1
+        # TP-040 (INV-003): without a key no request goes out, so the item
+        # fails before the spend - the report never counts a call not made.
+        # An adapter that exposes only the fetch seam counts as live.
+        adapter = self._fund_adapter if action == "fundamentals" else self._adapter
+        require_live = getattr(adapter, "require_live", None)
+        try:
+            if require_live is not None:
+                require_live()
+        except (MarketKeyMissing, FundamentalsKeyMissing) as exc:
+            return ItemResult(symbol, action, "failed", str(exc))
         if not self._budget.try_spend(cost):
             return ItemResult(
                 symbol,

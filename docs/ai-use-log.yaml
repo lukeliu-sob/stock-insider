@@ -3823,3 +3823,38 @@ sessions:
       accepted the author's labeling rules; chose to fix the F012 regression now and disclose
       it rather than pin it.
     status: applied
+  - id: AILOG-0093
+    date: "2026-11-03"
+    agent_task: >-
+      TP-040, from the 2026-11-03 CLI smoke test on the owner's real store: migration v9
+      restores HKEX-spelled primary HK rows that v6 demoted (BD-030); verified_names drops the
+      direct-verification placeholder (BD-032); a tool call's canonical symbol joins the
+      session index row's subject symbols (BD-031, FR-012); the CLI sessions listing shows
+      last-active; a keyless sync fails each item before the budget spend; the info header
+      names the exchange; lowercase symbol arguments are upper-cased in the CLI and in
+      /report and /watch remove. The planned /watch remove membership pre-check was withdrawn
+      because a prior TP-022 test pins the sequence. Twelve offline tests, four mutants
+      killed; two TP-035 schema-version pins migrated.
+    artifacts:
+      - src/stockinsider/data/store/schema.py
+      - src/stockinsider/data/store/__init__.py
+      - src/stockinsider/data/store/info.py
+      - src/stockinsider/data/ingest/sync.py
+      - src/stockinsider/data/ingest/market.py
+      - src/stockinsider/data/ingest/fundamentals.py
+      - src/stockinsider/agent/session.py
+      - src/stockinsider/agent/repl.py
+      - src/stockinsider/cli/app.py
+      - test/offline/test_tp040_smoke_defects.py
+      - test/offline/test_tp035_storage_sync.py
+      - docs/test-plans/TP-040.md
+      - docs/bug-diary.md
+      - docs/ai-use-log.yaml
+    human_decision: >-
+      Owner, in session, 2026-11-03: approved the smoke test on the real data root with
+      sessions in a scratch directory, then instructed the agent to fix the reported defects.
+      The split into TP-040 (this plan) and separate plans for the registry, post-check, new
+      tool and digest items, and the withdrawal of the /watch remove pre-check, are agent
+      decisions recorded for owner review; the two migrated schema-version assertions await
+      owner approval in the PR.
+    status: applied

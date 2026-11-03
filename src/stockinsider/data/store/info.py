@@ -50,6 +50,10 @@ def render_info(conn: sqlite3.Connection, symbol: str) -> list[str]:
         "SELECT name, exchange, sector, industry FROM symbol_profiles WHERE canonical_symbol = ?",
         (symbol,),
     ).fetchone()
+    # FR-005 names the exchange: the symbol map carries it even when the
+    # fundamentals profile is absent (TP-040).
+    mapped = conn.execute("SELECT exchange FROM symbols WHERE canonical_symbol = ?", (symbol,)).fetchone()
+    exchange = f"exchange {mapped['exchange']}" if mapped is not None and mapped["exchange"] else "exchange unknown"
     lines: list[str] = []
     if profile is not None:
         bits = [symbol, str(profile["name"] or ""), f"({profile['exchange'] or '?'})"]
@@ -57,7 +61,7 @@ def render_info(conn: sqlite3.Connection, symbol: str) -> list[str]:
             bits.append(str(profile["sector"]))
         lines.append(" — ".join([b for b in bits if b]))
     else:
-        lines.append(f"{symbol} — profile unavailable (fundamentals feed not ingested)")
+        lines.append(f"{symbol} — {exchange} — profile unavailable (fundamentals feed not ingested)")
     last = bars[-1]
     prev = bars[-2] if len(bars) >= 2 else None
     close_line = (

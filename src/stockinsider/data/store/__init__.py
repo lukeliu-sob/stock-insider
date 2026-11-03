@@ -36,6 +36,11 @@ __all__ = [
     "open_data_store",
 ]
 
+#: The text `verify_symbol` writes into a direct-verified row's name
+#: (BD-017). A name carrying it is a placeholder, never an official
+#: name (TP-040).
+UNVERIFIED_NAME_MARKER = "(name unverified"
+
 
 class DataStore:
     """One open database with its services (single composition point).
@@ -138,11 +143,12 @@ class DataStore:
     def verified_names(self, symbols: "Iterable[str]") -> dict[str, str]:
         """Official names of verified symbols, keyed by canonical symbol (DE-16).
 
-        Only rows with `verified = 1` count: a direct-verified row carries a
-        "(name unverified ...)" placeholder, which must not become a name.
+        Only rows with `verified = 1` count, and a direct-verified row is
+        verified but carries the "(name unverified ...)" placeholder, so a
+        placeholder name is dropped too (TP-040): it must not become a name.
         A symbol without a verified name is absent from the result.
 
-        Implements: REQ-SI-INV-001, REQ-SI-FR-004 (ADR-005 Am4; TP-025 stage 4)
+        Implements: REQ-SI-INV-001, REQ-SI-FR-004 (ADR-005 Am4; TP-025 stage 4, TP-040)
         """
         wanted = sorted({symbol for symbol in symbols if symbol})
         if not wanted:
@@ -152,7 +158,11 @@ class DataStore:
             f"SELECT canonical_symbol, official_name FROM symbols WHERE verified = 1 AND canonical_symbol IN ({marks})",
             wanted,
         ).fetchall()
-        return {row["canonical_symbol"]: row["official_name"] for row in rows if row["official_name"]}
+        return {
+            row["canonical_symbol"]: row["official_name"]
+            for row in rows
+            if row["official_name"] and UNVERIFIED_NAME_MARKER not in row["official_name"]
+        }
 
     def fundamentals_coverage(self, symbol: str) -> dict[str, Any]:
         """FR-002 coverage snapshot ONLY (M8 honesty record, TP-017).
@@ -347,7 +357,7 @@ class DataStore:
             canonical_symbol=canonical,
             exchange=suffix,
             official_name=(
-                f"{canonical} (name unverified - vendor search does not index this exchange; verify before adding)"
+                f"{canonical} {UNVERIFIED_NAME_MARKER} - vendor search does not index this exchange; verify before adding)"
             ),
             asset_type="unverified",
         )

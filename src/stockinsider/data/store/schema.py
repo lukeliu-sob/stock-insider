@@ -211,6 +211,19 @@ CREATE INDEX idx_news_source ON news(source);
 CREATE INDEX idx_news_quarantine_fetched ON news_quarantine(fetched_at);
 """
 
+#: Migration v9 (TP-040): v6 also demoted primary HK listings whose
+#: exchange an early build spelled as the venue name (HKEX, SEHK, HKSE)
+#: instead of the HK market code. Such a row, when it carries a real name
+#: rather than the direct-verification placeholder, returns to HK and
+#: verified. v6 is left as written (append-only); secondary venues stay
+#: demoted.
+MIGRATION_V9 = """
+UPDATE symbols SET exchange = 'HK', verified = 1
+WHERE canonical_symbol LIKE '%.HK'
+  AND exchange IN ('HKEX', 'SEHK', 'HKSE')
+  AND official_name NOT LIKE '%(name unverified%';
+"""
+
 #: Append-only migration list: index i holds migration to version i+1.
 MIGRATIONS: tuple[str, ...] = (
     MIGRATION_V1,
@@ -221,6 +234,7 @@ MIGRATIONS: tuple[str, ...] = (
     MIGRATION_V6,
     MIGRATION_V7,
     MIGRATION_V8,
+    MIGRATION_V9,
 )
 
 #: Latest schema version this code understands.

@@ -13,6 +13,7 @@ from __future__ import annotations
 
 import json
 import os
+import re
 import uuid
 from datetime import datetime, timezone
 from pathlib import Path
@@ -24,6 +25,26 @@ from stockinsider.shared.provenance import (
     PROVENANCE_FIELDS,
     validate_provenance,
 )
+
+
+#: A canonical symbol as the tools take it: digits or letters, then a
+#: market suffix (0700.HK, AAPL.US, HSI.INDX).
+_CANONICAL_SYMBOL = re.compile(r"^[A-Z0-9][A-Z0-9-]{0,9}\.[A-Z]{2,4}$")
+
+
+def _subject_of(event: dict[str, Any]) -> str | None:
+    """The security a tool call is about, if any (FR-012 subject symbols).
+
+    A `session.*` tool looks up the sessions index, not a security, so
+    its symbol filter is no subject.
+
+    Implements: REQ-SI-FR-012 (ADR-001; TP-040)
+    """
+    if event.get("event") != "tool-call" or str(event.get("tool", "")).startswith("session."):
+        return None
+    arguments = event.get("arguments")
+    symbol = arguments.get("symbol") if isinstance(arguments, dict) else None
+    return symbol if isinstance(symbol, str) and _CANONICAL_SYMBOL.match(symbol) else None
 
 
 class SessionError(RuntimeError):
@@ -171,7 +192,10 @@ class SessionStore:
         "user-confirmation" kind wrote schema-invalid lines for exactly
         this reason).
 
-        Implements: REQ-SI-FR-011 (ADR-004; TP-018 PR-3)
+        A tool call's canonical `symbol` argument joins the index row's
+        subject symbols (TP-040), so the listing can filter by symbol.
+
+        Implements: REQ-SI-FR-011, REQ-SI-FR-012 (ADR-004; TP-018 PR-3, TP-040)
         """
         from stockinsider.shared.events import validate_event
 
@@ -179,7 +203,15 @@ class SessionStore:
         validate_event(event)  # then the event shape (fail closed)
         with (session_dir / "session.jsonl").open("a", encoding="utf-8") as stream:
             stream.write(json.dumps(event) + "\n")
-        self._index_update(session_id, last_active=_now())
+        fields: dict[str, Any] = {"last_active": _now()}
+        subject = _subject_of(event)
+        if subject is not None:
+            # The index row learns the securities the session's tools were
+            # asked about; the event log itself is untouched.
+            known = self._index_find(session_id).get("subject_symbols", [])
+            if subject not in known:
+                fields["subject_symbols"] = sorted({*known, subject})
+        self._index_update(session_id, **fields)
 
     def load_snapshots(self, session_id: str) -> list[tuple[str, dict[str, Any]]]:
         """Read every stored turn snapshot (turn id, values) in order.
