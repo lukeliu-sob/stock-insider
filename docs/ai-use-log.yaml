@@ -3858,3 +3858,32 @@ sessions:
       decisions recorded for owner review; the two migrated schema-version assertions await
       owner approval in the PR.
     status: applied
+  - id: AILOG-0094
+    date: "2026-11-03"
+    agent_task: >-
+      TP-041 (ADR-005 Amendment 5), from the 2026-11-03 CLI smoke test: a read tool
+      market.performance relays data/compute.period_performance (close-to-close change of the
+      adjusted close over 5, 20, 60 and 250 sessions, unavailable windows with reasons) through
+      DataStore.market_performance; registered by its own function so the TP-025 stage-3 pins
+      hold; no declared fields. No-data raises in market.quote, news.recent and the indicator
+      snapshot become LookupError. Seven offline tests, two mutants killed; the plain-REPL
+      golden migrated for the new tool's two lines.
+    artifacts:
+      - src/stockinsider/data/compute/compute.py
+      - src/stockinsider/data/compute/__init__.py
+      - src/stockinsider/data/store/__init__.py
+      - src/stockinsider/agent/registry.py
+      - src/stockinsider/agent/repl.py
+      - test/offline/test_tp041_performance_tool.py
+      - test/offline/fixtures/plain_repl_golden.txt
+      - docs/test-plans/TP-041.md
+      - docs/architecture/adr/005-tool-registry.md
+      - docs/review-memo.md
+      - docs/ai-use-log.yaml
+    human_decision: >-
+      Owner, in session, 2026-11-03: instructed the agent to fix the reported smoke-test
+      defects. The tool's shape, its separate registration function, the absence of declared
+      fields, and deferring the raw-float display item (it needs a prompt version bump or a
+      change to pinned indicator values) are agent decisions recorded for owner review; the
+      migrated golden awaits owner approval in the PR.
+    status: applied

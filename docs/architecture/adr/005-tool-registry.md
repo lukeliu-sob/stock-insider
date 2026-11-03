@@ -198,3 +198,18 @@ names this). TP-025 closes the two named debt entries; this residual is
 recorded there, not claimed closed.
 
 Implements: REQ-SI-INV-001, REQ-SI-SEC-002 (with ADR-008's phase 3).
+
+## Amendment 5 (2026-11-03, TP-041) — market.performance, and no-data errors as LookupError
+
+**Context.** The 2026-11-03 smoke test asked for a symbol's one-month move against its index. No tool exposes more than the latest bar, so the model refused, although the data side already computes the 20-session move for `stockinsider info`. Separately, an absent symbol failed `market.quote` with a `KeyError` whose `repr` quotes reached the model and the REPL.
+
+**Decision.**
+
+1. A read tool `market.performance` (COMPUTED provenance, argument `symbol`) returns trailing-window close-to-close changes for 5, 20, 60 and 250 sessions. The arithmetic is `data/compute.period_performance` (FR-006); the registry only relays it, as Amendment 1 requires. A window the history cannot cover is listed as unavailable with its reason, never estimated (INV-003).
+2. The tool is registered by its own function, `register_performance_tools`. The existing registration functions keep their tool sets, which the TP-025 stage-3 tests pin.
+3. The tool declares no result fields (Amendment 4 stays optional). Its keys are typed by the heuristic, and a signed percent claim verifies against `change_pct` under the existing rounding rule (ADR-008).
+4. A no-data condition in the market and news read tools raises `LookupError`, so the registry's `tool ... failed: <type>: <message>` error reads cleanly. The fail-closed order of `Registry.execute` is unchanged.
+
+**Consequences.** The model can state a period move with a data date and a source. A decline written as "fell 2.73%" is still misread by the claim side (the sign attaches to a nearby count); The post-check follow-up plan owns that class.
+
+Implements: REQ-SI-FR-006, REQ-SI-FR-008, REQ-SI-INV-001, REQ-SI-INV-003.

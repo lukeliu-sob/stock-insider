@@ -47,6 +47,7 @@ from stockinsider.agent.registry import (
     register_data_tools,
     register_market_tools,
     register_news_tools,
+    register_performance_tools,
     register_sync_tools,
 )
 from stockinsider.agent.session import SessionError, SessionStore
@@ -318,6 +319,7 @@ def build_registry(
         register_data_tools(registry, data_store)
         register_sync_tools(registry, data_store)
         register_market_tools(registry, data_store)
+        register_performance_tools(registry, data_store)
         register_news_tools(registry, data_store, embed_provider)
     registry.register(
         ToolSpec(

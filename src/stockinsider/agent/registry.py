@@ -243,7 +243,7 @@ def register_market_tools(registry: Registry, data_store: Any) -> None:
     def _quote(args: dict[str, Any]) -> dict[str, Any]:
         row = data_store.market_quote(args["symbol"])
         if row is None:
-            raise KeyError(f"{args['symbol']}: no stored market data (sync first; INV-003)")
+            raise LookupError(f"{args['symbol']}: no stored market data (sync first; INV-003)")
         return row | {"symbol": args["symbol"]} | _named(data_store, args["symbol"])
 
     def _fundamentals(args: dict[str, Any]) -> dict[str, Any]:
@@ -310,6 +310,39 @@ def register_market_tools(registry: Registry, data_store: Any) -> None:
     )
 
 
+def register_performance_tools(registry: Registry, data_store: Any) -> None:
+    """Register market.performance: trailing-window price changes (TP-041).
+
+    A function of its own, so the tool sets of the existing registration
+    functions (pinned by the TP-025 stage-3 tests) are unchanged. The tool
+    declares no result fields: its keys are typed by the heuristic, and a
+    signed percent claim verifies against `change_pct` (ADR-005 Am5).
+
+    Implements: REQ-SI-FR-006, REQ-SI-FR-008, REQ-SI-INV-001, REQ-SI-INV-003 (ADR-005 Am5)
+    """
+
+    def _performance(args: dict[str, Any]) -> dict[str, Any]:
+        # The arithmetic lives behind the data facade (FR-006; Am1).
+        return data_store.market_performance(args["symbol"]) | _named(data_store, args["symbol"])
+
+    registry.register(
+        ToolSpec(
+            name="market.performance",
+            description=(
+                "Close-to-close change of a symbol's adjusted close over the last 5, 20, 60 and "
+                "250 stored sessions: each window's dates, both closes and change_pct (percent). "
+                "Windows the stored history cannot cover are listed as unavailable with the reason. "
+                "Deterministic; call it for the benchmark index too when comparing."
+            ),
+            arguments_spec={"symbol": "str"},
+            result_spec="dict",
+            effect_class=EffectClass.READ,
+            source_kind=SourceKind.COMPUTED,
+        ),
+        _performance,
+    )
+
+
 def register_news_tools(
     registry: Registry,
     data_store: Any,
@@ -335,7 +368,7 @@ def register_news_tools(
         k = min(max(int(args.get("k") or 5), 1), 25)  # M11: bounded [1, 25]
         rows = data_store.news_recent_rows(symbol, k)
         if not rows:
-            raise KeyError(
+            raise LookupError(
                 f"{symbol}: no stored news for this bucket (sync first; INV-003)"
             )
         items = []
