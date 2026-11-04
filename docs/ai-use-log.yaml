@@ -4053,3 +4053,50 @@ sessions:
       to English. The self-reflection is an agent draft for the owner to revise; the name and
       student-ID fields are left for the owner.
     status: applied
+  - id: AILOG-0101
+    date: "2026-11-04"
+    agent_task: >-
+      TP-047 (ADR-008 Amendment 6, ADR-002 Amendment 3, registry v0.7.0). (1) The notice under
+      an answer with unverified numbers is one fixed line, "data with [?] means the data may be
+      fabricated"; the per-number reasons and the three-in-a-row notice are no longer shown.
+      The [?] marks, the stored unverified_detail, show, the model feedback and the /report
+      header count are unchanged; agent/guardrail is not touched (agent/loop.py only).
+      REQ-SI-INV-001's statement changed accordingly. (2) REQ-SI-FR-028 appended: interactive
+      sessions and digest check stored bars against the expected session (weekdays; HK
+      available 10:00 UTC, US 23:00 UTC; a run since availability counts as current) and run
+      the full sync then embed when behind; --no-sync / STOCKINSIDER_NO_SYNC skip it; no
+      market key or a failed sync is reported and the session opens. New
+      data/ingest/freshness.py and DataStore.freshness; sync and embed bodies became shared
+      helpers. 14 new tests, 6 mutants killed; 7 migrated assertions (notice text and streak
+      display). Verified on a copy of the real store: first start synced (7 ok) and embedded
+      (9 of 9), second start did not sync, and a flagged answer showed only the fixed line.
+      Also restores the README terminal-UI section, whose commit missed the #93 merge.
+    artifacts:
+      - src/stockinsider/agent/loop.py
+      - src/stockinsider/cli/app.py
+      - src/stockinsider/data/ingest/freshness.py
+      - src/stockinsider/data/store/__init__.py
+      - test/offline/test_tp047_notice_and_freshness.py
+      - test/offline/test_agent_loop.py
+      - test/offline/test_tp023_verify_and_flag.py
+      - test/offline/test_tp024_typed_claims.py
+      - test/offline/test_tui_invariants.py
+      - docs/test-plans/TP-047.md
+      - docs/req/requirements.yaml
+      - docs/architecture/adr/008-numeric-verification-v2.md
+      - docs/architecture/adr/002-data-source-vendor.md
+      - docs/architecture/invariants.md
+      - docs/architecture/runtime-policy-catalog.md
+      - docs/architecture/trace-matrix.md
+      - docs/review-memo.md
+      - README.md
+      - docs/ai-use-log.yaml
+    human_decision: >-
+      Owner, in session, 2026-11-04: show only "data with [?] means the data may be
+      fabricated" under an answer with unverified numbers, without naming the numbers or
+      reasons, so it is not jarring; drop the three-in-a-row notice too; on each start, check
+      the data against the current date and sync when it disagrees. From the agent's options
+      the owner chose interactive sessions plus digest, and full sync plus embed. The
+      availability times, the holiday rule and the migrated assertions are agent decisions
+      recorded for owner review in the PR.
+    status: applied

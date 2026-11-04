@@ -30,13 +30,11 @@ from pathlib import Path
 from typing import Any
 
 from stockinsider.agent.guardrail import (
-    UNVERIFIED_STREAK_NOTICE,
     PostCheckCounter,
     mark_claims,
     run_postcheck,
     run_with_regeneration,
     unverified_detail,
-    unverified_notice,
 )
 from stockinsider.agent.profiles import tool_loop_limit
 from stockinsider.agent.providers import ProviderError
@@ -53,6 +51,11 @@ from stockinsider.shared.tools import EffectClass, ToolCall, ToolResult, ToolSpe
 #: whose question was cut off (the live model then denied having
 #: stated a value it gave in turn 1).
 HISTORY_WINDOW = 20
+
+#: The one line shown under an answer with unverified numbers (TP-047, ADR-008
+#: Am6): the [?] marks say which numbers; the reasons stay in the session
+#: record (`unverified_detail`), not on screen.
+UNVERIFIED_NOTICE = "data with [?] means the data may be fabricated"
 
 #: Told to the model when older turns fell outside the window, so it
 #: says so instead of asserting what "the start" of the conversation was.
@@ -717,7 +720,7 @@ class TurnEngine:
             displayed = combined
             body = candidate
         if unverified:
-            progress(unverified_notice(flag_check))
+            progress(UNVERIFIED_NOTICE)
         message_event: dict[str, Any] = {
             "event": "assistant-message",
             "text": displayed,
@@ -734,9 +737,9 @@ class TurnEngine:
         self._open_turn = None  # DE-14: answered; an interruption from here on leaves the turn complete
         # ADR-008: the unverified streak counts the answer as shown (for a
         # regeneration, its recheck); the INV-002 budget is fed as before
+        # TP-047: the three-in-a-row notice is no longer shown; the counter still
+        # keeps the streak and the INV-002 abort budget
         abort_reason = self._counter.record(replace(verdict, number_check=flag_check))
-        if self._counter.number_notice_due:
-            progress(UNVERIFIED_STREAK_NOTICE)
         if abort_reason:
             # H4: the abort is now session-sticky — the next run_turn refuses
             # before any model call (the old code only printed a line).

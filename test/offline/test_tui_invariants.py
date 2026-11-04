@@ -166,7 +166,9 @@ def test_unverified_number_marked_in_ui(store, prompts_dir, monkeypatch) -> None
     use_engine(monkeypatch, [ChatOutcome(text="The answer is 999.", usage={})], prompts_dir)
     screen = run_ui(store, "tell me" + ENTER + "/exit" + ENTER)
     assert "The answer is 999[?]." in screen
-    assert "unverified (not found in this session's tool results; marked [?]): 999" in screen
+    # TP-047 migrated assertion (was: the notice naming 999 and its reason)
+    assert "data with [?] means the data may be fabricated" in screen
+    assert "not found in this session's tool results" not in screen
     assert "data unavailable" not in screen
     assert "999." not in screen.replace("999[?].", "")  # never shown unmarked
 

@@ -12,7 +12,7 @@ Implements: REQ-SI-FR-013, REQ-SI-FR-026, REQ-SI-INV-003 (ADR-001, ADR-007)
 """
 
 from enum import Enum
-from typing import NoReturn, Optional
+from typing import Any, NoReturn, Optional
 
 import typer
 
@@ -90,6 +90,16 @@ _UI_ENV = "STOCKINSIDER_UI"
 _UI_HELP = "Interactive front-end: plain (default) or tui (inline terminal UI; needs an interactive terminal)."
 
 
+_NO_SYNC_ENV = "STOCKINSIDER_NO_SYNC"
+_NO_SYNC_HELP = "Skip the startup freshness check and its automatic sync (TP-047)."
+
+
+def _no_sync_for(ctx: typer.Context, no_sync: bool) -> bool:
+    """A subcommand's own --no-sync, or the root option's."""
+    inherited = (ctx.obj or {}).get("no_sync") if isinstance(ctx.obj, dict) else False
+    return bool(no_sync or inherited)
+
+
 def _ui_for(ctx: typer.Context, ui: Optional[UIMode]) -> UIMode:
     """A subcommand's own --ui wins; otherwise the root option's value applies."""
     if ui is not None:
@@ -142,6 +152,18 @@ def sync(
 
     Implements: REQ-SI-FR-001
     """
+    report = _sync_and_report(verbose)
+    if report["counts"]["failed"]:
+        raise typer.Exit(code=1)
+
+
+def _sync_and_report(verbose: bool = False) -> dict[str, Any]:
+    """Run one sync with streamed progress and print its summary (the `sync` body).
+
+    Shared by `sync` and the startup freshness sync (TP-047).
+
+    Implements: REQ-SI-FR-001, REQ-SI-FR-028
+    """
     started = monotonic()
 
     def _emit(line: str) -> None:
@@ -162,8 +184,7 @@ def sync(
     for line in news_track_lines(report):
         typer.echo(line)
     typer.echo(f"sync total wall time {monotonic() - started:.1f}s")
-    if report["counts"]["failed"]:
-        raise typer.Exit(code=1)
+    return report
 
 
 @app.command()
@@ -171,6 +192,18 @@ def embed() -> None:
     """Embed pending news rows into the retrieval index (idempotent).
 
     Implements: REQ-SI-FR-007
+    """
+    report = _embed_and_report()
+    if report is None or report["failed_batches"]:
+        raise typer.Exit(code=1)
+
+
+def _embed_and_report() -> "dict[str, Any] | None":
+    """Embed pending news and print the outcome (the `embed` body); None when unconfigured.
+
+    Shared by `embed` and the startup freshness sync (TP-047).
+
+    Implements: REQ-SI-FR-007, REQ-SI-FR-028
     """
     from stockinsider.data.ingest.embed import run_embed
 
@@ -181,7 +214,7 @@ def embed() -> None:
             f"embedding provider not configured (embedding base_url + {EMBEDDING_API_KEY_ENV} required; "
             "the chat key serves only a same-host endpoint); nothing done"
         )
-        raise typer.Exit(code=1)
+        return None
     provider = OpenAICompatibleProvider(config, api_key=key)
     data_store = open_data_store()
     try:
@@ -196,8 +229,45 @@ def embed() -> None:
         shown = batch["news_ids"][:3]
         more = f"... +{len(batch['news_ids']) - 3}" if len(batch["news_ids"]) > 3 else ""
         typer.echo(f"failed  {batch['error']} (news_ids {shown}{more})")
-    if report["failed_batches"]:
-        raise typer.Exit(code=1)
+    return report
+
+
+def _startup_sync(no_sync: bool) -> None:
+    """Check stored data against today; run sync, then embed, when it is behind (TP-047).
+
+    A failure is reported and the caller still starts: the data stays as
+    stored, and every answer keeps its as-of dates (INV-003, policy P-03).
+
+    Implements: REQ-SI-FR-028, REQ-SI-INV-003 (ADR-002 Am3)
+    """
+    if no_sync:
+        return
+    data_store = open_data_store()
+    try:
+        fresh = data_store.freshness()
+    finally:
+        data_store.close()
+    behind = fresh["behind"]
+    if not behind:
+        return
+    first = behind[0]
+    head = (
+        f"data is behind ({len(behind)} symbol(s), e.g. {first['symbol']} through "
+        f"{first['newest'] or 'no stored bars'}, expected {first['expected']})"
+    )
+    if not fresh["market_live"]:
+        typer.echo(f"note: {head}; automatic sync needs EODHD_API_KEY, so the stored data is used as is", err=True)
+        return
+    typer.echo(f"{head}; running sync (skip with --no-sync)")
+    try:
+        _sync_and_report()
+        _embed_and_report()
+    except Exception as exc:  # reported, never fatal: the session starts on the stored data
+        typer.secho(
+            render_error(f"automatic sync failed ({type(exc).__name__}: {exc}); continuing with the stored data"),
+            fg=typer.colors.RED,
+            err=True,
+        )
 
 
 @app.command()
@@ -346,11 +416,13 @@ def info(symbol: str = typer.Argument(..., help="Canonical symbol, e.g. 0700.HK"
 def analyze(
     ctx: typer.Context,
     ui: Optional[UIMode] = typer.Option(None, "--ui", envvar=_UI_ENV, case_sensitive=False, help=_UI_HELP),
+    no_sync: bool = typer.Option(False, "--no-sync", envvar=_NO_SYNC_ENV, help=_NO_SYNC_HELP),
 ) -> None:
     """Enter an interactive analysis REPL session (interactive only).
 
-    Implements: REQ-SI-FR-013, REQ-SI-FR-026
+    Implements: REQ-SI-FR-013, REQ-SI-FR-026, REQ-SI-FR-028
     """
+    _startup_sync(_no_sync_for(ctx, no_sync))
     _interactive(_ui_for(ctx, ui))
 
 
@@ -359,11 +431,13 @@ def resume(
     ctx: typer.Context,
     session_id: str = typer.Argument(None, help="Session to resume (default: the most recent closed)."),
     ui: Optional[UIMode] = typer.Option(None, "--ui", envvar=_UI_ENV, case_sensitive=False, help=_UI_HELP),
+    no_sync: bool = typer.Option(False, "--no-sync", envvar=_NO_SYNC_ENV, help=_NO_SYNC_HELP),
 ) -> None:
     """Resume a closed session and continue the conversation.
 
-    Implements: REQ-SI-FR-023, REQ-SI-FR-026
+    Implements: REQ-SI-FR-023, REQ-SI-FR-026, REQ-SI-FR-028
     """
+    _startup_sync(_no_sync_for(ctx, no_sync))
     try:
         _interactive(_ui_for(ctx, ui), resume=True, session_id=session_id)
     except SessionError as exc:
@@ -529,7 +603,10 @@ def config_path_cmd() -> None:
 
 
 @app.command()
-def digest() -> None:
+def digest(
+    ctx: typer.Context,
+    no_sync: bool = typer.Option(False, "--no-sync", envvar=_NO_SYNC_ENV, help=_NO_SYNC_HELP),
+) -> None:
     """Generate the weekly digest per watchlist symbol.
 
     Deterministic sections from registry tools, post-checked against
@@ -537,9 +614,11 @@ def digest() -> None:
     configured; stored as a session artifact (TP-043). Exits 1 when a
     symbol's price section is unavailable, as `sync` does for failures.
 
-    Implements: REQ-SI-FR-016
+    Implements: REQ-SI-FR-016, REQ-SI-FR-028
     """
     from stockinsider.agent.digest import run_digest
+
+    _startup_sync(_no_sync_for(ctx, no_sync))
 
     data_store = open_data_store()
     try:
@@ -567,11 +646,13 @@ def _root(
         is_eager=True,
     ),
     ui: UIMode = typer.Option(UIMode.plain, "--ui", envvar=_UI_ENV, case_sensitive=False, help=_UI_HELP),
+    no_sync: bool = typer.Option(False, "--no-sync", envvar=_NO_SYNC_ENV, help=_NO_SYNC_HELP),
 ) -> None:
     """Local CLI financial analyst for HK + US equities."""
     init_output()
-    ctx.obj = {"ui": ui}
+    ctx.obj = {"ui": ui, "no_sync": no_sync}
     if ctx.invoked_subcommand is None:
+        _startup_sync(no_sync)
         _interactive(ui)
 
 

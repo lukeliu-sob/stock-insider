@@ -178,7 +178,10 @@ def test_three_flagged_turns_notify_without_abort(store, prompts_dir) -> None:
         )
         aborted = outcome.aborted
     assert aborted is None
-    assert any("three answers in a row contained unverified numbers" in line for line in spy.lines)
+    # TP-047 migrated assertion: the three-in-a-row notice is no longer shown
+    # (was: a line containing "three answers in a row contained unverified numbers")
+    assert not any("in a row" in line for line in spy.lines)
+    assert spy.lines.count("data with [?] means the data may be fabricated") == 3
     assert not any("session aborted" in line for line in spy.lines)
 
 

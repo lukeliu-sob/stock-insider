@@ -16,7 +16,7 @@ What the system does when each degraded or failure path is triggered. Invariant 
 |---|---|---|---|---|---|
 | P-01 | Data gap detected (calendar vs stored bars) | Auto-backfill on next `sync` | Gap listed in sync output | Gap persisting > 2 sync cycles is flagged for manual review | FR-001, QA-003 |
 | P-02 | Ingestion API failure / sustained rate limit | Transactional abort for that source; no partial writes | Sync report names the failure | Retry next sync; sustained EODHD throttling → **human action: tier upgrade** (ADR-002) | FR-002/003, INV-003 |
-| P-03 | Stale data requested (market open / gap present) | Freshness labels from exchange calendar | Every numeric renders with "as of \<date\>" | — | FR-005, INV-003 |
+| P-03 | Stale data requested (market open / gap present) | Freshness labels from exchange calendar; when an interactive session or `digest` starts and a tracked symbol lags the expected session, sync then embed run first (TP-047; skip with `--no-sync`) | Every numeric renders with "as of \<date\>"; a startup line says the data is behind and that sync is running, or why it cannot | A failed or impossible startup sync is reported and the session opens on the stored data | FR-005, FR-028, INV-003 |
 | P-04 | Vector index missing / embedding-model mismatch | Deterministic rebuild from news corpus with the configured model; retrieval fails explicitly during rebuild | "Retrieval unavailable: rebuilding" | Completion notice. **No keyword fallback** — silent quality degradation is forbidden | ADR-003, FR-007 |
 
 ## B. Model / turn path
@@ -25,7 +25,7 @@ What the system does when each degraded or failure path is triggered. Invariant 
 |---|---|---|---|---|---|
 | P-05 | Provider failure / stream interruption mid-response | Abort turn; partial usage recorded; no fabricated completion | Explicit error; session resumable | `resume` continues from last complete turn | INV-003 |
 | P-06 | Malformed model output (schema-invalid score etc.) | Reject and log; never silently repaired | News item marked unscored | Eligible for the next scoring pass | FR-009, INV-003 |
-| P-07 | INV-001 unverified numeric | Mark each occurrence `[?]`; record `post_check: flagged` with the list | Answer displayed with markers and a notice naming the numbers and reasons | Three consecutive flagged answers → non-blocking notice; an unmarkable number → withhold (stored `post_check: failed`, degraded line) | INV-001 |
+| P-07 | INV-001 unverified numeric | Mark each occurrence `[?]`; record `post_check: flagged` with the list | Answer displayed with markers and the fixed notice "data with [?] means the data may be fabricated"; reasons stay in the record (`show`) (TP-047) | An unmarkable number → withhold (stored `post_check: failed`, degraded line) | INV-001 |
 | P-08 | INV-002 violation | Strip passage; one constrained regeneration | Labeled refusal if regeneration still violates | > 2 per session → session abort + evaluation-logbook entry | INV-002 |
 | P-09 | Injection payload detected in untrusted content | Neutralize; log to tool-call and verdict streams; tool selection unchanged | Excluded content noted in the turn if neutralization is uncertain | Repeated payloads from one source → source/crawler review | SEC-002 |
 

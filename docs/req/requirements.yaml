@@ -37,7 +37,14 @@ meta:
   # 0.6.3 (2026-10-26, TP-035 implementation): REQ-SI-FR-027 regression_scope
   # drops its future/ prefix (the suite exists). No statement or fit-criterion
   # change; recorded in AILOG-0085.
-  registry_version: "0.6.3"
+  # 0.7.0 (2026-11-04, TP-047): requirement change and append, owner decision
+  # 2026-11-04. REQ-SI-INV-001's statement no longer shows which values are
+  # unverified and why: the [?] marker stays on every unverified value, a fixed
+  # notice follows the answer, and the reasons are kept in the session record
+  # (ADR-008 Am6); fit criterion unchanged. REQ-SI-FR-028 appended (freshness
+  # sync when an interactive session or digest starts, ADR-002 Am3). Recorded
+  # in AILOG-0101.
+  registry_version: "0.7.0"
   id_prefix: REQ-SI
   classification: type-c-system          # AI-agent-built AND LLM-native (methodology judgment 1)
   markets: [HK, US]
@@ -732,6 +739,39 @@ requirements:
     regression_trigger: true
     regression_scope: [test/offline/test_ingest_newsrss.py]
 
+  - id: REQ-SI-FR-028
+    type: functional
+    statement: >-
+      When an interactive session or the weekly digest starts, the system
+      compares the stored market data with the current date. When a
+      tracked symbol lags the latest session whose end-of-day bar is
+      available, and no sync has run since that session became available,
+      it runs the full sync and then embeds new news before the session
+      opens. The check can be skipped by a flag or an environment
+      variable; a sync that cannot run or fails is reported, and the
+      session opens on the stored data.
+    fit_criterion: >-
+      Offline tests with an injected clock and a stubbed sync: (a) a
+      symbol whose newest bar is older than the expected session, with no
+      run since its availability time, triggers sync then embed before
+      the session opens; (b) a current store, or a run after the
+      availability time (holiday), triggers nothing; (c) weekends map to
+      the previous Friday and the availability time is a +/-1 boundary;
+      (d) the skip flag and variable trigger nothing; (e) without a market
+      key nothing is fetched and one line says so; (f) a raising sync is
+      reported and the session still opens.
+    priority: Should
+    tradeoff: >-
+      Up to a few minutes on the first start after each session closes,
+      for answers that are current by default; a weekday rule is used
+      because the stored calendar cannot announce a session it has not
+      seen, so an exchange holiday costs one sync that finds nothing new.
+    source: "Owner request 2026-11-04 (TP-047)"
+    status: conceptual
+    depends_on: [REQ-SI-FR-001, REQ-SI-FR-007, REQ-SI-INV-003]
+    regression_trigger: true
+    regression_scope: [test/offline/test_tp047_notice_and_freshness.py]
+
   # -----------------------------------------------------------------
   # Invariants (INV) — non-negotiable, zero-tolerance
   # -----------------------------------------------------------------
@@ -742,9 +782,11 @@ requirements:
       post-check against the session's evidence: database records or
       computed results registered in its context snapshots. A value that
       cannot be verified is never displayed or stored without an explicit
-      unverified marker, and the user is told which values are unverified
-      and why. If an unverified value cannot be marked, the response is
-      withheld. Verified values display unmarked.
+      unverified marker; an answer carrying unverified values is followed
+      by a fixed notice that marked data may be fabricated, and the reason
+      for each value is kept in the session record. If an unverified value
+      cannot be marked, the response is withheld. Verified values display
+      unmarked.
     fit_criterion: >-
       Zero tolerance. In an adversarial suite, every fabricated or
       misattributed number injected into outputs reaches display and

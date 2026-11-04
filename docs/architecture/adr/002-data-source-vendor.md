@@ -129,3 +129,24 @@ remove the domain (robots.txt / terms are also checked by the TP-035
 live probe before a domain joins the body whitelist).
 
 Implements: REQ-SI-FR-003, REQ-SI-FR-015, REQ-SI-INV-003.
+
+## Amendment 3 (2026-11-04, TP-047) — freshness sync when a session starts
+
+Owner decision, 2026-11-04: each start checks the stored data against the current date and syncs when it is behind. On 2026-11-03 the real store was a month stale until a manual sync.
+
+Decision:
+
+- **Where.** Interactive sessions (bare invocation, `analyze`, `resume`, under either front-end) and `digest` check freshness before opening a session. Quick read commands (`info`, `sessions`, `show`, `watch`, `config`) do not.
+- **What is behind.**
+  - The stored calendar is derived from benchmark bars (this ADR, D3), so it cannot announce a session it has not seen. Freshness therefore uses weekdays and an availability time per exchange: HK 10:00 UTC, US 23:00 UTC (the close plus a margin).
+  - A tracked symbol, meaning a benchmark index or an active watchlist entry, is behind when its newest bar is older than the expected session and its market track has not run since that session became available.
+  - The second condition keeps a holiday from re-triggering a sync on every start.
+- **What runs.** The full `sync` (market, news, bodies), then `embed`, through the same code as the commands, with the same streamed report.
+- **Failure.**
+  - A failed or impossible sync is reported, and the session opens on the stored data, with its as-of dates (INV-003, runtime policy P-03).
+  - Without a market key nothing is fetched, and one line says so.
+  - `--no-sync` or `STOCKINSIDER_NO_SYNC=1` skips the check.
+
+Known limitation: the vendor may serve an index's in-progress bar during the HK session. That bar counts as current for this check; it was already stored that way by manual syncs, and it is outside this amendment.
+
+Implements: REQ-SI-FR-028, REQ-SI-FR-001, REQ-SI-INV-003.

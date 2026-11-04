@@ -845,3 +845,21 @@ test-plan gate's safety-path attestation).
   - No new dependency or module.
 - Test quality: 11 new tests, each defect with a negative case: the extension unavailable, no exact search match, an HK symbol, a value swapped between columns, a non-unique data listing, a wrong or swapped range, and a bare drawdown number. There are seven mutants, one per rule plus the extension load, `pending_count` and the US search branch; all are killed (the suspended-hyphen test was rewritten to the live shape after its first version let the mutant survive). The full offline suite has 839 passed and 2 xfailed; ruff and mypy are clean.
 - Risk: the name rule picks a listing from the turn's data. If the model writes "Tencent" meaning an ADR that has no data in the ledger, its numbers are read against 0700.HK. They then verify only if they are 0700.HK's numbers, so a wrong number is still marked. The `watch add` search adds one unbudgeted search call per non-HK symbol add.
+
+### RM-81 — TP-047: a fixed unverified notice, and a freshness sync when a session starts (ADR-008 Am6, ADR-002 Am3)
+
+- Verdict: APPROVE pending owner merge. The owner requested both changes in session (2026-11-04) and chose the options. The plan was committed before any code.
+- Spec alignment:
+  - REQ-SI-INV-001's statement changes (registry v0.7.0). The zero-tolerance part is untouched: every unverified number is still marked `[?]` on screen and in the record, an unmarkable one still withholds the answer, and the reasons are still recorded and shown by `show`.
+  - REQ-SI-FR-028 is appended, with a fit criterion matching the tests one to one.
+  - INV-003 holds: a failed or impossible startup sync is reported, never hidden, and answers keep their as-of dates.
+- Architecture:
+  - The display change is in `agent/loop.py`; `agent/guardrail*` is not touched.
+  - The freshness check is a read-only data-side module behind the `DataStore` facade.
+  - The CLI reuses the exact `sync` and `embed` code paths.
+  - No new dependency or module outside `data/ingest`.
+- Test quality: 14 new tests, with negatives for every trigger (fresh store, holiday run, flag, variable, no key, failing sync) and ±1 boundaries on the availability time and weekends. Six mutants, all killed. Seven assertions migrated: notice text and streak display only, with the original intent of each kept (marks, record, counting, no abort). Full offline suite: 853 passed, 2 expected failures; ruff and mypy clean.
+- Risk:
+  - The first start of a trading day takes a few minutes.
+  - Weekday rules mean an exchange holiday costs one sync that finds nothing new.
+  - The vendor's in-progress index bar during the HK session counts as current (ADR-002 Am3, known limitation).
