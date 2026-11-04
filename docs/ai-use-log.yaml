@@ -3995,3 +3995,35 @@ sessions:
       battery (disclosed; E-016 left to the owner) and the migrated E-014 pin are agent
       decisions recorded for owner review in the PR.
     status: applied
+  - id: AILOG-0099
+    date: "2026-11-04"
+    agent_task: >-
+      TP-046 (ADR-008 Amendment 5), from an end-to-end test of main 3646d60 on a sqlite backup
+      of the owner's store (real data/ untouched). Three fixes. (1) embed: pending_news queried
+      vec_news before sqlite-vec was loaded, so every incremental run reported 128 pending and
+      failed one batch with a UNIQUE error (BD-033); the extension is now loaded first, a load
+      failure fails closed, and pending_before is an uncapped count. (2) watch add: a non-HK
+      symbol tries vendor search for its official name before the BD-017 direct path
+      (BD-034). (3) post-check: an ambiguous name word names the single listing with non-search
+      data; a range written after "range" reads low then high; suspended hyphens are counts
+      (BD-035). Live re-check 27 marks -> 12 (5 correct flags); digest 6 -> 0. 11 offline
+      tests, 7 mutants killed; E-013/E-014/E-015 pins unchanged. Disclosed: no independent
+      battery measures the post-check change.
+    artifacts:
+      - src/stockinsider/data/store/vector.py
+      - src/stockinsider/data/ingest/embed.py
+      - src/stockinsider/cli/app.py
+      - src/stockinsider/agent/guardrail_claims.py
+      - test/offline/test_tp046_real_test.py
+      - docs/test-plans/TP-046.md
+      - docs/architecture/adr/008-numeric-verification-v2.md
+      - docs/architecture/evaluation-logbook.md
+      - docs/bug-diary.md
+      - docs/review-memo.md
+      - docs/ai-use-log.yaml
+    human_decision: >-
+      Owner, in session, 2026-11-04: asked for one more real test, then instructed the agent
+      to fix all three reported defects under TP-046. The rule designs, the accepted residuals
+      and measuring without an independent battery (disclosed; E-016 left to the owner) are
+      agent decisions recorded for owner review in the PR.
+    status: applied

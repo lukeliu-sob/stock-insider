@@ -207,6 +207,24 @@ def knn(
     ]
 
 
+def _vec_ready(conn: sqlite3.Connection) -> bool:
+    """Whether the vec table exists; when it does, load sqlite-vec first.
+
+    A query on ``vec_news`` without the extension fails with "no such
+    module", which is not "no table yet" (TP-046): the extension is
+    loaded or VectorUnavailable is raised (INV-003).
+
+    Implements: REQ-SI-FR-007, REQ-SI-INV-003 (ADR-003)
+    """
+    exists = conn.execute(
+        "SELECT 1 FROM sqlite_master WHERE name = 'vec_news'"
+    ).fetchone()
+    if exists is None:
+        return False
+    load_extension(conn)
+    return True
+
+
 def pending_news(conn: sqlite3.Connection, *, limit: int = 128) -> list[tuple[int, str]]:
     """News rows without vectors, oldest first (embedding backlog).
 
@@ -216,7 +234,7 @@ def pending_news(conn: sqlite3.Connection, *, limit: int = 128) -> list[tuple[in
 
     Implements: REQ-SI-FR-007, REQ-SI-FR-027 (ADR-003)
     """
-    try:
+    if _vec_ready(conn):
         rows = conn.execute(
             """
             SELECT n.news_id AS news_id, n.title AS title
@@ -227,7 +245,7 @@ def pending_news(conn: sqlite3.Connection, *, limit: int = 128) -> list[tuple[in
             """,
             (TOPICAL_BUCKET, limit),
         ).fetchall()
-    except sqlite3.OperationalError:
+    else:
         # vec table not created yet: every news row is pending
         rows = conn.execute(
             """
@@ -239,14 +257,29 @@ def pending_news(conn: sqlite3.Connection, *, limit: int = 128) -> list[tuple[in
     return [(int(row["news_id"]), str(row["title"])) for row in rows]
 
 
+def pending_count(conn: sqlite3.Connection) -> int:
+    """The whole embedding backlog's size, not capped by a batch limit (TP-046).
+
+    Implements: REQ-SI-FR-007 (ADR-003)
+    """
+    if _vec_ready(conn):
+        row = conn.execute(
+            "SELECT COUNT(*) FROM news n LEFT JOIN vec_news v ON v.rowid = n.news_id"
+            " WHERE v.rowid IS NULL AND n.symbol IS NOT ?",
+            (TOPICAL_BUCKET,),
+        ).fetchone()
+    else:
+        row = conn.execute("SELECT COUNT(*) FROM news WHERE symbol IS NOT ?", (TOPICAL_BUCKET,)).fetchone()
+    return int(row[0])
+
+
 def prune_orphans(conn: sqlite3.Connection) -> int:
     """Delete vectors whose news rows are gone (retention follow-up).
 
     Implements: REQ-SI-FR-007 (ADR-003)
     """
-    try:
-        with conn:
-            removed = conn.execute("DELETE FROM vec_news WHERE rowid NOT IN (SELECT news_id FROM news)").rowcount
-    except sqlite3.OperationalError:
+    if not _vec_ready(conn):
         return 0  # vec table not created yet: nothing to prune
+    with conn:
+        removed = conn.execute("DELETE FROM vec_news WHERE rowid NOT IN (SELECT news_id FROM news)").rowcount
     return int(removed or 0)

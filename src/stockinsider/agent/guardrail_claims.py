@@ -232,8 +232,9 @@ _COUNT_MODIFIERS = (
     r"returned|listed|vendor|api|sync|data|more|separate|individual"
 )
 _COUNT_NOUN = re.compile(
-    # a hyphen may join the count to its noun ("the 259-session history"; TP-045)
-    rf"(?:\s*|-)(?:(?:{_COUNT_MODIFIERS})\s+){{0,2}}(?:"
+    # a hyphen may join the count to its noun ("the 259-session history"; TP-045), also
+    # suspended over a list ("the 20-, 60- and 250-session windows"; TP-046)
+    rf"(?:\s*|-(?:,?\s+(?:(?:and|or|to)\s+)?\d{{1,4}}-)*)(?:(?:{_COUNT_MODIFIERS})\s+){{0,2}}(?:"
     + "|".join(f"(?P<{name}>{pattern})" for name, pattern in _COUNT_NOUNS)
     + r")\b",
     re.IGNORECASE,
@@ -477,7 +478,18 @@ def index_evidence(snapshot_values: object, specs: Mapping[str, ToolSpec] | None
         _walk(evidence, snapshot_values, key="", parent="", siblings={}, tool="", subject=None)
     names: dict[str, set[str]] = {}
     _collect_names(snapshot_values, names)
-    evidence.names = {word: next(iter(found)) for word, found in names.items() if len(found) == 1}
+    data_subjects: set[str] = set()
+    if isinstance(snapshot_values, dict):
+        for key, result in snapshot_values.items():
+            if _tool_of(str(key)) != "symbol.search":
+                _collect_subjects(result, data_subjects)
+    for word, found in names.items():
+        if len(found) == 1:
+            evidence.names[word] = next(iter(found))
+        elif len(found & data_subjects) == 1:
+            # a name that search returned for many listings names the one listing a
+            # non-search tool returned data for ("Tencent" -> 0700.HK; TP-046)
+            evidence.names[word] = next(iter(found & data_subjects))
     for entry in evidence.entries:
         if not entry.derived:
             evidence.pool.add(v1._canon_number(entry.value))
@@ -489,6 +501,18 @@ def _bucket_symbol(node: dict[str, Any]) -> str | None:
     """A news row's symbol bucket; macro and topical buckets are not symbols (TP-025 stage 4)."""
     bucket = node.get("bucket")
     return bucket if isinstance(bucket, str) and _SYMBOL_SHAPE.match(bucket.strip()) else None
+
+
+def _collect_subjects(node: object, subjects: set[str]) -> None:
+    if isinstance(node, dict):
+        subject = _subject_of(node)
+        if subject:
+            subjects.add(subject)
+        for value in node.values():
+            _collect_subjects(value, subjects)
+    elif isinstance(node, (list, tuple)):
+        for item in node:
+            _collect_subjects(item, subjects)
 
 
 def _collect_names(node: object, names: dict[str, set[str]]) -> None:
@@ -1351,6 +1375,12 @@ _RANGE_ENDS = ("low", "high")
 _RANGE_NOUN = re.compile(r"\s+(?:[A-Za-z-]+\s+)?range\b", re.IGNORECASE)
 _RANGE_AFTER = re.compile(r"\s*[–—]\s*\d[\d,]*(?:\.\d+)?" + _RANGE_NOUN.pattern, re.IGNORECASE)
 _RANGE_BEFORE = re.compile(r"\d[\d,]*(?:\.\d+)?\s*[–—]\s*$")
+#: A price range written "range [of] A–B" or "range of A to B" (TP-046): its low, then its high.
+_RANGE_LEAD = r"\brange\s*(?:of|from|:)?\s*(?:HKD|USD|HK\$|US\$|\$)?\s*"
+_RANGE_JOIN = r"\s*(?:[–—]|\bto\b)\s*(?:HKD|USD|HK\$|US\$|\$)?\s*"
+_RANGE_LOW_LEAD = re.compile(_RANGE_LEAD + r"$", re.IGNORECASE)
+_RANGE_LOW_JOIN = re.compile(_RANGE_JOIN + r"\d", re.IGNORECASE)
+_RANGE_HIGH_LEAD = re.compile(_RANGE_LEAD + r"\d[\d,]*(?:\.\d+)?" + _RANGE_JOIN + r"$", re.IGNORECASE)
 
 
 def _fields(answer: _Answer, pending: list[_Pending]) -> dict[int, str | None]:
@@ -1377,6 +1407,13 @@ def _fields(answer: _Answer, pending: list[_Pending]) -> dict[int, str | None]:
                 if _RANGE_AFTER.match(answer.text, item.end):
                     name = _RANGE_ENDS[0]
                 elif _RANGE_BEFORE.search(answer.text, 0, item.start) and _RANGE_NOUN.match(answer.text, item.end):
+                    name = _RANGE_ENDS[1]
+                # "a session range of 391.8 to 402.6", "range 70.45–73.20" (TP-046)
+                elif _RANGE_LOW_LEAD.search(answer.text, 0, item.start) and _RANGE_LOW_JOIN.match(
+                    answer.text, item.end
+                ):
+                    name = _RANGE_ENDS[0]
+                elif _RANGE_HIGH_LEAD.search(answer.text, 0, item.start):
                     name = _RANGE_ENDS[1]
             fields[id(item)] = _refine(name, item, answer, pending) if name else None
     for item in pending:

@@ -831,3 +831,17 @@ test-plan gate's safety-path attestation).
 - Architecture: `agent/guardrail_claims.py` is in the safety-critical prefix, hence this entry. All ten rules are claim-side, and the evidence side is unchanged. One structural detail: the low/high labels come from a tuple constant, because the name-based static-arithmetic gate taints any variable assigned a market-field string, module-wide.
 - Test quality: 9 tests with an adversarial case for each rule. Ten mutants, all killed; the range-noun mutant needed an added case. Full offline suite passes, and ruff and mypy are clean.
 - Risk: the bare-index alias ("an ... index") applies only when the ledger holds exactly one index, and the tool-key rule applies only to snake_case keys the typing table knows.
+
+### RM-80 — TP-046: defects found by the end-to-end test on a copy of the real store (ADR-008 Am5)
+
+- Verdict: APPROVE pending owner merge. The owner instructed the fix in session (2026-11-04), and the plan was committed before any code. One method deviation is disclosed, as in TP-045: no independent battery measures the post-check change.
+- Spec alignment:
+  - REQ-SI-FR-007 / INV-003: incremental `embed` no longer fails, and "pending before" is the true backlog. A store whose vec table exists but whose extension cannot load now fails closed instead of reporting every row as pending.
+  - REQ-SI-FR-004 / INV-004: a US symbol gets its official name from search. The confirmation step is unchanged, and the declined path is tested.
+  - REQ-SI-INV-001: 27 live marks become 12, of which 5 are correct flags. No escape was added on E-013, E-014 or E-015, and their pins are unchanged.
+- Architecture:
+  - `agent/guardrail_claims.py` is safety-critical, hence ADR-008 Amendment 5 in this PR. The three rules are claim-side, and the evidence a claim must match is unchanged.
+  - `data/store/vector.py` and `cli/app.py` are not gated paths.
+  - No new dependency or module.
+- Test quality: 11 new tests, each defect with a negative case: the extension unavailable, no exact search match, an HK symbol, a value swapped between columns, a non-unique data listing, a wrong or swapped range, and a bare drawdown number. There are seven mutants, one per rule plus the extension load, `pending_count` and the US search branch; all are killed (the suspended-hyphen test was rewritten to the live shape after its first version let the mutant survive). The full offline suite has 839 passed and 2 xfailed; ruff and mypy are clean.
+- Risk: the name rule picks a listing from the turn's data. If the model writes "Tencent" meaning an ADR that has no data in the ledger, its numbers are read against 0700.HK. They then verify only if they are 0700.HK's numbers, so a wrong number is still marked. The `watch add` search adds one unbudgeted search call per non-HK symbol add.

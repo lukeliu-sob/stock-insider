@@ -20,6 +20,7 @@ from stockinsider.data.store.vector import (
     VectorModelMismatch,
     ensure_vec_table,
     insert_vectors,
+    pending_count,
     pending_news,
     prune_orphans,
 )
@@ -82,11 +83,10 @@ def run_embed(
         model_id=model_id,
     )
     skipped: set[int] = set()
+    report.pending_before = pending_count(conn)
     while True:
         backlog = [(news_id, title) for news_id, title in pending_news(conn)
                    if news_id not in skipped]
-        if report.pending_before == 0:
-            report.pending_before = len(backlog)
         if not backlog:
             break
         batch = backlog[:batch_size]
