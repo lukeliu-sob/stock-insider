@@ -490,3 +490,15 @@ A three-turn session and a digest on a snapshot of the owner's store, with TP-04
 The evidence side, P2 and P3 are unchanged. No independent battery measures this amendment: E-013, E-014 and E-015 run as regression only, and no escape was added. Whether to commission E-016 is an owner decision.
 
 Implements: REQ-SI-INV-001, REQ-SI-QA-001.
+
+## Amendment 5 (2026-11-04, TP-046) — readings found by the end-to-end test on a copy of the real store
+
+An end-to-end run of main (3646d60) on a copy of the owner's store produced a four-turn session, a resumed turn and a digest. TP-046 changes three readings:
+
+- **A name word shared by several listings.** `symbol.search "Tencent"` returned 16 listings named "Tencent ...", so the word was dropped from the name map. A comparison-table column headed "Tencent" then took the subject named in the other column's header. Now such a word names the one listing that a non-search tool returned data for, when exactly one such listing exists; otherwise it names none, as before. The evidence an answer must match is unchanged, only which subject a claim is read against.
+- **A range written after its noun.** "a session range of A to B" and "range A–B" read A as the low and B as the high. Amendment 4 covered only a pair written before "range".
+- **Suspended hyphens.** In "the 20-, 60- and 250-session windows", 20 and 60 are session counts.
+
+Re-check of the stored answers: 27 marks become 12. Of the 12, 5 are correct flags: four headline-only numbers, which must be quoted to verify (P3), and one ratio the model computed itself. The other 7 are accepted residuals, listed in TP-046. The digest's 6 marks become 0. E-013, E-014 and E-015 run as regression only; their pins are unchanged, so no escape was added and no false flag cleared. No independent battery measures this amendment, and E-016 remains the owner's decision.
+
+Implements: REQ-SI-INV-001, REQ-SI-QA-001.

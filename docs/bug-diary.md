@@ -289,3 +289,30 @@ Invariant/process gap exposed → what changed:
 - **Root cause**: `record_resolution` writes `verified = 1` for any HK/US listing, including a direct-verified one, while `verified_names` assumed (and its docstring said) that placeholder rows are unverified. The TP-025 stage-4 tests seed the placeholder row with `verified = 0`, which the product never writes.
 - **Fix**: `verified_names` drops a name carrying the placeholder marker (TP-040).
 - **Gap exposed -> change**: the same class as BD-031: a fixture written to the assumed shape instead of the produced one.
+
+## BD-033 — Every incremental `embed` run failed once the store held vectors
+- **Date / discovered by**: 2026-11-04 / coding agent, end-to-end test on a copy of the owner's store (owner-requested).
+- **Symptom**: `embed` printed "58 embedded (128 pending before)", then `UNIQUE constraint failed on vec_news primary key (news_ids [50, 49, 48]... +13)`, and exited 1. The 2026-11-03 run had already noted the count mismatch ("383 embedded (128 pending before)") without diagnosing it.
+- **Reproduction**: embed a store, add news, close the connection, then run `run_embed` on a new connection (`test_pending_news_with_vectors_returns_only_unembedded`).
+- **Classification**: fail-open error handling; test-coverage gap (every test embedded and re-queried on one connection, which already had the extension loaded).
+- **Root cause**: `pending_news` queried `vec_news` before sqlite-vec was loaded on the connection. The "no such module: vec0" error was caught by the handler meant for "no table yet", so the first 128 news rows were returned as pending, embedded ones included. The first batch collided with stored vectors, and was then skipped; later queries ran with the extension loaded and were correct. `pending_before` was the length of that capped list. `prune_orphans` had the same handler and returned 0 silently.
+- **Fix**: `_vec_ready` checks `sqlite_master` for the table and loads the extension before any `vec_news` query; a load failure raises `VectorUnavailable`. `pending_before` comes from an uncapped `pending_count` (TP-046).
+- **Gap exposed -> change**: a broad `except OperationalError` read one failure as another. The tests now open a fresh connection, as a new CLI process does.
+
+## BD-034 — `watch add` for a US symbol stored a placeholder name
+- **Date / discovered by**: 2026-11-04 / coding agent, same run.
+- **Symptom**: `watch add aapl.us` stored "AAPL.US (name unverified - vendor search does not index this exchange; verify before adding)". The model later reported to the user that the name had never been resolved.
+- **Reproduction**: `watch add AAPL.US` with a search returning AAPL.US (`test_watch_add_us_symbol_uses_search_name`).
+- **Classification**: a workaround applied wider than its cause.
+- **Root cause**: BD-017's direct-verification path is right for HK, which vendor search does not index. The CLI sent every symbol-shaped query down it, US included, although a live search for "AAPL.US" returns "Apple Inc.".
+- **Fix**: a non-HK symbol-shaped query tries vendor search first and takes the exact canonical match. With no exact match it falls back to direct verification; HK keeps the direct path (TP-046). INV-004 confirmation is unchanged.
+- **Gap exposed -> change**: none new; the BD-017 tests covered HK only.
+
+## BD-035 — Correct numbers in a comparison table marked unverified; the model retracted them
+- **Date / discovered by**: 2026-11-04 / coding agent, same run.
+- **Symptom**: in the table `| Window | Tencent | Hang Seng |`, every Tencent value was marked `[?]` with "this price change belongs to 0700.HK". In the next turns the model told the user to "disregard" those correct numbers, and the three-in-a-row warning fired. Price ranges written "range of A to B" were also marked, in every digest section.
+- **Reproduction**: `test_ambiguous_name_resolves_to_data_symbol`, `test_range_after_noun_reads_low_high`.
+- **Classification**: guardrail false positive (INV-001 claim side), with a user-visible cascade.
+- **Root cause**: the turn's `symbol.search "Tencent"` returned 16 listings named "Tencent ...". An ambiguous name word is dropped, so the column header named no subject, and the subject fell back to the last mention in the paragraph, which was the other column's header. Separately, Amendment 4's range rule read only a pair written before "range".
+- **Fix**: an ambiguous name names the single listing with non-search data; a range after its noun reads low then high; suspended hyphens are counts (TP-046, ADR-008 Am5).
+- **Gap exposed -> change**: the battery ledgers never contained a search result, so the ambiguity never arose offline. A live question that resolves a name before fetching data does exactly that.

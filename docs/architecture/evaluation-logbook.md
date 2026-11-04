@@ -399,3 +399,17 @@ This is not an E-entry: no new battery. The session (three turns plus a digest) 
 - After TP-045: 3 marked. The same 2 correct flags remain (a 250-session change called a "drawdown"), plus 1 postposed subject.
 
 Every battery is now a development set. An independent measurement would need a fresh battery (E-016).
+
+### Note to E-015 — end-to-end re-check on main (2026-11-04, TP-046)
+
+This is not an E-entry: no new battery. The session ran on a copy of the owner's store, on main at 3646d60: four turns with real model calls, one resumed turn, and a digest. Its stored answers were then re-checked offline.
+
+- Before TP-046: 27 numbers marked `[?]`: 21 in the session and 6 in the digest narrations.
+  - 6 sit in one comparison table, whose "Tencent" column was read against the index.
+  - 10 are price ranges written after "range".
+  - 1 is a suspended-hyphen count.
+- After TP-046: 12 marked, none of them in the digest.
+  - 5 are correct flags: four headline-only numbers and one ratio the model computed.
+  - 7 are accepted residuals: a number-word adjective, "5+", the date shorthand "11-02/03", a "respectively" sentence, and a window written without "sessions".
+
+The live side effect is recorded here because it matters more than the count. After the table false flags, the model told the user to "disregard" correct numbers in later turns, and the three-in-a-row warning fired.

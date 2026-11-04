@@ -236,11 +236,21 @@ def watch(
                 raise typer.Exit(code=2)
             try:
                 if SYMBOL_SHAPE.match(_canonical(query)):
-                    # Direct verification path (BD-017): vendor search does
-                    # not index HK listings; one budgeted EOD fetch proves
-                    # existence. INV-004 confirmation unchanged below.
-                    verified = data_store.verify_symbol(_canonical(query))
-                    candidates = [verified] if verified is not None else []
+                    canonical = _canonical(query)
+                    candidates = []
+                    if not canonical.endswith(".HK"):
+                        # vendor search indexes US listings: an exact match
+                        # carries the official name (TP-046)
+                        candidates = [
+                            cand for cand in data_store.resolver.search(canonical)
+                            if cand.canonical_symbol == canonical
+                        ]
+                    if not candidates:
+                        # Direct verification path (BD-017): vendor search does
+                        # not index HK listings; one budgeted EOD fetch proves
+                        # existence. INV-004 confirmation unchanged below.
+                        verified = data_store.verify_symbol(canonical)
+                        candidates = [verified] if verified is not None else []
                     if not candidates:
                         typer.secho(
                             f"not found: {_canonical(query)} returned no data via direct verification; "
