@@ -58,6 +58,29 @@ stockinsider digest                # weekly digest of the watchlist
 stockinsider sessions              # list sessions; then `show` or `resume` one
 ```
 
+### Terminal UI (opt-in)
+
+The analysis REPL has two front-ends over the same dispatch: the plain REPL (default) and an inline terminal UI (REQ-SI-FR-026, ADR-007). The terminal UI adds no commands of its own, and shows model text only after the post-check verdict.
+
+```bash
+stockinsider --ui tui              # bare invocation: new session in the terminal UI
+stockinsider analyze --ui tui
+stockinsider resume <id> --ui tui
+STOCKINSIDER_UI=tui stockinsider   # or set the env var once (PowerShell: $env:STOCKINSIDER_UI = "tui")
+```
+
+On Windows, if `stockinsider` is not on PATH (for example in a conda shell), run `.\.venv\Scripts\stockinsider.exe --ui tui` or activate `.venv` first.
+
+| Element | Behavior |
+|---|---|
+| Input | Framed prompt. `Enter` sends; `Esc` then `Enter` inserts a newline. Typing `/` opens completion of the slash commands (`/sessions`, `/show`, `/resume`, `/report`, `/watch`, `/sync`, `/tools`, `/help`, `/exit`). |
+| Status line | Session id · profile · model · tokens used/budget · last post-check verdict · watchlist size · vendor calls left. A counter that cannot be read shows `?`. |
+| During a turn | An activity indicator shows the current tool call. Answers render as Markdown, and every digit of the verified text is shown exactly as checked; unverified numbers keep their `[?]` marks. |
+| Write confirmation | When the model proposes a write in conversation (for example adding a symbol to the watchlist), the UI asks with a two-option choice that defaults to decline. `↑`/`←` decline, `↓`/`→` accept, `Tab` toggles, `Enter` confirms; `Esc`, `Ctrl+C` or `Ctrl+D` decline at once. Typed-ahead keys are ignored, so a stray `y` cannot approve a write (INV-004). The slash commands keep their own confirmations: `/watch add` and `/watch remove` ask `[y/N]`, and typing `/sync` is itself the confirmation. |
+| Interrupt and exit | `Ctrl+C` clears the input, or interrupts a running turn (the turn is marked incomplete and left out of later context). `Ctrl+C` twice on an empty prompt, `Ctrl+D`, or `/exit` closes the session and prints the `resume` command. |
+
+The terminal UI needs an interactive terminal on both stdin and stdout. When piped or redirected, the command prints `note: terminal UI unavailable (...); using the plain REPL` and continues in the plain REPL. If the `prompt-toolkit` dependency is missing, it stops with an explicit error (exit code 2) instead of falling back.
+
 ## Blocking gates (CI design)
 
 All six course gates are implemented in `.github/workflows/ci.yml` and `tools/checks/`:
