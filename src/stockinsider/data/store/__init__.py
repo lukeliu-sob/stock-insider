@@ -102,6 +102,19 @@ class DataStore:
 
         return SyncService(self._conn).run(progress=progress).as_dict()
 
+    def freshness(self, now: "datetime | None" = None) -> dict[str, Any]:
+        """Which tracked symbols lag the expected session, and whether sync can fetch.
+
+        Read-only. `market_live` is False when no market key is configured,
+        so a caller can say so instead of starting a sync that cannot fetch.
+
+        Implements: REQ-SI-FR-028, REQ-SI-INV-003 (ADR-002)
+        """
+        from stockinsider.data.ingest.freshness import behind
+        from stockinsider.data.ingest.market import EodhdMarketAdapter
+
+        return {"behind": behind(self._conn, now), "market_live": EodhdMarketAdapter().is_live()}
+
     def sync_status(self) -> dict[str, Any]:
         """Read-only sync status (budget, pending gaps, tracked symbols).
 

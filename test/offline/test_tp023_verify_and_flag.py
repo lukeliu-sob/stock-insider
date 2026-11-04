@@ -26,7 +26,9 @@ from test_agent_loop import IDENTITY, Spy, make_engine, tool_call
 from test_tui_session import ENTER, isolate, run_ui, use_engine
 
 MARK = "[?]"
-NOTICE_999 = "unverified (not found in this session's tool results; marked [?]): 999"
+# TP-047 migrated assertion: the notice under a flagged answer is one fixed line (was:
+# "unverified (not found in this session's tool results; marked [?]): 999")
+NOTICE_999 = "data with [?] means the data may be fabricated"
 #: "price rises" in Chinese, written as escapes so the repository language gate stays clean
 CJK_TEXT = "\u4ef7\u683c\u4e0a\u6da8"
 
@@ -238,7 +240,10 @@ def test_streak_notice_replaces_numeric_abort(store, prompts_dir) -> None:
     engine = make_engine(store, answers, prompts_dir)
     record = store.create(profile="standard")
     outcomes = [_turn(engine, record, f"q{i}") for i in range(3)]
-    assert [STREAK in spy.lines for _outcome, spy in outcomes] == [False, False, True]
+    # TP-047 migrated assertion: the streak is still counted but never shown (was: the
+    # notice on the third answer); the INV-001 abort stays retired
+    assert not any(STREAK in spy.lines for _outcome, spy in outcomes)
+    assert engine._counter.number_notice_due  # noqa: SLF001 - the counter is the subject
     assert all(outcome.aborted is None for outcome, _spy in outcomes)
     row = next(r for r in store.list_sessions() if r["session_id"] == record["session_id"])
     assert row["status"] == "active"
@@ -256,6 +261,7 @@ def test_streak_notice_replaces_numeric_abort(store, prompts_dir) -> None:
     record2 = store.create(profile="standard")
     spies = [_turn(engine2, record2, f"q{i}")[1] for i in range(4)]
     assert not any(STREAK in spy.lines for spy in spies)
+    assert not engine2._counter.number_notice_due  # noqa: SLF001 - reset by the verified answer
 
 
 def test_streak_follows_the_answer_as_shown(store, prompts_dir) -> None:
@@ -272,7 +278,9 @@ def test_streak_follows_the_answer_as_shown(store, prompts_dir) -> None:
     )
     record = store.create(profile="standard")
     spies = [_turn(counts, record, f"q{i}")[1] for i in range(3)]
-    assert [STREAK in spy.lines for spy in spies] == [False, False, True]
+    # TP-047 migrated assertion: the streak is counted, not shown (was: notice on turn 3)
+    assert not any(STREAK in spy.lines for spy in spies)
+    assert counts._counter.number_notice_due  # noqa: SLF001 - the counter is the subject
     # and a draft's unverified number that never reached the screen does not count
     resets = make_engine(
         store,
@@ -287,6 +295,7 @@ def test_streak_follows_the_answer_as_shown(store, prompts_dir) -> None:
     record2 = store.create(profile="standard")
     spies2 = [_turn(resets, record2, f"q{i}")[1] for i in range(3)]
     assert not any(STREAK in spy.lines for spy in spies2)
+    assert not resets._counter.number_notice_due  # noqa: SLF001 - the counter is the subject
 
 
 def test_epistemic_abort_still_trips(store, prompts_dir) -> None:

@@ -43,6 +43,7 @@ Mapping: **every requirement → enforcing component → test/evidence → runti
 | FR-025 Quant models | `data/quant` (deferred, future) | none until ADR reopen (per fit criterion) | — |
 | FR-026 Terminal UI (opt-in) | `agent/tui`, `agent/repl` (I/O port, command table), turn-engine hooks (`agent/loop`), `cli` (`--ui`) | `test/offline/test_tui_render.py`, `test/offline/test_tui_session.py`, `test/offline/test_tui_invariants.py` | S1 (session status on exit) |
 | FR-027 Curated topical bucket | `data/ingest` (RSS track, `newsrss`), `data/store` (embedding backlog exclusion) | `test/offline/test_ingest_newsrss.py` (TP-035) | S5 (topical counts and overflow in the run report) |
+| FR-028 Freshness sync at session start | `data/ingest` (`freshness`), `data/store` (`DataStore.freshness`), `cli` (startup check, `--no-sync`) | `test/offline/test_tp047_notice_and_freshness.py` (TP-047) | S5 (the startup line and the sync report) |
 
 ## Invariants
 

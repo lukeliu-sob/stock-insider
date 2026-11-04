@@ -58,6 +58,10 @@ stockinsider digest                # weekly digest of the watchlist
 stockinsider sessions              # list sessions; then `show` or `resume` one
 ```
 
+**Fresh data on start.** `stockinsider`, `analyze`, `resume` and `digest` first compare the stored bars with today. If a tracked symbol is behind the latest session whose end-of-day bar is available (HK from 10:00 UTC, US from 23:00 UTC, weekdays), they run `sync` and then `embed` before the session opens. This happens about once per trading day and takes a few minutes. Skip it with `--no-sync` or `STOCKINSIDER_NO_SYNC=1`. Without `EODHD_API_KEY`, or if the sync fails, the session opens on the stored data and says so.
+
+**Unverified numbers.** A number the post-check cannot verify against this session's tool results is shown with `[?]`, and the answer ends with `data with [?] means the data may be fabricated`. The reason for each marked number is kept in the session record (`stockinsider show <id>`).
+
 ### Terminal UI (opt-in)
 
 The analysis REPL has two front-ends over the same dispatch: the plain REPL (default) and an inline terminal UI (REQ-SI-FR-026, ADR-007). The terminal UI adds no commands of its own, and shows model text only after the post-check verdict.

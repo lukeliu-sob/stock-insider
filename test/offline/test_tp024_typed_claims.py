@@ -438,12 +438,10 @@ def test_notice_record_and_show_carry_reasons(store, prompts_dir) -> None:
         record["session_id"], "q", profile="standard", render=spy.render, progress=spy.progress, stream_sink=spy.sink
     )
     assert outcome.displayed == "The close was 999[?] and the P/E is 18[?]; also 777[?]."
-    notice = (
-        "unverified (no close evidence; marked [?]): 999; "
-        "unverified (no P/E evidence; marked [?]): 18; "
-        "unverified (not found in this session's tool results; marked [?]): 777"
-    )
-    assert notice in spy.lines
+    # TP-047 migrated assertion: the screen shows one fixed line; the reasons below stay in
+    # the record and in `show` (was: a notice naming each number with its reason)
+    assert "data with [?] means the data may be fabricated" in spy.lines
+    assert not any("no P/E evidence" in line for line in spy.lines)
     event = [e for e in store.read_events(record["session_id"]) if e["event"] == "assistant-message"][-1]
     assert event["unverified"] == ["999", "18", "777"]
     assert event["unverified_detail"] == [

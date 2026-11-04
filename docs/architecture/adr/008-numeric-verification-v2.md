@@ -502,3 +502,19 @@ An end-to-end run of main (3646d60) on a copy of the owner's store produced a fo
 Re-check of the stored answers: 27 marks become 12. Of the 12, 5 are correct flags: four headline-only numbers, which must be quoted to verify (P3), and one ratio the model computed itself. The other 7 are accepted residuals, listed in TP-046. The digest's 6 marks become 0. E-013, E-014 and E-015 run as regression only; their pins are unchanged, so no escape was added and no false flag cleared. No independent battery measures this amendment, and E-016 remains the owner's decision.
 
 Implements: REQ-SI-INV-001, REQ-SI-QA-001.
+
+## Amendment 6 (2026-11-04, TP-047) — one fixed notice instead of naming each number
+
+Owner decision, 2026-11-04. Below an answer with unverified numbers, the notice listed each number and its reason ("unverified (this price change belongs to 0700.HK; marked [?]): -6.0993, ..."), and after three such answers a streak notice asked the user to check the data. In live use the list read as an accusation against the answer, and a false flag in it led the model to retract correct numbers (BD-035).
+
+Decision:
+
+- the notice is one fixed line, "data with [?] means the data may be fabricated", shown once per flagged answer;
+- the streak notice is no longer shown, though the counter still runs because it also holds the INV-002 abort budget;
+- the `[?]` marker on every unverified number is unchanged, so the screen still shows which numbers are unverified;
+- each number's reason stays in the session record (`unverified_detail`) and in `show`;
+- the model's feedback about marked numbers, the post-check, and the `/report` header count (FR-008) are unchanged.
+
+This is a requirement change. REQ-SI-INV-001's statement drops "the user is told which values are unverified and why" (registry v0.7.0); the zero-tolerance fit criterion, which is about marking, is unchanged. The display change is in `agent/loop.py`; `agent/guardrail*` is not touched.
+
+Implements: REQ-SI-INV-001.
