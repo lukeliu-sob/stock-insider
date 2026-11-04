@@ -9,7 +9,7 @@ This project is the CS5351 agentic software engineering course project, built AI
 Two parts separated by a **tool boundary** (the authority membrane):
 
 - **Agent side** (`src/stockinsider/agent/`) — a self-built lightweight agent loop: REPL + slash commands, session persistence (append-only `session.jsonl`, values-as-seen context snapshots), layered context assembly with compaction and provenance-ledger re-injection, a deterministic guardrail (numeric post-check, epistemic filter, fail-safe), and user-configurable OpenAI-compatible providers (default `deepseek-flash`).
-- **Data side** (`src/stockinsider/data/`) — an in-process package behind a facade: ingestion adapters (EODHD fundamentals, GDELT + whitelist-crawler news), SQLite + sqlite-vec storage, deterministic indicators and event studies. The LLM reaches it only through schema-validated tools.
+- **Data side** (`src/stockinsider/data/`) — an in-process package behind a facade: ingestion adapters (EODHD market data and fundamentals; EODHD, GDELT and ten curated RSS feeds for news, with whitelisted article-body backfill), SQLite + sqlite-vec storage, and deterministic indicators and trailing-window performance. The LLM reaches it only through schema-validated tools.
 
 Four zero-tolerance invariants govern the product (`docs/architecture/invariants.md`): every number in output traces to the session's context snapshot; no deterministic causal claims or price predictions; failures are explicit, never substituted; watchlist additions only via verified symbol resolution.
 
@@ -17,8 +17,8 @@ Four zero-tolerance invariants govern the product (`docs/architecture/invariants
 
 | Path | Content |
 |---|---|
-| `docs/req/` | D1 — requirements registry (`requirements.yaml`, 47 entries), CI schema, glossary |
-| `architecture-blueprint.md`, `docs/architecture/` | D2 — blueprint, ADRs 001–003, invariant register, trace matrix, memory/permission/policy/evaluation artifacts |
+| `docs/req/` | D1 — requirements registry (`requirements.yaml`, 49 entries, v0.6.3), CI schema, glossary |
+| `architecture-blueprint.md`, `docs/architecture/` | D2 — blueprint, ADRs 001–008 (with dated amendments), invariant register, trace matrix, memory/permission/policy/evaluation artifacts |
 | `AGENTS.md`, `docs/code-governance/`, `.opencode/`, `.agent/`, `.pi/` | D3 — coding-agent governance (harness-neutral: opencode **and** pi; see `pi-adaptation.md`) |
 | `docs/code-governance/verification-constraints.md`, `.github/workflows/ci.yml`, `tools/checks/` | D4/D7 — verification governance and the blocking-gate pipeline |
 | `docs/review-memo.md`, `docs/debt-register.md`, `docs/bug-diary.md`, `docs/test-plans/`, `docs/ai-use-log.yaml` | Living QA and audit records |
@@ -42,7 +42,21 @@ python -m pytest test/offline test/live
 python tools/checks/registry_schema.py        # etc., see tools/checks/README.md
 ```
 
-Implemented and live-tested: market/fundamentals/news ingestion (EODHD + GDELT), watchlist with verified-symbol gating, the analysis REPL with numeric-provenance post-checks (identity v4), news retrieval (news.recent; news.search pending an embedding provider), indicator computation, and session replay. Remaining: weekly digest, bulk sync, currency display (explicit-failure stubs per INV-003).
+Implemented and tested end to end on a copy of a real store (2026-11-04): daily sync of market data and news (EODHD, GDELT, RSS), `embed` for the news vector index, watchlist with verified-symbol gating and confirmation, `info`, the analysis REPL (plain or `--ui tui`) with typed numeric post-checks and the epistemic filter (identity prompt v8), news retrieval (`news.recent`, `news.search`), indicators and `market.performance`, session list/show/resume, and the weekly `digest`. Not implemented: event scoring (REQ-SI-FR-009; the digest reports it as unavailable). Deferred by priority: Chinese news (FR-024) and quant models (FR-025). Accepted residuals are listed in `docs/debt-register.md` and `Report.md` §8.
+
+## Running the application
+
+```bash
+python -m venv .venv && .venv/Scripts/pip install -e .   # Windows path; use .venv/bin on Unix
+# keys go in a local .env (never committed): PROVIDER_API_KEY, EMBEDDING_API_KEY, EODHD_API_KEY
+stockinsider watch add 0700.HK     # verified resolution + confirmation (INV-004)
+stockinsider sync                  # daily EOD bars and news, under the call budget
+stockinsider embed                 # embed new headlines for news.search
+stockinsider info 0700.HK          # deterministic snapshot, no LLM
+stockinsider analyze               # analysis REPL (add --ui tui for the terminal UI)
+stockinsider digest                # weekly digest of the watchlist
+stockinsider sessions              # list sessions; then `show` or `resume` one
+```
 
 ## Blocking gates (CI design)
 
@@ -51,7 +65,7 @@ All six course gates are implemented in `.github/workflows/ci.yml` and `tools/ch
 | Gate | Mechanism |
 |---|---|
 | Test approval (D7-1) | Implementation PRs must reference an approved `docs/test-plans/TP-NNN.md`; `testplan_gate.py` validates |
-| Static analysis (D7-2) | `structural` job: import boundaries, docstring traceability, language policy, secret scan (+ ruff/mypy when scaffolding lands) |
+| Static analysis (D7-2) | `structural` job: import boundaries, docstring traceability, language policy, secret scan, static arithmetic, tautology and reference lint; `quality` job: ruff and mypy |
 | Schema (D7-3) | `registry_schema.py` validates the registry against `req-schema.json` |
 | Semantic evaluation (D7-4) | `eval` job replays the evaluation set on prompt/model-routing changes (QA-001 thresholds block) |
 | Regression (D7-5) | `regression` job runs the full offline suite; any old-test failure blocks |
