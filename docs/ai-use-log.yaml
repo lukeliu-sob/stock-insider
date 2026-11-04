@@ -4027,3 +4027,29 @@ sessions:
       and measuring without an independent battery (disclosed; E-016 left to the owner) are
       agent decisions recorded for owner review in the PR.
     status: applied
+  - id: AILOG-0100
+    date: "2026-11-04"
+    agent_task: >-
+      Course close-out documents. Report.md (D6) written from the repository records: process,
+      sprints, change loop, process optimization, requirement volatility, defect trends by
+      sprint and detector, evaluation evidence, an INV-001 case study, artifact co-evolution,
+      what human oversight caught, a draft self-reflection, and residual risks (6,950 words; 21
+      pages at 12pt single spacing, measured in Word). Two D5 transcripts rendered from the
+      Claude Code session logs of 2026-11-03 and 2026-11-04: complete and in order, Chinese
+      passages translated to English and marked, long tool payloads truncated with marks,
+      secrets redacted, interventions annotated per transcripts/TEMPLATE.md. README facts
+      updated (registry count, ADR range, implemented features, gate list) and a usage section
+      added.
+    artifacts:
+      - Report.md
+      - README.md
+      - transcripts/owner-2026-11-03-cli-smoke-test.md
+      - transcripts/owner-2026-11-04-real-store-test.md
+      - docs/ai-use-log.yaml
+    human_decision: >-
+      Owner, in session, 2026-11-04: the team has one member, so the contribution table has one
+      row and per-member information is not collected; write the report as proposed; render the
+      2026-11-03 and 2026-11-04 Claude Code sessions as transcripts, with all Chinese converted
+      to English. The self-reflection is an agent draft for the owner to revise; the name and
+      student-ID fields are left for the owner.
+    status: applied
